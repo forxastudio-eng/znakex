@@ -264,9 +264,9 @@ Con la visión actual desaparecen las gemas, el pase de batalla y el calendario 
 | Skins (fichas) | Hecho: 20 fichas (`SKINS/`) | Confirmar rarezas y pasar precios a monedas | P13 |
 | Mapas (fichas) | Hecho: 16 fichas (`MAPAS/`) | Verificar que encajan en el tablero 12×18 y con los orbes | P10 |
 | Orbes y efectos de juego | Pendiente | Orbe rojo, dorado, aparición, recogida | P11 |
-| Menú principal | Hecho, versión anterior (`Pantallas/`) | Rehacer translúcido y sin gemas | P1 |
+| Menú principal | Rehacer: el logo dice "ZNAREX", tiene gemas, pase y eventos | Rehacer translúcido, sin gemas | P1 |
 | Selección de modo | Pendiente | 4 modos | P2 |
-| Selección de mapa | Hecho, versión anterior (`Pantallas/`) | Rehacer translúcido, 16 mapas | P3 |
+| Selección de mapa | Rehacer: gemas, estrellas, 25 niveles | Rehacer translúcido, 16 mapas | P3 |
 | Selección de nivel | Pendiente | 10 niveles por mapa | P4 |
 | HUD de partida | Pendiente | Objetivo de orbes, tablero 12×18 | P5 |
 | Revivir / Game Over | Pendiente | Translúcido, anuncio o monedas | P6 |
@@ -275,10 +275,18 @@ Con la visión actual desaparecen las gemas, el pase de batalla y el calendario 
 | Bots del Duelo | Pendiente | 3 serpientes rivales | P12 |
 | Ruleta diaria | Pendiente | Reclamar con anuncio | P9 |
 | Tienda | Pendiente | Solo packs de monedas | P13 |
-| Skins (pantalla) | Hecho, versión anterior (`Pantallas/`) | Rehacer con precios en monedas | P13 |
-| Pausa y Ajustes | Ajustes hecho, versión anterior (`Pantallas/`) | Rehacer translúcidos, sin gemas | P14 |
-| Kit de interfaz | Hecho (`Pantallas/`) | Revisar que no tenga gemas | — |
+| Skins (pantalla) | Rehacer: gemas, texto "TARL" | Rehacer con precios en monedas | P13 |
+| Pausa y Ajustes | Ajustes: corregir con edición (logo "ZNAFEX", opciones sobrantes); Pausa: pendiente | Ver "Correcciones" en la sección 9 | P14 |
+| Kit de interfaz | Rehacer: tiene gema, corona y trofeo | Kit v2 con monedas, orbes, modos y peligros | P23 |
 | Ficha de Google Play | Pendiente | Icono, imagen destacada, capturas | P15 |
+| Pantalla de carga | Pendiente | Arte principal + logo + barra de carga | P16 |
+| Tutorial | Pendiente | 4 pasos | P17 |
+| Resultados de Clásico y Frenético | Pendiente | Récord y recompensa | P18 |
+| Ventanas emergentes | Pendiente | 6 popups: sin monedas, comprar, compra hecha, sin anuncio, salir, sin conexión | P19 |
+| Celebraciones | Pendiente | Skin desbloqueada, mapa completado, modo desbloqueado | P20 |
+| Arte de fondo de mapas | Pendiente | 16 fondos verticales | P21 |
+| Retratos de skins | Pendiente | 20 retratos cuadrados para la tienda | P22 |
+| Arenas de Clásico, Frenético y Duelo | Pendiente | 3 fichas de módulos | P24 |
 | Pase de batalla, gemas, recompensa diaria | Eliminado | No se usan | — |
 
 ---
@@ -570,6 +578,162 @@ SCREENSHOT: Google Play screenshot 9:16. Top 25%: a translucent dark glass banne
 ```
 
 Frases para 6 capturas: "16 WILD MAPS · 160 LEVELS" · "CHASE THE GOLDEN ORBS" · "DUEL SMART RIVALS" · "COLLECT LEGENDARY SKINS" · "LAVA, PORTALS, ICE & MORE" · "NO FORCED ADS".
+
+### Bloque de estilo común (P16–P24)
+
+Los prompts P16 a P24 terminan con este bloque. Pégalo tal cual donde dice `[STYLE BLOCK]`.
+
+```text
+STYLE – TRANSLUCENT FOREST RELIC: painterly warm forest, natural golden-green light; palette moss green #1F2A1C, olive #4A5A2E, amber #E8B04A, honey gold #F5D48A, bark brown #2B1E14. UI: frosted smoky dark glass panels (#0E1410 at 40-50% opacity, blur only behind the panels, the scene always visible through them), thin worn white borders, small carved corner ornaments; all icons and text worn off-white #F2EFE6 with distressed stencil texture matching the attached "ZNAKEX" logo; amber glow for active states. Single currency: coins (no gems anywhere). No neon, no purple, no glossy plastic.
+RULES: the game name is spelled exactly "ZNAKEX"; all text perfectly spelled exactly as written in quotes; respect phone safe areas. No watermark, no artist signature, no device frame, no extra text.
+```
+
+### P16 · Pantalla de carga (splash)
+
+```text
+Design the SPLASH / LOADING screen of the mobile snake game "ZNAKEX", vertical 9:16 (1080x1920), full-screen key art. Use the attached logo EXACTLY.
+
+ART: painterly ancient forest cathedral, colossal twisted trees and roots framing the screen, a powerful warm golden-green god ray falling into a mossy clearing. In the clearing a colossal moss-green and bronze serpent with glowing amber eyes coils around a broken temple pillar carved with serpent runes, rearing up into the light. Floating in the beam: one glowing crimson orb and one radiant golden orb, fireflies and white birds.
+
+UI: the "ZNAKEX" logo in worn off-white, large in the upper third, serpent eyes glowing amber. Bottom: thin loading bar with worn white outline and amber fill at 65%, small text above it "LOADING...", tip under it "TIP: Golden orbs make you grow x3, but you move twice as fast!", tiny "v1.0.0" in the corner.
+
+[STYLE BLOCK]
+```
+
+### P17 · Tutorial (4 pasos)
+
+Relación de aspecto 16:9 (cuatro pantallas verticales en una imagen).
+
+```text
+Design a 4-step TUTORIAL for the mobile snake game "ZNAKEX": four vertical 9:16 phone screens side by side in one image. Each screen shows the top-down 12x18 Emerald Jungle board (calm mossy tiles, faint grid, vine-and-stone border), dimmed 50% except a spotlight area, with a translucent instruction panel at the bottom, step dots "1-4" at the top and a "SKIP" link top-right.
+
+STEP 1 – "SWIPE TO MOVE": short moss-green snake in the center, a big worn white hand icon swiping right with a curved arrow. Panel: "Swipe to guide your serpent."
+STEP 2 – "COLLECT RED ORBS": spotlight on a glowing crimson orb, arrow from the snake head, "+1" popup. Panel: "Red orbs make you grow."
+STEP 3 – "GOLDEN ORBS": spotlight on a radiant golden orb with "x3" and a speed icon "x2". Panel: "Golden orbs: grow x3, but you move twice as fast!"
+STEP 4 – "REACH THE GOAL": spotlight on the HUD objective "ORBS 0 / 10" and on a mossy wall with a worn white "X". Panel: "Collect the orbs. Don't hit walls or your tail!" and a big button "START" with amber glow.
+
+[STYLE BLOCK]
+```
+
+### P18 · Resultados de Clásico y Orbes Frenéticos
+
+Relación de aspecto 16:9 (dos pantallas verticales en una imagen).
+
+```text
+Design two RESULT screens of the mobile snake game "ZNAKEX" side by side: two vertical 9:16 phone screens. Behind each translucent panel, the frozen top-down 12x18 board of the finished run stays clearly visible (25% darker, light blur).
+
+SCREEN 1 – CLASSIC RESULT: board with stone border walls and a very long snake (40 segments). Panel: "NEW RECORD!" in big distressed worn white font with an amber laurel emblem, score "3,920", previous best "BEST 3,580" crossed out, stats row "ORBS 78 · LENGTH 41 · TIME 04:12", coins "+15", buttons "PLAY AGAIN" (amber glow), "LEADERBOARD" (podium icon) and "HOME".
+
+SCREEN 2 – GOLDEN FRENZY RESULT: board without walls, glowing edges, many golden sparks. Panel: "TIME'S UP!", score "1,740", "BEST 1,920", stats row "GOLDEN ORBS 36 · LENGTH 109", coins "+12", buttons "PLAY AGAIN" (amber glow), "LEADERBOARD" and "HOME".
+
+[STYLE BLOCK]
+```
+
+### P19 · Ventanas emergentes (6 popups)
+
+Relación de aspecto 3:2.
+
+```text
+Create a sheet of 6 POPUP windows for the mobile snake game "ZNAKEX", arranged in a 3x2 grid over a blurred painterly forest background. Each popup is a translucent card with a worn white border, carved corners and a round "X" close button.
+
+1) "NOT ENOUGH COINS": coin icon with a crack, text "You need 1,800 more coins", buttons "GET COINS" (amber glow) and "LATER".
+2) "BUY SKIN?": portrait of a snake skin head, name "ROOTBOUND SERPENT", tag "EPIC", price "6,000" with coin icon, buttons "BUY" (amber glow) and "CANCEL".
+3) "PURCHASE COMPLETE": pile of coins with sparkle burst, text "+15,000 COINS", button "GREAT!".
+4) "AD NOT AVAILABLE": worn white video icon with a small cloud, text "No ad is ready right now. Try again in a moment.", buttons "REVIVE · 100" and "OK".
+5) "QUIT LEVEL?": door icon, text "Your progress in this level will be lost.", buttons "QUIT" and "KEEP PLAYING" (amber glow).
+6) "NO CONNECTION": broken signal icon, text "Check your internet to buy coins or watch ads.", button "OK".
+
+[STYLE BLOCK]
+```
+
+### P20 · Celebraciones de desbloqueo
+
+Relación de aspecto 16:9 (tres pantallas verticales en una imagen).
+
+```text
+Design three CELEBRATION screens of the mobile snake game "ZNAKEX" side by side: three vertical 9:16 phone screens, each with a translucent panel over a painterly forest scene with a burst of golden light rays, falling petals and fireflies.
+
+1) "SKIN UNLOCKED": a newly bought snake skin coiled on a glowing mossy stone pedestal, rarity ribbon "LEGENDARY", name "CYBER SNAKE", buttons "EQUIP" (amber glow) and "CLOSE".
+2) "MAP COMPLETE": emblem of the map "I · EMERALD JUNGLE" with a worn white laurel, text "10 / 10 LEVELS", bonus "+200" coins, and below "NEW MAP UNLOCKED" with a thumbnail of "II · MOSSY RUINS" and a button "GO" (amber glow).
+3) "NEW MODE UNLOCKED": card of the "DUEL" mode with two snakes facing each other over a crimson orb, text "Challenge smart rivals and win coins", button "TRY IT" (amber glow).
+
+[STYLE BLOCK]
+```
+
+### P21 · Arte de fondo de cada mapa (repetir para los 16)
+
+Sirve de fondo de la selección de nivel (P4) y de miniatura en la selección de mapa (P3). Relación de aspecto 9:16. Adjunta la ficha de módulos del mapa correspondiente.
+
+```text
+Painterly vertical key art (9:16, 1080x1920) for map [I · EMERALD JUNGLE] of the mobile snake game "ZNAKEX". Scene: [overgrown jungle, fallen logs over deadly streams, wooden bridges, giant trees, golden light rays]. Show the map's signature component clearly: [wooden bridges]. A moss-green and bronze serpent small in the mid-ground, following a winding path that climbs from the bottom to the top of the image (the path will hold the 10 level nodes). Keep the center column calm and slightly darker so UI can sit on top. Warm natural light, atmospheric depth, same painterly style as the attached references. No text, no UI, no watermark, no signature.
+```
+
+Datos por mapa para los corchetes:
+
+| # | Mapa | Escena | Componente visible |
+| --- | --- | --- | --- |
+| 1 | Emerald Jungle | Selva con troncos caídos, arroyos y árboles gigantes | Puentes de madera |
+| 2 | Mossy Ruins | Ruinas cubiertas de musgo entre árboles | Pilares y pasillos estrechos |
+| 3 | Mangrove Swamp | Manglar oscuro con raíces retorcidas y niebla | Charcas de barro |
+| 4 | Desert Tombs | Dunas doradas con tumbas y estatuas de serpiente | Arenas movedizas |
+| 5 | Canyon Bridges | Cañón rojizo con abismos | Puentes colgantes rotos |
+| 6 | Frozen Tundra | Ruinas heladas bajo auroras suaves | Placas de hielo |
+| 7 | Crystal Caves | Cueva con cristales que brillan | Portales de cristal emparejados |
+| 8 | Mushroom Grove | Bosque de hongos gigantes | Nubes de esporas |
+| 9 | Volcano Core | Rocas negras junto a ríos de lava | Grietas en erupción |
+| 10 | Storm Peaks | Cumbres con nubes de tormenta | Rachas de viento con hojas |
+| 11 | Sunken Temple | Templo inundado con luz entre columnas | Trampas de pinchos |
+| 12 | Clockwork Ruins | Ruinas con engranajes de piedra y bronce | Bloques que se mueven |
+| 13 | Shadow Forest | Bosque nocturno con niebla y ojos en la oscuridad | Círculo de luz alrededor de la serpiente |
+| 14 | Bone Wastes | Páramo de huesos gigantes | Cráneos rodantes |
+| 15 | Sky Gardens | Islas flotantes con jardines colgantes | Huecos al vacío y portales |
+| 16 | Serpent Temple Core | Cámara central del templo con una estatua de serpiente colosal | Lava, portales y pinchos juntos |
+
+### P22 · Retratos de skins para la tienda (repetir para las 20)
+
+Relación de aspecto 1:1. Adjunta la ficha de la skin (`SKINS/`) como referencia.
+
+```text
+Square shop card portrait (1:1, 512x512) of the snake skin from the attached sheet, for the mobile snake game "ZNAKEX". Close-up 3/4 view of the head and the first coils, looking slightly toward the viewer, centered with even padding. Identical framing, size and light direction for every skin in the collection: soft warm key light from the top-left and a thin rim light. Background: a flat dark vignette tinted by rarity — common grey #6B6F66, rare blue #3E6E9E, epic green #4F8A3C, legendary gold #C99A2E, mythic white-gold #E9DDB5 — with a very subtle radial glow behind the head. Keep the skin's exact colors and design from the sheet. No frame, no text, no watermark.
+```
+
+### P23 · Kit de interfaz v2 (sin gemas)
+
+Relación de aspecto 9:16.
+
+```text
+Using the exact style of the attached ZNAKEX UI kit, create UI KIT v2 on a flat pure black background #000000, organized grid, generous spacing, no labels.
+
+Row 1 – CURRENCY & PICKUPS: worn gold coin icon, stack of coins, coin pile (3 sizes), red orb icon, golden orb icon, "x2" speed icon, "x3" growth icon.
+Row 2 – MODES: story (open book with serpent), classic (grid square), golden frenzy (golden orb with rays), duel (two crossed fangs), daily spin (snake-shaped wheel), leaderboard (podium).
+Row 3 – HAZARDS (one per map, 16 icons, same size): log, pillar, mud, quicksand, broken bridge, ice, portal, spores, lava, wind, spikes, moving block, darkness eye, rolling skull, void gap, temple core.
+Row 4 – NAVIGATION & ACTIONS: modes, maps, home, skins, settings, shop, pause, play, retry, levels, quit door, video ad, lock, check, close, back.
+Row 5 – LEVEL NODES: stone level node in states cleared, current (amber glow), locked, and the large "GUARDIAN" node with serpent skull.
+Row 6 – BLANK BUTTONS: large primary in normal/pressed/disabled, secondary, coin-price button, ad button with video icon, countdown ring (full, half, empty).
+
+All icons flat monochrome worn off-white #F2EFE6 with distressed stencil texture, same stroke weight, 128px; amber glow only for active states. No gem icons, no crown, no trophy.
+```
+
+### P24 · Arenas de Clásico, Orbes Frenéticos y Duelo
+
+Usa P10 con estos datos en los corchetes:
+
+- **Clásico:** mapa `[CLASSIC ARENA]`, tema `[ancient stone courtyard in the forest with mossy flagstones]`, componente `[none: only the border wall]`.
+- **Orbes Frenéticos:** mapa `[GOLDEN FRENZY ARENA]`, tema `[glowing golden clearing at dusk, no walls; board edges shown as a soft golden light line that marks the wrap-around]`, componente `[edge glow tiles in 4 directions]`.
+- **Duelo:** mapa `[DUEL ARENA]`, tema `[circular ritual arena of carved stone with serpent runes, two stone pillars]`, componente `[player spawn marker in amber, bot spawn marker in crimson]`.
+
+### Correcciones a las pantallas que ya existen
+
+- **Menú principal** (`Pantallas/…main-me…`): el logo dice "ZNAREX" en vez de "ZNAKEX", y todavía muestra gemas, "ARENA", "EVENTS" y "PASS". Rehacer con P1.
+- **Skins** (`Pantallas/…skins-screen…`): muestra gemas, el texto "TARL" (debería ser "TAIL") y las pestañas "TRAILS"/"EFFECTS", que no están en el diseño. Rehacer con P13.
+- **Mapas** (`Pantallas/…maps-world-sel…`): usa gemas, estrellas, 25 niveles por mundo y un evento limitado. Rehacer con P3.
+- **Ajustes** (`Pantallas/…settings-scree…`): se puede corregir con una edición. Adjunta la imagen y usa:
+
+```text
+Keep everything identical except: the small logo text in the footer must read exactly "ZNAKEX"; the control type selector has only two options, "SWIPE" (selected) and "BUTTONS"; remove the rows "SENSITIVITY", "LEFT-HANDED MODE" and "GRAPHICS"; remove the duplicated orange text "CONNECT GOOGLE PLAY GAMES" under the account button. Make the main panel translucent (40-50% opacity) so the forest is visible through it.
+```
+
+- **Kit de interfaz** (`Pantallas/…forest-re…`): tiene icono de gema, corona y trofeo. Sustituir por P23.
 
 ---
 
