@@ -1,5 +1,10 @@
 // Screens, overlays and HUD (DOM layer over the canvases).
-import { MODES, MAPS, SKINS, RARITY, BOTS, ECONOMY, TIPS, DIFFS, skinById, skinPrice, storyLevel } from './data.js';
+import { MODES, MAPS, SKINS, RARITY, BOTS, ECONOMY, TIPS, DIFFS, SEASON_MAP, skinById, skinPrice, storyLevel, tutorialLevel } from './data.js';
+import * as meta from './meta.js';
+import { PW } from './powerups.js';
+import { drawOrb } from './orbs.js';
+import { IMG } from './assets.js';
+import * as cloud from './cloud.js';
 import * as store from './store.js';
 import { url } from './assets.js';
 import { drawSnake, pathPoints } from './snakedraw.js';
@@ -9,6 +14,9 @@ import { CONFIG } from './config.js';
 import { CONTROL_INFO } from './input.js';
 
 const icon = (n) => url(`ui/icons/${n}.png`);
+const kit = (n) => url(`ui/v3/${n}.png`);
+const pwi = (n) => url(`pw/${n}.png`);
+const fmtT = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 const $ = (root, sel) => root.querySelector(sel);
 
 function el(html) {
@@ -30,6 +38,8 @@ export class UI {
     this.game = null;
     this.timers = [];
     document.addEventListener('coins', () => this.refreshCoins(true));
+    document.addEventListener('achievement', (e) => e.detail.forEach((a, i) => setTimeout(() => this.toast(`<img src="${kit('medal_gold')}" style="height:1.6rem;vertical-align:-.4rem;margin-right:.4rem">LOGRO · ${a.name.toUpperCase()}`), i * 2000)));
+    document.addEventListener('mission', (e) => this.toast(`<img src="${kit('check_box')}" style="height:1.5rem;vertical-align:-.35rem;margin-right:.4rem">MISIÓN LISTA · ${e.detail.text}`));
   }
 
   S() { return store.S(); }
@@ -143,6 +153,12 @@ export class UI {
         ${this.coinPill()}
       </div>
       <div class="home-mid stagger">
+        <div class="home-tools" ${stag(0)}>
+          <button class="tool" data-act="missions"><img src="${kit('scroll_daily')}" alt=""><span>MISIONES</span>${meta.claimableMissions() ? '<i class="dot"></i>' : ''}</button>
+          <button class="tool" data-act="streak"><img src="${kit('flame')}" alt=""><span>RACHA</span>${meta.streakState().claimedToday ? '' : '<i class="dot"></i>'}</button>
+          <button class="tool" data-act="season"><img src="${kit('rosette')}" alt=""><span>TEMPORADA</span>${meta.seasonActive() ? '<i class="dot"></i>' : ''}</button>
+          <button class="tool" data-act="ach"><img src="${kit('medal_gold')}" alt=""><span>LOGROS</span></button>
+        </div>
         <div class="mode-sel" ${stag(0)}>
           <button class="arrow" data-act="mode" data-d="-1">‹</button>
           <div class="mode-chip"><div class="n worn" id="mn"></div><div class="s" id="ms"></div></div>
@@ -173,12 +189,21 @@ export class UI {
       mode: (b) => { idx = (idx + Number(b.dataset.d) + MODES.length) % MODES.length; paint(); },
       play: () => this.playMode(MODES[idx].id),
       wheel: () => this.openWheel(),
+      missions: () => this.go('missions'),
+      streak: () => this.openStreak(),
+      season: () => this.go('season'),
+      ach: () => this.go('ach'),
     });
+    if (!this.streakShown && !meta.streakState().claimedToday) {
+      this.streakShown = true;
+      setTimeout(() => { if (this.cur && this.cur.name === 'home') this.openStreak(); }, 900);
+    }
     return { el: e };
   }
 
   playMode(id) {
     if (id === 'story') {
+      if (!this.S().tutorialSeen) return this.startGame({ mode: 'story', level: tutorialLevel() });
       const cs = store.currentStory();
       this.startGame({ mode: 'story', level: storyLevel(cs.map, cs.level, this.S().diff) });
     } else if (id === 'duel') this.go('duel');
@@ -269,7 +294,7 @@ export class UI {
           const rw = storyLevel(map, n, dif).reward;
           return `<button class="level-node ${st} ${n === 10 ? 'guardian' : ''}" data-act="lv" data-n="${n}" style="left:${x}%;top:${y}%">
             <img src="${url('ui/nodes/' + img + '.png')}" alt="">${n === 10 ? '' : `<span class="num">${n}</span>`}
-            <span class="rw"><img src="${icon('coin')}" alt="">${rw}</span></button>`;
+            ${n <= cl ? `<span class="nstars">${[1, 2, 3].map((k) => `<img src="${kit(k <= store.starsOf(map, n, dif) ? 'star_gold' : 'star_empty')}" alt="">`).join('')}</span>` : `<span class="rw"><img src="${icon('coin')}" alt="">${rw}</span>`}</button>`;
         }).join('')}
       </div>
       <div class="panel" id="lp" style="margin-bottom:.4rem"></div>
@@ -283,6 +308,7 @@ export class UI {
           <div class="t-display worn" style="font-size:2.1rem">${selected === 10 ? 'GUARDIÁN · ' : ''}NIVEL ${map}-${selected}</div>
           <div class="obj"><img src="${icon('orb_red')}" alt="">RECOGE ${L.target} ORBES <span class="dtag" style="--dc:${DIFFS[dif].color}">${DIFFS[dif].label}</span></div>
           <div class="obj dim"><img src="${icon('coin')}" alt="">${selected <= cl ? `REPETIR: +${ECONOMY.replayReward}` : `RECOMPENSA: +${L.reward}`}</div>
+          <div class="obj dim"><img src="${kit('star_gold')}" alt="">★★★: SIN MORIR Y EN MENOS DE ${fmtT(Math.round((L.target * 12) / L.speed))}</div>
         </div>
         <button class="btn-primary" data-act="play" style="min-height:4rem;font-size:2.1rem;padding:0 1.4rem" ${locked ? 'disabled' : ''}>${locked ? '<img src="' + icon('lock') + '" style="width:2rem;border-radius:.2rem">' : '<span class="worn">JUGAR</span>'}</button>
       </div>`;
@@ -368,12 +394,21 @@ export class UI {
           <img class="pt" src="${url('skins/' + s.id + '.jpg')}" alt="">
           ${own ? '' : `<img class="lk" src="${icon('lock')}" alt="">`}
           ${S.equipped === s.id ? `<img class="eq" src="${icon('check')}" alt="">` : ''}
-          <div class="foot">${own ? (S.equipped === s.id ? 'EQUIPADA' : 'TUYA') : `<img src="${icon('coin')}" alt="">${fmt(skinPrice(s))}`}</div>
+          <span class="rl" style="background:${rc}">${RARITY[s.rarity].label}</span>
+          <div class="foot">${own ? (S.equipped === s.id ? 'EQUIPADA' : 'TUYA') : s.season ? 'TEMPORADA' : `<img src="${icon('coin')}" alt="">${fmt(skinPrice(s))}`}</div>
         </button>`;
       };
-      const basics = SKINS.filter((s) => s.basic), specials = SKINS.filter((s) => !s.basic);
-      grid.innerHTML = `<div class="grid-head">BÁSICAS · 10 COLORES</div>${basics.map(card).join('')}
-        <div class="grid-head">ESPECIALES</div>${specials.map((s, i) => card(s, i + basics.length)).join('')}`;
+      const basics = SKINS.filter((s) => s.basic);
+      let html = `<div class="grid-head">BÁSICAS · 10 COLORES</div>${basics.map(card).join('')}`;
+      let n = basics.length;
+      for (const r of ['especial', 'mitico', 'legendario', 'temporada']) {
+        const list = SKINS.filter((s) => !s.basic && s.rarity === r);
+        if (!list.length) continue;
+        html += `<div class="grid-head" style="color:${RARITY[r].color}">${RARITY[r].label}S · ${list.length}</div>${list.map((s) => card(s, n++)).join('')}`;
+      }
+      const normals = SKINS.filter((s) => !s.basic && s.rarity === 'normal');
+      if (normals.length) html = html.replace(/<div class="grid-head">BÁSICAS[^]*?(?=<div class="grid-head" style="color)/, (m) => m + `<div class="grid-head" style="color:${RARITY.normal.color}">NORMALES · ${normals.length}</div>${normals.map((s) => card(s, n++)).join('')}`);
+      grid.innerHTML = html;
     };
     const paintInfo = () => {
       const s = skinById(sel);
@@ -386,6 +421,7 @@ export class UI {
       let html;
       if (own && S.equipped === s.id) html = `<button class="btn" style="width:100%" disabled>EQUIPADA</button>`;
       else if (own) html = `<button class="btn-primary" data-act="equip" style="width:100%;min-height:4rem;font-size:2.1rem"><span class="worn">EQUIPAR</span></button>`;
+      else if (s.season) html = `<button class="btn" data-act="toseason" style="width:100%">SE DESBLOQUEA EN LA TEMPORADA</button>`;
       else {
         const pct = Math.min(100, (S.coins / price) * 100);
         html = `<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.45rem"><div class="progress" style="flex:1"><i style="width:${pct}%"></i></div><span class="t-label" style="font-size:.85rem">${fmt(S.coins)} / ${fmt(price)}</span></div>
@@ -408,25 +444,39 @@ export class UI {
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
       g.clearRect(0, 0, r.width, r.height);
       const t = (now - t0) / 1000;
-      // pedestal glow
       const cx = r.width / 2, cy = r.height * 0.55;
-      const grd = g.createRadialGradient(cx, cy + r.height * 0.18, 5, cx, cy + r.height * 0.18, r.width * 0.42);
-      grd.addColorStop(0, 'rgba(255,215,130,0.45)');
-      grd.addColorStop(1, 'rgba(255,215,130,0)');
-      g.fillStyle = grd;
+      // test board: a little patch of the jungle floor with a rounded frame
+      const bw = r.width * 0.9, bh = r.height * 0.86, bx = (r.width - bw) / 2, by = r.height * 0.07;
+      g.save();
       g.beginPath();
-      g.ellipse(cx, cy + r.height * 0.2, r.width * 0.42, r.height * 0.16, 0, 0, TAU);
-      g.fill();
+      g.roundRect(bx, by, bw, bh, 14);
+      g.clip();
+      const ts = bw / 8;
+      for (let j = 0; j < Math.ceil(bh / ts) + 1; j++) for (let i = 0; i < 8; i++) {
+        const im = IMG[`mx/01/floor${(i * 3 + j * 5) % 4}.jpg`];
+        if (im) g.drawImage(im, bx + i * ts, by + j * ts, ts + 0.5, ts + 0.5);
+      }
+      g.fillStyle = 'rgba(10,14,8,0.28)';
+      g.fillRect(bx, by, bw, bh);
+      g.restore();
+      g.strokeStyle = 'rgba(232,176,74,.55)';
+      g.lineWidth = 2;
+      g.beginPath(); g.roundRect(bx, by, bw, bh, 14); g.stroke();
       blinkT -= 1 / 60; if (blinkT < 0) { blink = 1; blinkT = rand(2, 4); } blink = Math.max(0, blink - 0.12);
       tongueT -= 1 / 60; if (tongueT < 0) { tongue = 1; tongueT = rand(1.5, 3); } tongue = Math.max(0, tongue - 0.05);
-      mouth = Math.max(0, Math.sin(t * 0.9) - 0.75) * 4;
+      const rr = r.height * 0.075;
+      const ahead = pathPoints(cx, cy, r.width * 0.3, r.height * 0.26, t * 1.1 + 0.55, 0.1, 2, 'eight')[0];
+      const near = (Math.sin(t * 2.4) > 0.35);
+      mouth = near ? 1 : 0;
+      if (Math.sin(t * 2.4 - 0.6) > -0.2) drawOrb(g, ahead.x, ahead.y, rr * 2.6, Math.floor(t / 2.6) % 3 === 2 ? 'gold' : 'red', t, {});
       const pts = pathPoints(cx, cy, r.width * 0.3, r.height * 0.26, t * 1.1, 4.4, 60, 'eight');
-      drawSnake(g, pts, skinById(sel), { R: r.height * 0.075, t, blink, tongue, mouth: clamp(mouth, 0, 1) });
+      drawSnake(g, pts, skinById(sel), { R: rr, t, blink, tongue, mouth: clamp(mouth, 0, 1) });
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
 
     this.wire(e, {
+      toseason: () => this.go('season'),
       sk: (b) => { sel = b.dataset.id; grid.querySelectorAll('.skin-card').forEach((c) => c.classList.toggle('sel', c.dataset.id === sel)); paintInfo(); },
       equip: () => { S.equipped = sel; store.save(); paintGrid(); paintInfo(); this.toast('¡Skin equipada!'); },
       buy: () => {
@@ -466,6 +516,237 @@ export class UI {
         <button class="btn-primary" data-act="ok" style="width:100%"><span class="worn">GENIAL</span></button>
       </div></div></div>`);
     this.wire(o, { ok: () => this.closeOverlay(o) });
+  }
+
+
+  // ------------------------------------------------------------ missions
+  scr_missions() {
+    this.setBg('deep');
+    let tab = 'daily';
+    const e = el(`<section>
+      ${this.topbar('MISIONES')}
+      <div class="tabs"><button class="tab on" data-act="tab" data-t="daily">DIARIAS</button><button class="tab" data-act="tab" data-t="weekly">SEMANALES</button></div>
+      <div class="scroll" id="ml"></div>
+      ${this.nav('home')}
+    </section>`);
+    const left = () => {
+      const now = new Date();
+      const next = tab === 'daily' ? Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
+        : Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + (8 - (now.getUTCDay() || 7)));
+      const s = Math.max(0, Math.floor((next - now.getTime()) / 1000));
+      const h = Math.floor(s / 3600);
+      return tab === 'daily' || h < 48 ? `${String(h).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` : `${Math.floor(h / 24)} días`;
+    };
+    const paint = () => {
+      const M = meta.missions();
+      const list = tab === 'daily' ? M.daily : M.weekly;
+      const ch = meta.WEEK_CHEST;
+      $(e, '#ml').innerHTML = `<div class="stagger">${list.map((m, i) => `<div class="mission ${m.cur >= m.target ? 'done' : ''} ${m.claimed ? 'claimed' : ''}" ${stag(i)}>
+          <img class="mi" src="${kit(tab === 'daily' ? 'scroll_daily' : 'scroll_weekly')}" alt="">
+          <div class="mb"><div class="mt">${m.text}</div>
+            <div class="mp"><div class="progress"><i style="width:${(m.cur / m.target) * 100}%"></i></div><span>${m.cur}/${m.target}</span></div></div>
+          <div class="mr"><span class="coins"><img src="${icon('coin')}" alt="">${m.reward}</span>
+            <button class="btn small" data-act="claim" data-id="${m.id}" ${m.claimed || m.cur < m.target ? 'disabled' : ''}>${m.claimed ? '✓' : 'RECLAMAR'}</button></div>
+        </div>`).join('')}</div>
+        <div class="t-label dim" style="text-align:center;margin:.5rem 0" id="cd">SE RENUEVA EN ${left()}</div>
+        <div class="chest-card ${M.chest ? 'claimed' : ''}">
+          <img src="${kit(M.chest || M.claimedWeek >= ch.need ? 'chest_open' : 'chest_closed')}" alt="">
+          <div class="mb"><div class="mt">COFRE SEMANAL</div>
+            <div class="steps">${Array.from({ length: ch.need }, (_, k) => `<i class="${k < M.claimedWeek ? 'on' : ''}"></i>`).join('')}</div>
+            <div class="t-label dim" style="font-size:.8rem">Reclama ${ch.need} misiones esta semana</div></div>
+          <button class="btn small" data-act="chest" ${M.chest || M.claimedWeek < ch.need ? 'disabled' : ''}><img class="ic" src="${icon('coin')}" alt="">${M.chest ? '✓' : ch.coins}</button>
+        </div>`;
+    };
+    paint();
+    const iv = setInterval(() => { const c = $(e, '#cd'); if (c) c.textContent = `SE RENUEVA EN ${left()}`; }, 1000);
+    this.wire(e, {
+      tab: (b) => { tab = b.dataset.t; e.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t === b)); paint(); },
+      claim: (b) => { const c = meta.claimMission(b.dataset.id); if (c) { this.toast(`+${c} monedas`); paint(); } },
+      chest: () => { const c = meta.claimChest(); if (c) { this.toast(`¡Cofre! +${fmt(c)} monedas`); paint(); } },
+    });
+    return { el: e, destroy: () => clearInterval(iv) };
+  }
+
+  // ------------------------------------------------------------ daily streak
+  openStreak() {
+    const info = meta.streakState();
+    const R = meta.STREAK_REWARDS;
+    const tiles = R.map((c, i) => {
+      const day = i + 1;
+      const done = info.claimedToday ? day <= info.day : day < info.day;
+      const today = !info.claimedToday && day === info.day;
+      const big = day === 7;
+      return `<div class="day ${done ? 'done' : ''} ${today ? 'today' : ''} ${big ? 'big' : ''}">
+        <b>${day}</b><img src="${kit(big ? (done ? 'chest_open' : 'chest_closed') : 'calendar')}" alt=""><span><img src="${icon('coin')}" alt="">${fmt(c)}</span>
+        ${done ? `<img class="stamp" src="${kit('collected')}" alt="">` : ''}${today ? '<em>HOY</em>' : ''}</div>`;
+    }).join('');
+    const o = this.overlay(`<div class="overlay dark"><div class="panel strong"><div class="inner">
+      <div class="ov-title worn">RACHA DIARIA</div>
+      <div class="ov-sub">Vuelve cada día para ganar más</div>
+      <div class="t-label glow-amber"><img src="${kit('flame')}" style="height:1.3rem;vertical-align:-.25rem"> RACHA: ${info.count} ${info.count === 1 ? 'DÍA' : 'DÍAS'}</div>
+      <div class="days">${tiles}</div>
+      ${info.claimedToday ? '<button class="btn" data-act="close" style="width:100%" disabled>YA RECLAMADO HOY</button>' : `<button class="btn-primary" data-act="claim" style="width:100%"><span class="worn">RECLAMAR</span></button>
+        <button class="link" data-act="claim2">Ver anuncio para duplicar</button>`}
+      <button class="link" data-act="close">Cerrar</button>
+    </div></div></div>`);
+    const done = (double) => {
+      const c = meta.claimStreak(double);
+      if (c) this.toast(`+${fmt(c)} monedas`);
+      this.closeOverlay(o);
+      if (this.cur && this.cur.name === 'home') this.go('home');
+    };
+    this.wire(o, {
+      claim: () => done(false),
+      claim2: () => this.fakeAd(() => done(true)),
+      close: () => this.closeOverlay(o),
+    });
+  }
+
+  // ------------------------------------------------------------ achievements & statistics
+  scr_ach() {
+    this.setBg('deep');
+    const S = this.S();
+    const A = meta.ACHIEVEMENTS;
+    const got = A.filter((a) => S.ach[a.id]).length;
+    const st = S.stats;
+    const fmtH = (s) => (s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min` : `${Math.floor(s / 60)} min`);
+    const rows = [
+      ['orb', 'Orbes comidos', fmt(st.orbs)], ['flame', 'Mejor racha sin morir', `${st.bestClean} niveles`], ['snake', 'Serpiente más larga', st.maxLen],
+      ['map', 'Mapas completados', `${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].filter((m) => store.clearedLevels(m, 'easy') >= 10 || store.clearedLevels(m, 'normal') >= 10 || store.clearedLevels(m, 'hard') >= 10).length}/16`],
+      ['star_gold', 'Estrellas conseguidas', `${store.totalStars('easy') + store.totalStars('normal') + store.totalStars('hard')}`], ['bars', 'Duelos ganados', st.duelWins], ['chest_closed', 'Objetos recogidos', st.items],
+    ];
+    const e = el(`<section>
+      ${this.topbar('LOGROS ' + got + '/' + A.length)}
+      <div class="scroll">
+        <div class="medal-grid stagger">${A.map((a, i) => {
+          const have = !!S.ach[a.id];
+          const p = meta.achievementProgress(a);
+          return `<div class="medal ${have ? 'on' : ''}" ${stag(i)}><img src="${kit(have ? 'medal_' + a.tier : 'medal_locked')}" alt="">
+            <b>${a.name}</b><small>${a.text}</small><div class="progress"><i style="width:${(p / a.need) * 100}%"></i></div></div>`;
+        }).join('')}</div>
+        <div class="sec">ESTADÍSTICAS</div>
+        <div class="stat-list">${rows.map(([ic, k, v]) => `<div><img src="${ic === 'orb' ? icon('orb_red') : kit(ic)}" alt=""><span>${k}</span><b>${v}</b></div>`).join('')}
+          <div><img src="${kit('cloud')}" alt=""><span>Tiempo jugado</span><b>${fmtH(st.playSec)}</b></div></div>
+        <button class="btn" data-act="share" style="width:100%;margin:.6rem 0">COMPARTIR</button>
+      </div>
+      ${this.nav('home')}
+    </section>`);
+    this.wire(e, {
+      share: async () => {
+        const text = `Llevo ${fmt(st.orbs)} orbes y ${got}/${A.length} logros en ZNAKEX. ¿Me superas?`;
+        try { if (navigator.share) await navigator.share({ title: 'ZNAKEX', text }); else { await navigator.clipboard.writeText(text); this.toast('Texto copiado'); } } catch { /* cancelled */ }
+      },
+    });
+    return { el: e };
+  }
+
+  // ------------------------------------------------------------ season: map + pass
+  scr_season({ tab = 'map', ch } = {}) {
+    this.setBg('deep');
+    const S = this.S();
+    const cleared = store.seasonCleared();
+    const chapter = ch ?? (cleared >= 10 ? 1 : 0);
+    const days = Math.ceil(meta.seasonLeft() / 86400000);
+    const head = `<div class="season-head"><img src="${url('ui/season_badge.png')}" alt=""><div><div class="t-display worn" style="font-size:1.9rem">${meta.SEASON.name}</div>
+      <div class="t-label dim" style="font-size:.85rem">${meta.seasonActive() ? (CONFIG.tester ? 'MODO TESTER' : `TERMINA EN ${days} ${days === 1 ? 'DÍA' : 'DÍAS'}`) : 'TEMPORADA FINALIZADA'}</div></div></div>
+      <div class="tabs"><button class="tab ${tab === 'map' ? 'on' : ''}" data-act="stab" data-t="map">MAPA</button><button class="tab ${tab === 'pass' ? 'on' : ''}" data-act="stab" data-t="pass">PASE</button></div>`;
+    if (tab === 'pass') return this.seasonPass(head);
+    const P = [[50, 93], [74, 84], [52, 75], [26, 66], [48, 57], [74, 48], [52, 39], [26, 30], [46, 21], [58, 9]];
+    let selected = clamp(cleared + 1 - chapter * 10, 1, 10);
+    if (cleared >= 20) selected = 10;
+    const e = el(`<section style="background:url(${url(SEASON_MAP.key)}) center/cover">
+      <div style="position:absolute;inset:0;background:linear-gradient(to bottom, rgba(6,9,6,.55), rgba(6,9,6,.2) 30%, rgba(6,9,6,.35) 70%, rgba(6,9,6,.9))"></div>
+      ${this.topbar('TEMPORADA', 'home')}
+      ${head}
+      <div class="diffbar" style="grid-template-columns:repeat(2,1fr)"><button class="dchip ${chapter === 0 ? 'on' : ''}" data-act="chap" data-c="0" style="--dc:#E87532">CAPÍTULO 1 · 1-10</button><button class="dchip ${chapter === 1 ? 'on' : ''}" data-act="chap" data-c="1" style="--dc:#E87532">CAPÍTULO 2 · 11-20</button></div>
+      <div class="levels-wrap compact" id="lw">
+        <svg class="path" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${P.map((p) => p.join(',')).join(' ')}" fill="none" stroke="rgba(242,239,230,.55)" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
+        ${P.map(([x, y], i) => {
+          const n = chapter * 10 + i + 1;
+          const open = n <= cleared + 1 && meta.seasonMapAccess(n);
+          const st = n <= cleared ? 'cleared' : n === cleared + 1 && open ? 'current' : 'locked';
+          const guardian = n === 10 || n === 20;
+          const img = guardian ? (st === 'locked' ? 'locked' : 'guardian') : st;
+          const stars = store.starsOf(17, n, 'normal');
+          return `<button class="level-node ${st} ${guardian ? 'guardian' : ''}" data-act="lv" data-n="${n}" style="left:${x}%;top:${y}%">
+            <img src="${url('ui/nodes/' + img + '.png')}" alt="">${guardian ? '' : `<span class="num">${n}</span>`}
+            ${n <= cleared ? `<span class="nstars">${[1, 2, 3].map((k) => `<img src="${kit(k <= stars ? 'star_gold' : 'star_empty')}" alt="">`).join('')}</span>` : `<span class="rw"><img src="${icon('coin')}" alt="">${storyLevel(17, n).reward}</span>`}</button>`;
+        }).join('')}
+      </div>
+      <div class="panel" id="lp" style="margin-bottom:.4rem"></div>
+    </section>`);
+    const paint = () => {
+      const n = chapter * 10 + selected;
+      const L = storyLevel(17, n);
+      const gated = !meta.seasonMapAccess(n);
+      const locked = n > cleared + 1 || gated || !meta.seasonActive();
+      $(e, '#lp').innerHTML = `<div class="inner level-panel">
+        <div>
+          <div class="t-display worn" style="font-size:2.1rem">${L.guardian ? 'GUARDIÁN · ' : ''}NIVEL ${n}</div>
+          <div class="obj"><img src="${icon('orb_red')}" alt="">RECOGE ${L.target} ORBES</div>
+          <div class="obj dim">${gated ? 'Necesitas el pase premium (niveles 6-20)' : cleared >= 20 ? '<span style="color:var(--honey)">¡Skin de temporada conseguida!</span>' : `Completa los 20 niveles para la skin · ${cleared}/20`}</div>
+        </div>
+        <button class="btn-primary" data-act="play" style="min-height:4rem;font-size:2.1rem;padding:0 1.4rem">${gated ? `<span class="worn">PASE</span>` : locked ? '<img src="' + icon('lock') + '" style="width:2rem;border-radius:.2rem">' : '<span class="worn">JUGAR</span>'}</button>
+      </div>`;
+      e.querySelectorAll('.level-node').forEach((nd) => nd.classList.toggle('sel', Number(nd.dataset.n) === n));
+    };
+    paint();
+    this.wire(e, {
+      stab: (b) => this.go('season', { tab: b.dataset.t }),
+      chap: (b) => this.go('season', { tab: 'map', ch: Number(b.dataset.c) }),
+      lv: (b) => { selected = Number(b.dataset.n) - chapter * 10; paint(); },
+      play: () => {
+        const n = chapter * 10 + selected;
+        if (!meta.seasonMapAccess(n)) return this.go('season', { tab: 'pass' });
+        if (n > cleared + 1) return this.toast('Supera el nivel anterior');
+        if (!meta.seasonActive()) return this.toast('La temporada ha terminado');
+        this.startGame({ mode: 'story', level: storyLevel(17, n) });
+      },
+    });
+    return { el: e };
+  }
+
+  seasonPass(head) {
+    const S = this.S();
+    const se = S.season;
+    const tier = meta.seasonTier();
+    const SE = meta.SEASON;
+    const xpIn = se.xp - tier * SE.xpPerTier;
+    const cell = (track, i) => {
+      const r = (track === 'prem' ? SE.prem : SE.free)[i];
+      const claimed = (track === 'prem' ? se.prem : se.free).includes(i);
+      const reached = i < tier;
+      const locked = track === 'prem' && !se.premium;
+      const cls = claimed ? 'claimed' : reached && !locked ? 'ready' : 'lock';
+      const inner = r.skin ? `<img class="sk" src="${url('skins/' + r.skin + '.jpg')}" alt="">` : `<img src="${icon('coin')}" alt=""><b>${r.c}</b>`;
+      return `<button class="slot ${cls}" data-act="tclaim" data-t="${track}" data-i="${i}">${inner}${claimed ? '<i class="ck">✓</i>' : locked || !reached ? `<img class="lk2" src="${kit('slot_locked')}" alt="">` : ''}</button>`;
+    };
+    const e = el(`<section>
+      ${this.topbar('TEMPORADA', 'home')}
+      ${head}
+      <div class="pass-bar"><span class="t-display" style="font-size:1.5rem">NIVEL ${tier}/${SE.tiers}</span><div class="progress" style="flex:1"><i style="width:${tier >= SE.tiers ? 100 : (xpIn / SE.xpPerTier) * 100}%"></i></div><span class="t-label" style="font-size:.85rem">${tier >= SE.tiers ? 'MÁX' : `${xpIn}/${SE.xpPerTier} PX`}</span></div>
+      <div class="pass-cols"><span>GRATIS</span><span>PREMIUM</span></div>
+      <div class="scroll"><div class="pass-list">${Array.from({ length: SE.tiers }, (_, i) => `<div class="tier ${i < tier ? 'reach' : ''}"><em>${i + 1}</em>${cell('free', i)}${cell('prem', i)}</div>`).join('')}</div></div>
+      <div style="padding:.5rem 0 .2rem">
+        ${se.premium ? '<div class="btn" style="width:100%;text-align:center">PASE PREMIUM ACTIVO ✓</div>' : `<button class="btn-primary" data-act="buypass" style="width:100%"><span class="stack"><span class="worn">OBTENER PASE PREMIUM · ${SE.price}</span><span class="sub">Skin exclusiva · ${fmt(SE.bonusCoins)} monedas · Mapa completo</span></span></button>`}
+        <div class="demo-note">Puntos de pase: superar niveles, estrellas y misiones. Compra simulada (demo).</div>
+      </div>
+      ${this.nav('home')}
+    </section>`);
+    this.wire(e, {
+      stab: (b) => this.go('season', { tab: b.dataset.t }),
+      tclaim: (b) => {
+        const r = meta.claimTier(b.dataset.t, Number(b.dataset.i));
+        if (r) { this.toast(r.skin ? '¡Skin de temporada!' : `+${r.c} monedas`); this.go('season', { tab: 'pass' }); }
+        else if (b.dataset.t === 'prem' && !se.premium) this.toast('Recompensa del pase premium');
+        else if (Number(b.dataset.i) >= tier) this.toast('Sube de nivel de pase para reclamarla');
+      },
+      buypass: () => this.popup({
+        title: 'PASE DE TEMPORADA', icon: 'coins', text: `Skin exclusiva, <b>${fmt(SE.bonusCoins)}</b> monedas, mapa completo y recompensas premium por <b>${SE.price}</b>.<br><span class="dim">Compra simulada en la demo.</span>`,
+        buttons: [['COMPRAR', () => { meta.buyPass(); this.toast('¡Pase premium activado!'); this.go('season', { tab: 'pass' }); }, true], ['CANCELAR', null]],
+      }),
+    });
+    return { el: e };
   }
 
   // ------------------------------------------------------------ shop
@@ -528,6 +809,10 @@ export class UI {
         <div class="sec">CONTROLES</div>
         <div class="ctl-grid">${[['swipe', 'DESLIZAR'], ['buttons', 'FLECHAS'], ['joystick', 'PALANCA'], ['tap', 'TOQUES']].map(([v, l]) => `<button class="ctl ${set.controls === v ? 'on' : ''}" data-act="ctl" data-v="${v}"><span class="ctl-ic ctl-${v}"></span>${l}</button>`).join('')}</div>
         <div class="demo-note" id="ctlinfo" style="text-align:left;margin-top:.3rem">${CONTROL_INFO[set.controls] || ''}</div>
+        <div class="sec">CUENTA Y GUARDADO</div>
+        <div class="set-row"><span class="l"><img src="${kit('gamepad')}">GOOGLE PLAY GAMES</span><span class="t-label dim" style="font-size:.8rem">${cloud.available() ? 'CONECTADO' : 'EN LA APP DE GOOGLE PLAY'}</span></div>
+        <div class="set-row"><span class="l"><img src="${kit('cloud')}">CÓDIGO DE GUARDADO</span><span style="display:flex;gap:.4rem"><button class="btn small" data-act="savecode">COPIAR</button><button class="btn small" data-act="loadcode">RESTAURAR</button></span></div>
+        <div class="set-row"><span class="l"><img src="${kit('bulb')}">TUTORIAL</span><button class="btn small" data-act="tutorial">REPETIR</button></div>
         <div class="sec">DEMO</div>
         <div class="set-row"><span>+5.000 MONEDAS</span><button class="btn small" data-act="coins">AÑADIR</button></div>
         <div class="set-row"><span>RULETA DE HOY</span><button class="btn small" data-act="wheel">REINICIAR</button></div>
@@ -540,6 +825,9 @@ export class UI {
       ${this.nav('settings')}
     </section>`);
     this.wire(e, {
+      savecode: async () => { const c = cloud.exportCode(); try { await navigator.clipboard.writeText(c); this.toast('Código copiado'); } catch { window.prompt('Copia tu código de guardado:', c); } },
+      loadcode: () => { const c = window.prompt('Pega tu código de guardado:'); if (c) { if (cloud.importCode(c)) { this.toast('Partida restaurada'); this.go('home'); } else this.toast('Código no válido'); } },
+      tutorial: () => this.startGame({ mode: 'story', level: tutorialLevel() }),
       tg: (b) => { set[b.dataset.k] = !set[b.dataset.k]; b.classList.toggle('on', set[b.dataset.k]); if (b.dataset.k === 'lowfx') { document.body.classList.toggle('lowfx', set.lowfx); window.dispatchEvent(new Event('resize')); } store.save(); },
       ctl: (b) => { set.controls = b.dataset.v; e.querySelectorAll('[data-act=ctl]').forEach((x) => x.classList.toggle('on', x === b)); $(e, '#ctlinfo').textContent = CONTROL_INFO[set.controls]; store.save(); },
       coins: () => { store.addCoins(5000); this.toast('+5.000 monedas'); },
@@ -738,13 +1026,14 @@ export class UI {
   // ------------------------------------------------------------ game
   startGame(cfg) {
     this.lastCfg = cfg;
+    if (cfg.mode === 'duel') meta.track('duelplay');
     if (this.game) this.game = null;
     this.closeOverlays();
     this.go('game', cfg);
   }
 
   scr_game(cfg) {
-    const art = cfg.mode === 'story' ? cfg.level.mapInfo.key : { classic: 'maps/key06.jpg', frenzy: 'maps/key12.jpg', duel: 'maps/key09.jpg' }[cfg.mode];
+    const art = cfg.mode === 'story' ? (cfg.level.mapInfo.key) : { classic: 'maps/key06.jpg', frenzy: 'maps/key12.jpg', duel: 'maps/key09.jpg' }[cfg.mode];
     this.setBg('game', art);
     const S = this.S();
     const e = el(`<section style="padding:0">
@@ -755,6 +1044,7 @@ export class UI {
       </div>
       <div class="hud-bottom">
         <div class="tag-level" id="tl"></div>
+        <div class="pw-row" id="pwr"></div>
         <div class="boost" id="bo"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="rgba(0,0,0,.5)" stroke="rgba(255,255,255,.15)" stroke-width="4"/><circle id="bor" cx="20" cy="20" r="16" fill="none" stroke="#FFC23A" stroke-width="4" stroke-dasharray="100.5" stroke-dashoffset="0" stroke-linecap="round"/></svg>x2</div>
       </div>
       ${S.settings.controls === 'buttons' ? `<div class="dpad"><button class="u" data-dir="up"><i></i></button><button class="l" data-dir="left"><i></i></button><button class="d" data-dir="down"><i></i></button><button class="r" data-dir="right"><i></i></button></div>` : ''}
@@ -766,7 +1056,9 @@ export class UI {
     const hc = $(e, '#hc');
     if (mode === 'story') {
       hc.innerHTML = `<div class="hud-obj"><img src="${icon('orb_red')}" alt=""><span id="ho">0 / ${cfg.level.target}</span></div><div class="hud-bar"><i id="hb"></i></div>`;
-      $(e, '#tl').textContent = `${cfg.level.guardian ? 'GUARDIÁN · ' : ''}NIVEL ${cfg.level.map}-${cfg.level.n} · ${cfg.level.mapInfo.name} · ${DIFFS[cfg.level.diff].label}`;
+      $(e, '#tl').textContent = cfg.level.tutorial ? 'TUTORIAL · NIVEL 0'
+        : cfg.level.season ? `${cfg.level.guardian ? 'GUARDIÁN · ' : ''}TEMPORADA · NIVEL ${cfg.level.n}`
+          : `${cfg.level.guardian ? 'GUARDIÁN · ' : ''}NIVEL ${cfg.level.map}-${cfg.level.n} · ${cfg.level.mapInfo.name} · ${DIFFS[cfg.level.diff].label}`;
     } else if (mode === 'classic') {
       hc.innerHTML = `<div class="hud-obj"><img src="${icon('mode_classic')}" alt=""><span id="ho">LARGO 3</span></div><div class="t-label dim" style="font-size:.75rem">RÉCORD ${fmt(S.best.classic)}</div>`;
       $(e, '#tl').textContent = 'CLÁSICO';
@@ -796,10 +1088,11 @@ export class UI {
   fxLayer() { return this.hudEl && $(this.hudEl, '#fxl'); }
 
   // keeps the warning strip and the d-pad in the free space under the board
-  placeUnderBoard(under, H, strip) {
+  placeUnderBoard(under, H, strip, boardTop = 0) {
     const e = this.hudEl;
     if (!e) return;
     this.warnTop = under + 4;
+    this.boardTop = boardTop;
     const tag = e.querySelector('.hud-bottom');
     if (tag && e.querySelector('.dpad')) { tag.style.bottom = 'auto'; tag.style.top = `${Math.round(under + 6)}px`; tag.style.justifyContent = 'center'; }
     const pad = e.querySelector('.dpad');
@@ -824,7 +1117,7 @@ export class UI {
   countdown(done) {
     const layer = this.fxLayer();
     const ctl = this.S().settings.controls || 'swipe';
-    if (this.hudEl && ctl !== 'buttons') {
+    if (this.hudEl && ctl !== 'buttons' && !(this.lastCfg && this.lastCfg.level && this.lastCfg.level.tutorial)) {
       const h = el(`<div class="ctl-hint"><span class="ctl-ic ctl-${ctl}"></span>${CONTROL_INFO[ctl]}</div>`);
       const dp = this.hudEl.querySelector('.dpad');
       if (dp) h.style.bottom = `${Math.round(window.innerHeight - dp.getBoundingClientRect().top + 8)}px`;
@@ -917,6 +1210,53 @@ export class UI {
     if (h) h.remove();
   }
 
+  // wide banner plaque (banner kit) that announces an event on top of the board
+  plaque(text, idx, sec = 2) {
+    if (!this.hudEl) return;
+    const p = el(`<div class="plaque p${idx}" style="top:${Math.round((this.boardTop || 60) + 6)}px;animation-duration:${sec}s"><img src="${url('ui/banners/b' + idx + '.png')}" alt=""><span>${text}</span></div>`);
+    this.hudEl.appendChild(p);
+    setTimeout(() => p.remove(), sec * 1000 + 80);
+  }
+
+  // effect chips (magnet, portal, force field, star) with their countdown rings
+  pwHud(st) {
+    const row = this.hudEl && $(this.hudEl, '#pwr');
+    if (!row) return;
+    const items = [['shield', st.shield > 0 ? st.shield / 2 : 0, st.shield], ['magnet', st.magnet, 0], ['portal', st.portal, 0], ['star', st.star, 0]];
+    for (const [k, v, n] of items) {
+      let c = $(row, `[data-k=${k}]`);
+      if (v <= 0) { if (c) c.remove(); continue; }
+      if (!c) {
+        c = el(`<div class="pw-chip" data-k="${k}"><img src="${k === 'shield' ? pwi('shield') : pwi(PW[k].hud)}" alt=""><b></b></div>`);
+        row.appendChild(c);
+      }
+      c.style.setProperty('--k', String(clamp(k === 'shield' ? 1 : v, 0, 1)));
+      $(c, 'b').textContent = k === 'shield' ? `x${n}` : '';
+    }
+  }
+
+  shiftFlash() { this.flash('white'); }
+
+  tutStep(i) {
+    if (!this.hudEl) return;
+    const T = [
+      ['DESLIZA PARA GIRAR', 'Mueve el dedo hacia donde quieras ir. Prueba con dos giros.', 'swipe'],
+      ['COME EL ORBE ROJO', 'Cada orbe rojo te hace crecer un poquito y suma al objetivo.', 'orb'],
+      ['ORBE DORADO', '¡Crece x3 y vas al doble de velocidad unos segundos!', 'star_gold'],
+      ['EVITA LOS OBSTÁCULOS', 'Agua, lava y pinchos te eliminan. Recoge el campo de fuerza: rompe 2 obstáculos.', 'eye'],
+    ][i];
+    const old = $(this.hudEl, '.tut-panel');
+    if (old) old.remove();
+    const p = el(`<div class="tut-panel" style="top:${Math.round(this.warnTop || 0)}px"><img class="ic" src="${T[2] === 'orb' ? icon('orb_red') : kit(T[2])}" alt="">
+      <div><div class="tt">${T[0]} <span>${i + 1}/4</span></div><div class="tx">${T[1]}</div></div></div>`);
+    this.hudEl.appendChild(p);
+    if (i === 0) {
+      const h = el(`<img class="tut-hand" src="${kit('swipe')}" alt="">`);
+      this.hudEl.appendChild(h);
+      setTimeout(() => h.remove(), 6500);
+    }
+  }
+
   pause() {
     const game = this.game;
     if (!game || game.paused || !['play', 'countdown', 'ready'].includes(game.state)) return;
@@ -954,18 +1294,23 @@ export class UI {
     if (r >= 2) { game.giveUp(); return; }
     const cost = ECONOMY.reviveCoins[r];
     const canAd = r === 0;
-    let sub = info.mode === 'story' ? `Solo te faltan ${info.left} orbes` : info.mode === 'duel' ? '¡El duelo sigue abierto!' : `${fmt(info.score)} puntos`;
+    let sub = info.mode === 'story' ? (info.left === 1 ? 'Te faltó 1 orbe' : `Te faltaron ${info.left} orbes`) : info.mode === 'duel' ? '¡El duelo sigue abierto!' : `${fmt(info.score)} puntos`;
     if (r === 1) sub = 'Última oportunidad';
     const prog = info.target ? `<div style="width:100%;display:flex;align-items:center;gap:.5rem"><img src="${icon('orb_red')}" style="width:1.8rem;border-radius:.2rem"><div class="progress" style="flex:1"><i style="width:${(info.cur / info.target) * 100}%"></i></div><span class="t-display" style="font-size:1.4rem">${info.cur}/${info.target}</span></div>` : '';
     const enough = S.coins >= cost;
+    const tip = this.deathTip(info);
+    const tipHtml = `<div class="tip-chip"><img src="${kit('bulb')}" alt=""><span>${tip}</span></div>`;
+    const adCoin = `<button class="chip-ad" data-act="adcoin"><img src="${kit('plus1')}" alt=""><span>+1 MONEDA · VER ANUNCIO</span></button>`;
     const o = this.overlay(`<div class="overlay" style="justify-content:flex-end;padding-bottom:12%"><div class="panel"><div class="inner">
-      <div class="ov-title worn">¡CASI!</div>
+      <div class="ov-title worn">${info.target && info.left / info.target > 0.4 ? '¡AY!' : '¡CASI!'}</div>
       <div class="ov-sub">${sub}</div>
       ${prog}
+      ${tipHtml}
       ${canAd ? `<div class="revive-main"><button class="btn-primary" data-act="ad" style="width:100%"><img src="${icon('ad')}" style="width:2.2rem;border-radius:.25rem"><span class="stack"><span class="worn">REVIVIR</span><span class="sub">VER ANUNCIO</span></span></button>
         <div class="ring"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="rgba(10,14,11,.9)" stroke="rgba(255,255,255,.15)" stroke-width="3"/><circle id="rr" cx="20" cy="20" r="17" fill="none" stroke="#E8B04A" stroke-width="3" stroke-dasharray="106.8" stroke-dashoffset="0" stroke-linecap="round"/></svg><span id="rn">6</span></div></div>` : ''}
       <button class="${canAd ? 'btn' : 'btn-primary'}" data-act="coins" style="width:100%;${canAd ? '' : 'min-height:4rem;font-size:2rem'}"><img class="ic" src="${icon('coin')}" style="${canAd ? '' : 'width:2rem;height:2rem;border-radius:50%'}"><span>REVIVIR · ${cost}</span></button>
       ${enough ? '' : `<div class="t-label" style="color:#FF8A7A;font-size:.85rem">TE FALTAN ${fmt(cost - S.coins)} MONEDAS · <button class="link" data-act="getcoins" style="padding:0;color:var(--honey)">CONSEGUIR</button></div>`}
+      ${adCoin}
       <div class="btn-row"><button class="btn small" data-act="retry"><img class="ic" src="${icon('retry')}">REINTENTAR</button><button class="btn small" data-act="home"><img class="ic" src="${icon('home')}">SALIR</button></div>
       <button class="link" data-act="no">No, gracias</button>
     </div></div></div>`);
@@ -1003,10 +1348,28 @@ export class UI {
         game.revive();
       },
       getcoins: () => { paused = true; this.quickShop(() => { paused = false; }); },
+      adcoin: (b) => {
+        paused = true;
+        this.fakeAd(() => { store.addCoins(1); this.toast('+1 moneda'); b.remove(); paused = false; });
+      },
       retry: () => this.startGame(this.lastCfg),
       home: () => this.exitGame(),
       no: () => decline(),
     });
+  }
+
+  // One short line about what just happened, tuned to the map and the way the player died.
+  deathTip(info) {
+    const LETHAL = { 1: 'El río', 2: 'El estanque', 3: 'El agua', 4: 'El río de esporas', 5: 'La arena movediza', 6: 'El lodo tóxico', 7: 'El agua helada', 8: 'El abismo de cristal', 9: 'El agua profunda', 10: 'La lava', 11: 'El mar', 12: 'El foso', 13: 'El vacío', 14: 'El agua sagrada', 15: 'La ciénaga', 16: 'El canal de energía', 17: 'El pantano maldito' };
+    if (info.mode === 'duel') return 'Corta el paso al rival, pero no cruces su cuerpo.';
+    if (info.reason === 'hazard') {
+      if (info.cellT === 6) return 'Los pinchos te eliminan. Recoge el campo de fuerza para romperlos.';
+      return `${LETHAL[info.map] || 'El terreno'} te elimina. Cruza por los puentes.`;
+    }
+    if (info.reason === 'obstacle') return 'Los obstáculos bloquean el paso. Rodéalos o rómpelos con el campo de fuerza.';
+    if (info.reason === 'wall') return 'Los muros del borde te detienen. Gira antes de llegar.';
+    if (info.reason === 'self') return 'Cuidado con tu cola: deja espacio para girar.';
+    return 'Planifica tu ruta un par de casillas por delante.';
   }
 
   // Minimal in-game coin pack sheet (keeps the run alive).
@@ -1038,27 +1401,53 @@ export class UI {
     const t = res.time;
     const time = `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
-    if (res.mode === 'story') {
+    if (res.mode === 'story' && res.tutorial) {
+      coins = res.won ? 100 : 0;
+      if (res.won) { S.tutorialSeen = true; store.save(); }
+      html = `<div class="t-label glow-amber">TUTORIAL</div>
+        <div class="ov-title worn">¡LISTO PARA JUGAR!</div>
+        <div class="ov-sub">Ya conoces los orbes, los obstáculos y el campo de fuerza</div>
+        <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>
+        <button class="btn-primary" data-act="first" style="width:100%"><span class="worn">JUGAR NIVEL 1-1</span><i class="tri"></i></button>
+        <div class="btn-row"><button class="btn" data-act="retry"><img class="ic" src="${icon('retry')}">REPETIR</button><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">INICIO</button></div>`;
+    } else if (res.mode === 'story') {
       const L = cfg.level;
+      const back = L.season ? 'season' : 'levels';
       if (res.won) {
         const first = store.markCleared(L.map, L.n, L.diff);
-        coins = first ? L.reward : ECONOMY.replayReward;
+        const gained = store.setStars(L.map, L.n, res.stars, L.diff);
+        coins = (first ? L.reward : ECONOMY.replayReward) + gained * 15;
+        // progress hooks: missions, achievements, season points
+        meta.track('level');
+        if (res.deaths === 0) meta.track('level_clean');
+        if (gained) meta.track('star', gained);
+        if (res.stars === 3) meta.track('star3');
+        meta.addSeasonXp((L.season ? 25 : first ? 15 : 5) + (res.stars === 3 ? 10 : 0));
+        const skinNow = L.season && L.n === 20 && meta.seasonSkinUnlock();
         html = `<div class="t-label glow-amber">${L.guardian ? '¡GUARDIÁN DERROTADO!' : '¡OBJETIVO CUMPLIDO!'}</div>
-          <div class="ov-title worn">NIVEL SUPERADO</div>
-          <div class="ov-sub">${L.map}-${L.n} · ${L.mapInfo.name}</div>
+          <div class="ov-title worn">¡NIVEL SUPERADO!</div>
+          <div class="ov-sub">${L.season ? 'TEMPORADA' : L.map + '-'}${L.season ? ' · NIVEL ' + L.n : L.n} · ${L.mapInfo.name}</div>
+          <div class="star-row">${[
+            ['Objetivo', true], [res.deaths ? 'Sin morir' : 'Sin morir', res.deaths === 0], [`Rápido · ${fmtT(res.par)}`, res.stars === 3],
+          ].map(([cap, on], i) => `<div class="star ${on ? 'on' : ''}" style="--d:${0.35 + i * 0.3}s"><img src="${kit(on ? 'star_gold' : 'star_empty')}" alt=""><span>${cap}</span></div>`).join('')}</div>
+          ${res.stars === 3 ? '<div class="newrec">¡PERFECTO!</div>' : ''}
           ${statRow([['ORBES', `${Math.min(res.orbs, L.target)}/${L.target}`], ['PUNTOS', fmt(res.score)], ['TIEMPO', time]])}
           <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>
           ${first ? '' : '<div class="demo-note">Nivel repetido: recompensa reducida</div>'}
-          ${L.n < 10 ? `<button class="btn-primary" data-act="next" style="width:100%"><span class="worn">SIGUIENTE</span><i class="tri"></i></button>`
-            : `<div class="t-label glow-amber">¡MAPA ${ROMAN[L.map - 1]} COMPLETADO!</div>${L.map < 16 ? `<button class="btn-primary" data-act="nextmap" style="width:100%"><span class="stack"><span class="worn">SIGUIENTE MAPA</span><span class="sub">${MAPS[L.map].name}</span></span></button>` : ''}`}
+          ${skinNow ? `<div class="t-label glow-amber">¡SKIN DE TEMPORADA DESBLOQUEADA!</div>` : ''}
+          <button class="ad-x2" data-act="x2"><img src="${kit('x2')}" alt=""><span>x2 MONEDAS · VER ANUNCIO</span><img class="vid" src="${kit('video')}" alt=""></button>
+          ${L.season ? (L.n < 20 ? `<button class="btn-primary" data-act="next" style="width:100%"><span class="worn">SIGUIENTE</span><i class="tri"></i></button>` : `<div class="t-label glow-amber">¡TEMPORADA COMPLETADA!</div>`)
+            : L.n < 10 ? `<button class="btn-primary" data-act="next" style="width:100%"><span class="worn">SIGUIENTE</span><i class="tri"></i></button>`
+              : `<div class="t-label glow-amber">¡MAPA ${ROMAN[L.map - 1]} COMPLETADO!</div>${L.map < 16 ? `<button class="btn-primary" data-act="nextmap" style="width:100%"><span class="stack"><span class="worn">SIGUIENTE MAPA</span><span class="sub">${MAPS[L.map].name}</span></span></button>` : ''}`}
           <div class="btn-row"><button class="btn" data-act="retry"><img class="ic" src="${icon('retry')}">REPETIR</button><button class="btn" data-act="levels"><img class="ic" src="${icon('levels')}">NIVELES</button></div>`;
       } else {
         html = `<div class="ov-title worn">NIVEL FALLIDO</div>
-          <div class="ov-sub">${L.map}-${L.n} · ${L.mapInfo.name}</div>
+          <div class="ov-sub">${L.season ? 'TEMPORADA · NIVEL ' + L.n : L.map + '-' + L.n} · ${L.mapInfo.name}</div>
           ${statRow([['ORBES', `${res.orbs}/${L.target}`], ['PUNTOS', fmt(res.score)], ['TIEMPO', time]])}
           <button class="btn-primary" data-act="retry" style="width:100%"><span class="worn">REINTENTAR</span></button>
           <div class="btn-row"><button class="btn" data-act="levels"><img class="ic" src="${icon('levels')}">NIVELES</button><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">INICIO</button></div>`;
       }
+      void back;
     } else if (res.mode === 'classic' || res.mode === 'frenzy') {
       const key = res.mode;
       const prevBest = S.best[key];
@@ -1071,6 +1460,7 @@ export class UI {
         <div class="ov-sub">RÉCORD ${fmt(Math.max(prevBest, res.score))}</div>
         ${statRow(key === 'classic' ? [['ORBES', res.orbs], ['LARGO', res.length], ['TIEMPO', time]] : [['DORADOS', res.gold], ['LARGO', res.length], ['TIEMPO', time]])}
         <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>
+        ${coins > 0 ? `<button class="ad-x2" data-act="x2"><img src="${kit('x2')}" alt=""><span>x2 MONEDAS · VER ANUNCIO</span><img class="vid" src="${kit('video')}" alt=""></button>` : ''}
         <button class="btn-primary" data-act="retry" style="width:100%"><span class="worn">JUGAR DE NUEVO</span></button>
         <div class="btn-row"><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">INICIO</button><button class="btn" data-act="lb"><img class="ic" src="${icon('mode_leaderboard')}">RANKING</button></div>`;
     } else if (res.mode === 'duel') {
@@ -1080,6 +1470,7 @@ export class UI {
         if (S.duelWins.day !== d) S.duelWins = { day: d, count: 0 };
         if (S.duelWins.count < ECONOMY.duelPaidWinsPerDay) { coins = ECONOMY.duelReward[cfg.difficulty]; S.duelWins.count++; }
         store.save();
+        meta.track('duelwin');
       }
       html = `<div class="ov-title worn" style="color:${res.won ? 'var(--honey)' : '#FF8A7A'}">${res.won ? 'VICTORIA' : 'DERROTA'}</div>
         <div class="ov-sub">${res.won ? `${b.name} DERROTADO` : res.loseReason === 'bot' ? `${b.name} LLEGÓ PRIMERO` : `${b.name} TE HA VENCIDO`}</div>
@@ -1109,8 +1500,17 @@ export class UI {
     this.wire(o, {
       next: () => this.startGame({ mode: 'story', level: storyLevel(cfg.level.map, cfg.level.n + 1, cfg.level.diff) }),
       retry: () => this.startGame(cfg),
-      levels: () => { this.game = null; this.go('levels', { map: cfg.level.map, sel: Math.min(10, cfg.level.n + (res.won ? 1 : 0)) }); },
+      levels: () => { this.game = null; if (cfg.level.season) this.go('season'); else this.go('levels', { map: cfg.level.map, sel: Math.min(10, cfg.level.n + (res.won ? 1 : 0)) }); },
       nextmap: () => { this.game = null; this.go('levels', { map: cfg.level.map + 1 }); },
+      first: () => this.startGame({ mode: 'story', level: storyLevel(1, 1, this.S().diff) }),
+      x2: (b) => {
+        this.fakeAd(() => {
+          store.addCoins(coins);
+          this.toast(`+${fmt(coins)} monedas más`);
+          const cr = $(o, '#cr'); if (cr) cr.textContent = '+' + fmt(coins * 2);
+          b.remove();
+        });
+      },
       home: () => { this.game = null; this.go('home'); },
       duel: () => { this.game = null; this.go('duel'); },
       lb: () => this.toast('Ranking con Google Play Games en la versión final'),

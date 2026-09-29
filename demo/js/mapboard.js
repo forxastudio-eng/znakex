@@ -32,6 +32,12 @@ export class MapBoard extends Board {
     this.map = level.map;
     this.def = level.def;
     this.mx = MX[level.map];
+    this.applyLevel();
+  }
+
+  // (re)build the lookup arrays from level.cells — also used after the level-5/10 shuffle
+  applyLevel() {
+    const level = this.level;
     const n = COLS * ROWS;
     this.solid = new Uint8Array(n);
     this.lethal = new Uint8Array(n);
@@ -52,6 +58,19 @@ export class MapBoard extends Board {
       this.portalMap.set(k2(b.x, b.y), { x: a.x, y: a.y, pair: i });
     });
     this.torches = [];
+  }
+
+  // force field: an obstacle or spike is destroyed
+  breakCell(x, y) {
+    const k = k2(x, y);
+    const t = this.level.cells[k];
+    if (t !== T.SOLID && t !== T.SPIKE) return false;
+    this.level.cells[k] = T.FLOOR;
+    this.level.obs = this.level.obs.filter((o) => !(o.x === x && o.y === y));
+    this.solid[k] = 0;
+    this.lethal[k] = 0;
+    this.orbBlocked[k] = 0;
+    return true;
   }
 
   isLethal(x, y) { return this.lethal[k2(x, y)] === 1; }

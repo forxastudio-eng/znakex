@@ -109,6 +109,9 @@ export const MAPS = [
 ].map((m) => ({ ...m, key: `maps/key${String(m.sheet).padStart(2, '0')}.jpg` }));
 
 
+// Monthly season map (20 levels, guardians at 10 and 20). Season 1 = Harvest Moon Hollow.
+export const SEASON_MAP = { id: 17, name: 'HARVEST MOON HOLLOW', key: 'maps/season1.jpg', hazard: 'hz_dark', levels: 20, freeLevels: 5, skin: 'harvest' };
+
 // ------------------------------------------------------------------ levels
 // Legend for ASCII layouts (duel arena): . floor | P pillar | T totem | C column (2 wide, with c) | W wall block
 const L = (rows) => rows.map((r) => r.padEnd(12, '.'));
@@ -126,6 +129,18 @@ const TARGET_MAP = { easy: 0.3, normal: 0.4, hard: 0.5 };
 const TARGET_LVL = { easy: 0.9, normal: 1.1, hard: 1.3 };
 
 export function storyLevel(map, n, diff = 'normal') {
+  if (map === 17) {
+    const g = n === 10 || n === 20;
+    return {
+      map, n, diff: 'normal', mapInfo: SEASON_MAP, season: true,
+      target: Math.round(11 + 0.85 * (n - 1)) + (g ? 2 : 0),
+      speed: 3.9 + 0.055 * (n - 1) + (g ? 0.2 : 0),
+      goldChance: Math.min(0.3, 0.1 + 0.01 * n),
+      reward: 60 + 10 * n,
+      spawn: { x: 5, y: 15, dir: 'up', len: 3 },
+      guardian: g,
+    };
+  }
   const d = DIFFS[diff] || DIFFS.normal;
   return {
     map, n, diff: d.id, mapInfo: MAPS[map - 1],
@@ -137,6 +152,12 @@ export function storyLevel(map, n, diff = 'normal') {
     guardian: n === 10,
   };
 }
+
+// Guided level 0 (first game): small target, easy terrain, scripted in game.js
+export const tutorialLevel = () => ({
+  map: 1, n: 4, diff: 'easy', mapInfo: MAPS[0], tutorial: true, target: 5, speed: 3.3, goldChance: 0, reward: 0,
+  spawn: { x: 5, y: 15, dir: 'up', len: 3 }, guardian: false,
+});
 
 export const DUEL_LAYOUT = L(['', '', '', '..Cc....Cc..', '', '', '', '', '..P......P..', '..P......P..', '', '', '', '', '..Cc....Cc..', '', '', '']);
 

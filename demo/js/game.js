@@ -3,7 +3,10 @@
 import { COLS, ROWS, BOTS, DUEL_LAYOUT, skinById } from './data.js';
 import { Board, randomFreeCell } from './board.js';
 import { MapBoard } from './mapboard.js';
-import { buildLevel, MAPDEF } from './maps.js';
+import { buildLevel, reshuffleObstacles, MAPDEF, T } from './maps.js';
+import { PW, MAGNET_RANGE, ITEM_LIFE, SHIELD_CHARGES, drawItem, drawAuras, pwImg, tinted, skinColor } from './powerups.js';
+import { track } from './meta.js';
+import { CONFIG } from './config.js';
 import { drawSnake } from './snakedraw.js';
 import { drawOrb, orbSpawnK } from './orbs.js';
 import { FX, Ambient, MapAmbient, glowSprite } from './fx.js';
@@ -13,6 +16,7 @@ import { DIRS, OPPOSITE, rand, clamp, lerp, ease, vibrate } from './util.js';
 const COMBO_WINDOW = 3;
 const BOOST_TIME = 4;
 const GOLD_LIFE = 6;
+const STAR_CHANCE = CONFIG.tester ? 0.16 : 0.035;
 
 class Snake {
   constructor(skin, spawn, isBot = false) {
@@ -65,6 +69,21 @@ export class Game {
     this.speedLevel = 0;
     this.timer = this.mode === 'frenzy' ? 60 : 0;
     this.elapsed = 0;
+    // pickups, effects and run statistics
+    this.items = [];
+    this.pw = { magnet: 0, portal: 0, shield: 0, star: 0 };
+    this.itemClock = 0;
+    this.nextShield = 9;
+    this.nextUtil = 22;
+    this.starDone = false;
+    this.deaths = 0;
+    this.itemsPicked = 0;
+    this.shifted = false;
+    this.whiteT = 0;
+    this.redLife = Infinity;
+    this.goldLife = GOLD_LIFE;
+    this.magnetT = 0;
+    this.tut = null;
     this.setup();
   }
 
@@ -79,6 +98,9 @@ export class Game {
       this.target = level.target;
       this.baseSpeed = level.speed;
       this.goldChance = level.goldChance;
+      this.par = Math.round((this.target * 12) / this.baseSpeed);
+      this.eventLevel = !level.tutorial && (level.season ? level.n % 5 === 0 : level.n === 5 || level.n === 10);
+      if (level.tutorial) this.tut = { step: 0, turns: 0 };
     } else if (mode === 'classic') {
       this.baseSpeed = 4.6;
       this.goldChance = 0.14;
@@ -140,7 +162,7 @@ export class Game {
     this.ambient.resize(this.board.w, this.board.h);
     this.R = this.board.cell * 0.34;
     const under = this.board.y + this.board.h + this.board.frame; // first free pixel below the frame
-    if (this.ui.placeUnderBoard) this.ui.placeUnderBoard(under, H, strip);
+    if (this.ui.placeUnderBoard) this.ui.placeUnderBoard(under, H, strip, this.board.y - this.board.frame);
   }
 
   // ---------------------------------------------------------------- orbs
@@ -154,7 +176,7 @@ export class Game {
   spawnOrb(type, instant = false) {
     const cell = randomFreeCell(this.board, this.occupiedSet(), this.player.cells[0]);
     if (!cell) return;
-    const o = { ...cell, type, born: instant ? this.t - 1 : this.t, life: type === 'gold' && this.mode !== 'frenzy' ? GOLD_LIFE : Infinity };
+    const o = { ...cell, type, born: instant ? this.t - 1 : this.t, life: type === 'gold' && this.mode !== 'frenzy' ? this.goldLife : type === 'red' ? this.redLife : Infinity };
     this.orbs.push(o);
     const x = this.board.cx(o.x), y = this.board.cy(o.y);
     if (!instant) {
@@ -164,18 +186,18 @@ export class Game {
 
   // ---------------------------------------------------------------- obstacle warning
   // For the first seconds every dangerous cell (obstacles, water, lava, spikes) pulses red.
-  startWarning() {
-    this.resize(); // the HUD has its final size by now
+  startWarning(silent = false) {
+    if (!silent) this.resize(); // the HUD has its final size by now
     const b = this.board, cells = [];
     for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
       const k = y * COLS + x;
       if (b.solid[k] || (b.lethal && b.lethal[k])) cells.push({ x, y });
     }
     this.warnCells = cells;
-    this.warnDur = 5;
+    this.warnDur = silent ? 3 : 5;
     if (cells.length) {
       this.warnT = this.warnDur;
-      if (this.ui.warnBanner) this.ui.warnBanner(this.warnDur);
+      if (!silent && !this.tut && this.ui.warnBanner) this.ui.warnBanner(this.warnDur);
     }
   }
 
@@ -186,6 +208,7 @@ export class Game {
     const fade = Math.min(1, el / 0.3, this.warnT / 0.6);
     const pulse = 0.5 + 0.5 * Math.sin(el * Math.PI * 2 * 1.7 - Math.PI / 2);
     const a = fade * (0.28 + 0.5 * pulse);
+    const cb = !!(this.cfg.settings && this.cfg.settings.colorblind);
     g.save();
     for (const c of this.warnCells) {
       const x = b.x + c.x * s, y = b.y + c.y * s;
@@ -200,8 +223,245 @@ export class Game {
       g.strokeStyle = `rgba(255,80,70,${Math.min(1, a + 0.25)})`;
       g.lineWidth = Math.max(1.5, s * 0.05);
       g.strokeRect(x + 1.5, y + 1.5, s - 3, s - 3);
+      if (cb) { // colour-blind mode: white diagonal stripes and an X so the danger never depends on red
+        g.save();
+        g.beginPath(); g.rect(x + 2, y + 2, s - 4, s - 4); g.clip();
+        g.strokeStyle = `rgba(255,255,255,${Math.min(0.95, a + 0.3)})`;
+        g.lineWidth = Math.max(2, s * 0.07);
+        g.beginPath();
+        for (let k = -s; k < s * 2; k += s * 0.3) { g.moveTo(x + k, y + s); g.lineTo(x + k + s, y); }
+        g.moveTo(x + s * 0.28, y + s * 0.28); g.lineTo(x + s * 0.72, y + s * 0.72);
+        g.moveTo(x + s * 0.72, y + s * 0.28); g.lineTo(x + s * 0.28, y + s * 0.72);
+        g.stroke();
+        g.restore();
+      }
     }
     g.restore();
+  }
+
+
+  // ---------------------------------------------------------------- pickups & effects
+  headPixel() {
+    if (this.headPx) return this.headPx;
+    const h = this.player.cells[0];
+    return { x: this.board.cx(h.x), y: this.board.cy(h.y) };
+  }
+
+  spawnItem(type, at) {
+    if (!this.board.breakCell && type === 'shield') return null; // only story boards have breakable obstacles
+    const cell = at || randomFreeCell(this.board, this.occupiedSet(), this.player.cells[0]);
+    if (!cell) return null;
+    const it = { ...cell, type, born: this.t, life: ITEM_LIFE };
+    this.items.push(it);
+    const x = this.board.cx(it.x), y = this.board.cy(it.y);
+    this.fx.ring(x, y, PW[type].glow, this.R * 4, 0.6, 5);
+    this.fx.burst(x, y, 14, { type: 'star', color: PW[type].glow, speed: 150, size: 4, life: 0.7 });
+    return it;
+  }
+
+  // items appear on a steady rhythm so the player always has something to play with
+  updateItems(dt) {
+    if (this.mode !== 'story') return;
+    this.itemClock += dt;
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      if (this.t - this.items[i].born > this.items[i].life) this.items.splice(i, 1);
+    }
+    if (this.tut) return;
+    if (this.itemClock > this.nextShield && !this.items.some((i) => i.type === 'shield')) {
+      if (this.pw.shield === 0) this.spawnItem('shield');
+      this.nextShield = this.itemClock + 26;
+    }
+    if (this.itemClock > this.nextUtil && this.items.length < 2) {
+      this.spawnItem(Math.random() < 0.5 ? 'magnet' : 'portal');
+      this.nextUtil = this.itemClock + 34;
+    }
+  }
+
+  pickItem(s, it) {
+    const def = PW[it.type];
+    this.items.splice(this.items.indexOf(it), 1);
+    const x = this.board.cx(it.x), y = this.board.cy(it.y);
+    this.itemsPicked++;
+    track('item');
+    this.fx.flash(x, y, def.glow, this.R * 8, 0.5);
+    this.fx.ring(x, y, def.glow, this.R * 6, 0.7, 6);
+    this.fx.burst(x, y, 26, { type: 'spark', color: [def.glow, '#FFFFFF'], speed: 380, speedMin: 100, size: 5, life: 0.6, drag: 3 });
+    vibrate(25, this.cfg.settings.vibration);
+    if (it.type === 'shield') this.pw.shield = SHIELD_CHARGES;
+    else this.pw[it.type] = def.dur;
+    if (it.type === 'star') {
+      this.fx.shake(6, 0.35);
+      this.ui.plaque('¡ESTRELLA DORADA!', 2, 2.4);
+    } else this.ui.plaque(def.label, 3, 1.8);
+    if (it.type === 'magnet') this.magnetT = 0;
+    this.ui.pwHud(this.pwState());
+    if (this.tut && this.tut.step >= 3) this.tut.gotItem = true;
+  }
+
+  pwState() {
+    return {
+      shield: this.pw.shield, magnet: this.pw.magnet / PW.magnet.dur, portal: this.pw.portal / PW.portal.dur,
+      star: this.pw.star / PW.star.dur,
+    };
+  }
+
+  updateEffects(dt) {
+    const s = this.player;
+    let changed = false;
+    for (const k of ['magnet', 'portal', 'star']) {
+      if (this.pw[k] > 0) {
+        this.pw[k] = Math.max(0, this.pw[k] - dt);
+        changed = true;
+        if (this.pw[k] === 0) this.effectEnded(k);
+      }
+    }
+    if (this.whiteT > 0) this.whiteT -= dt;
+    if (changed) {
+      this.hudFxT = (this.hudFxT || 0) - dt;
+      if (this.hudFxT <= 0) { this.hudFxT = 0.1; this.ui.pwHud(this.pwState()); }
+    }
+    // magnet: orbs within range slide one cell towards the head
+    if (this.pw.magnet > 0 && s.alive) {
+      this.magnetT -= dt;
+      if (this.magnetT <= 0) { this.magnetT = 0.2; this.pullOrbs(s); }
+    }
+  }
+
+  effectEnded(k) {
+    this.ui.pwHud(this.pwState());
+    const s = this.player;
+    if (k === 'star') {
+      // never leave the snake inside a rock: if it is on a blocked cell, give it a moment then rescue it
+      const h = s.cells[0];
+      const bad = this.board.isSolid(h.x, h.y) || (this.board.isLethal && this.board.isLethal(h.x, h.y));
+      s.ghostT = Math.max(s.ghostT, 1.2);
+      if (bad) { this.starGrace = (this.starGrace || 0) + 1; this.pw.star = 0.6; if (this.starGrace > 5) { this.starGrace = 0; this.pw.star = 0; this.rescueToStart(s, true); } }
+      else this.starGrace = 0;
+    }
+  }
+
+  pullOrbs(s) {
+    const h = s.cells[0];
+    const occ = new Set(); for (const sn of this.snakes) for (const c of sn.cells) occ.add(c.y * COLS + c.x);
+    for (const o of [...this.orbs]) {
+      const dx = h.x - o.x, dy = h.y - o.y;
+      const d = Math.hypot(dx, dy);
+      if (d > MAGNET_RANGE || d < 0.5) continue;
+      let sx = 0, sy = 0;
+      if (Math.abs(dx) >= Math.abs(dy)) sx = Math.sign(dx); else sy = Math.sign(dy);
+      const nx = o.x + sx, ny = o.y + sy;
+      if (nx === h.x && ny === h.y) { this.eat(s, o, this.orbs.indexOf(o)); continue; }
+      const k = ny * COLS + nx;
+      if (this.board.isSolid(nx, ny) || (this.board.isLethal && this.board.isLethal(nx, ny)) || occ.has(k) || this.orbs.some((q) => q.x === nx && q.y === ny)) continue;
+      this.fx.burst(this.board.cx(o.x), this.board.cy(o.y), 3, { type: 'dot', color: '#FFC24A', speed: 40, size: 4, life: 0.35 });
+      o.x = nx; o.y = ny;
+    }
+  }
+
+  // Which effect (if any) saves the snake from this crash. Returns true if the crash is cancelled.
+  protect(s, reason, nx, ny) {
+    if (s !== this.player) return false;
+    const cells = this.board.level && this.board.level.cells;
+    const t = cells ? cells[ny * COLS + nx] : -1;
+    if (this.pw.star > 0) return reason !== 'wall';
+    if (this.pw.shield > 0 && (reason === 'obstacle' || (reason === 'hazard' && t === T.SPIKE))) {
+      if (this.board.breakCell && this.board.breakCell(nx, ny)) {
+        this.pw.shield--;
+        this.breakFx(nx, ny);
+        this.board.prerender(this.view.dpr);
+        this.ui.pwHud(this.pwState());
+        return true;
+      }
+    }
+    if (this.pw.portal > 0) {
+      this.pw.portal = 0;
+      this.ui.pwHud(this.pwState());
+      this.rescueToStart(s, false);
+      return 'rescued';
+    }
+    return false;
+  }
+
+  breakFx(x, y) {
+    const cx = this.board.cx(x), cy = this.board.cy(y);
+    const col = skinColor(this.player.skin);
+    this.fx.flash(cx, cy, col, this.R * 6, 0.4);
+    this.fx.ring(cx, cy, col, this.R * 5, 0.6, 6);
+    this.fx.burst(cx, cy, 30, { type: 'spark', color: [col, '#FFFFFF'], speed: 460, speedMin: 120, size: 5, life: 0.6, drag: 3 });
+    this.fx.burst(cx, cy, 14, { type: 'dust', color: '#B8AA8A', speed: 200, size: 14, life: 0.8, add: false, drag: 3 });
+    this.fx.shake(6, 0.25);
+    vibrate([15, 20, 25], this.cfg.settings.vibration);
+    track('break');
+  }
+
+  // Portal / star rescue: the snake is put back in the safe start area and waits for a swipe.
+  rescueToStart(s, quiet) {
+    const path = [[5, 15], [5, 16], [5, 17], [4, 17], [4, 16], [4, 15], [4, 14], [4, 13], [4, 12], [4, 11], [3, 11], [3, 12], [3, 13], [3, 14], [3, 15], [3, 16], [3, 17]];
+    const total = s.cells.length + s.grow;
+    const m = Math.min(total, path.length);
+    const h = s.cells[0];
+    const ox = this.board.cx(h.x), oy = this.board.cy(h.y);
+    s.cells = path.slice(0, m).map(([x, y]) => ({ x, y }));
+    s.prev = s.cells.map((c) => ({ ...c }));
+    s.grow = total - m;
+    s.dir = 'up';
+    s.queue = [];
+    s.acc = 0;
+    s.boostT = 0;
+    s.ghostT = 99;
+    const occ = new Set(s.cells.map((c) => c.y * COLS + c.x));
+    this.orbs = this.orbs.filter((o) => !occ.has(o.y * COLS + o.x));
+    if (!this.orbs.some((o) => o.type === 'red')) this.spawnOrb('red');
+    const nx = this.board.cx(5), ny = this.board.cy(15);
+    for (const [x, y] of [[ox, oy], [nx, ny]]) {
+      this.fx.flash(x, y, '#38E8FF', this.R * 8, 0.5);
+      this.fx.ring(x, y, '#38E8FF', this.R * 6, 0.7, 6);
+      this.fx.burst(x, y, 30, { type: 'spark', color: ['#38E8FF', '#E8B04A', '#FFFFFF'], speed: 340, size: 5, life: 0.7 });
+    }
+    vibrate([30, 30, 30], this.cfg.settings.vibration);
+    if (!quiet) this.ui.plaque('¡A SALVO!', 3, 1.6);
+    track('rescue');
+    this.setState('ready');
+    this.ui.showHint('DESLIZA PARA CONTINUAR');
+  }
+
+  // Level 5 / 10 event: half way through, every obstacle moves, the pace quickens.
+  mapShift() {
+    this.shifted = true;
+    const s = this.player;
+    const avoid = new Set();
+    const near = (c) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) avoid.add((c.y + j) * COLS + (c.x + i)); };
+    for (const sn of this.snakes) for (const c of sn.cells) near(c);
+    for (const o of this.orbs) avoid.add(o.y * COLS + o.x);
+    for (const it of this.items) avoid.add(it.y * COLS + it.x);
+    // old obstacles crumble
+    for (const c of this.board.level.obs) {
+      const x = this.board.cx(c.x), y = this.board.cy(c.y);
+      this.fx.burst(x, y, 8, { type: 'dust', color: '#E8E4D8', speed: 160, size: 14, life: 0.7, add: false, drag: 3 });
+    }
+    reshuffleObstacles(this.board.level, 1, [...avoid]);
+    this.board.applyLevel();
+    this.board.low = this.low;
+    this.board.prerender(this.view.dpr);
+    for (const c of this.board.level.obs) {
+      const x = this.board.cx(c.x), y = this.board.cy(c.y);
+      this.fx.ring(x, y, '#FFFFFF', this.R * 3, 0.5, 4);
+    }
+    this.fx.flash(this.board.cx(5.5), this.board.cy(8.5), '#FFFFFF', this.board.w * 0.9, 0.7);
+    this.fx.shake(8, 0.4);
+    s.ghostT = Math.max(s.ghostT, 3);
+    this.whiteT = 3;
+    this.baseSpeed *= 1.06;
+    this.goldLife = 5;
+    this.redLife = 16;
+    for (const o of this.orbs) if (o.type === 'red') { o.life = this.redLife; o.born = this.t; }
+    this.ui.plaque('¡EL MAPA CAMBIA!', 1, 2.6);
+    this.ui.shiftFlash();
+    vibrate([20, 30, 20, 30, 40], this.cfg.settings.vibration);
+    // let the player see what moved
+    this.warnCells = null;
+    this.warnDur = 3;
+    this.startWarning(true);
   }
 
   // ---------------------------------------------------------------- input
@@ -218,9 +478,16 @@ export class Game {
       return;
     }
     if (this.state !== 'play' && this.state !== 'countdown') return;
-    const last = s.queue.length ? s.queue[s.queue.length - 1] : s.dir;
-    if (dir === last || dir === OPPOSITE[last]) return;
-    if (s.queue.length < 2) s.queue.push(dir);
+    if (s.queue.length >= 2) { // buffer full: the newest turn replaces the last one
+      const ref = s.queue[0];
+      if (dir === ref || dir === OPPOSITE[ref]) return;
+      s.queue[1] = dir;
+    } else {
+      const last = s.queue.length ? s.queue[s.queue.length - 1] : s.dir;
+      if (dir === last || dir === OPPOSITE[last]) return;
+      s.queue.push(dir);
+    }
+    if (this.tut) this.tut.turns++;
   }
 
   // Relative turn (tap controls): left / right of where the snake is heading.
@@ -254,11 +521,13 @@ export class Game {
         this.setState('countdown');
         this.ui.countdown(() => { if (this.state === 'countdown') this.setState('play'); });
         this.startWarning();
+        if (this.tut) this.ui.tutStep(0);
       }
       return;
     }
     if (this.state === 'dying') {
       this.player.a.death = clamp(this.stateT / 0.55, 0, 1);
+      if (this.tut && this.stateT > 0.9) { this.revive(); return; }
       if (this.stateT > 0.95 && !this.reviveShown) {
         this.reviveShown = true;
         this.ui.showRevive(this.reviveInfo());
@@ -282,6 +551,10 @@ export class Game {
     if (this.state !== 'play') return;
 
     this.elapsed += dt;
+    this.updateEffects(dt);
+    this.updateItems(dt);
+    if (this.eventLevel && !this.shifted && this.player.alive && this.player.orbs >= Math.ceil(this.target / 2)) this.mapShift();
+    if (this.tut) this.tutorialUpdate();
     if (this.mode === 'frenzy') {
       this.timer = Math.max(0, this.timer - dt);
       this.ui.hudTimer(this.timer);
@@ -301,12 +574,14 @@ export class Game {
         this.orbs.splice(i, 1);
       }
     }
+    if (this.mode !== 'frenzy' && !this.orbs.some((o) => o.type === 'red')) this.spawnOrb('red');
 
     for (const s of this.snakes) {
       if (!s.alive) continue;
       const hd = s.cells[0];
       const bogged = this.board.isSlow && hd && this.board.isSlow(hd.x, hd.y);
-      const speed = this.baseSpeed * (s.speedMult || 1) * (s.boostT > 0 ? (this.mode === 'frenzy' ? 1.25 : 1.85) : 1) * (bogged ? 0.55 : 1);
+      const starOn = s === this.player && this.pw.star > 0;
+      const speed = this.baseSpeed * (s.speedMult || 1) * (starOn ? 2 : s.boostT > 0 ? (this.mode === 'frenzy' ? 1.25 : 1.85) : 1) * (bogged ? 0.55 : 1);
       const interval = 1 / speed;
       s.interval = interval;
       s.acc += dt;
@@ -385,7 +660,7 @@ export class Game {
     const d = DIRS[s.dir];
     const h = s.cells[0];
     let nx = h.x + d.x, ny = h.y + d.y;
-    const wrap = this.mode === 'frenzy';
+    const wrap = this.mode === 'frenzy' || (s === this.player && this.pw.star > 0);
     if (wrap) {
       nx = (nx + COLS) % COLS;
       ny = (ny + ROWS) % ROWS;
@@ -406,6 +681,11 @@ export class Game {
           if (reason) break;
         }
       }
+    }
+    if (reason) {
+      const saved = this.protect(s, reason, nx, ny);
+      if (saved === 'rescued') return;
+      if (saved) reason = null;
     }
     if (reason) {
       this.die(s, reason, nx, ny);
@@ -435,6 +715,10 @@ export class Game {
     // eat
     const oi = this.orbs.findIndex((o) => o.x === nx && o.y === ny);
     if (oi >= 0) this.eat(s, this.orbs[oi], oi);
+    if (s === this.player) {
+      const ii = this.items.findIndex((i) => i.x === nx && i.y === ny);
+      if (ii >= 0) this.pickItem(s, this.items[ii]);
+    }
 
     // mouth anticipation: an orb within 2 cells straight ahead
     let near = false;
@@ -466,6 +750,11 @@ export class Game {
       vibrate(gold ? 30 : 12, this.cfg.settings.vibration);
       this.fx.text(x, y - R, `+${pts}`, gold ? '#FFE08A' : '#FFD0D0', gold ? 46 : 38);
       if (this.combo > 1) this.ui.combo(this.combo);
+      track(gold ? 'gold' : 'orb');
+      if (!gold && !this.starDone && this.mode === 'story' && !this.tut && s.orbs >= 3 && Math.random() < STAR_CHANCE) {
+        this.starDone = true;
+        this.spawnItem('star');
+      }
     }
 
     if (gold) {
@@ -541,7 +830,10 @@ export class Game {
       return;
     }
     s.alive = false;
+    this.deaths++;
+    track('death');
     this.deathReason = reason;
+    this.deathCell = { x: nx, y: ny };
     this.fx.shake(14, 0.5);
     this.timeScale = 0.3;
     vibrate([40, 30, 60], this.cfg.settings.vibration);
@@ -562,7 +854,8 @@ export class Game {
   }
 
   reviveInfo() {
-    const info = { mode: this.mode, revives: this.revives, score: this.score };
+    const cellT = this.deathCell && this.board.level ? this.board.level.cells[this.deathCell.y * COLS + this.deathCell.x] : -1;
+    const info = { mode: this.mode, revives: this.revives, score: this.score, reason: this.deathReason, cellT, map: this.cfg.level && this.cfg.level.map };
     if (this.mode === 'story') info.left = this.target - this.player.orbs, info.cur = this.player.orbs, info.target = this.target;
     if (this.mode === 'duel') info.cur = this.player.orbs, info.target = this.target;
     return info;
@@ -626,12 +919,69 @@ export class Game {
   }
 
   finish(won) {
+    let stars = 0;
+    if (won && this.mode === 'story' && !this.tut) {
+      stars = 1;
+      if (this.deaths === 0) stars++;
+      if (this.elapsed <= this.par) stars++;
+    }
+    track('len', this.player.cells.length + this.player.grow);
     this.ui.finish({
+      stars, par: this.par, deaths: this.deaths, tutorial: !!this.tut, items: this.itemsPicked,
       mode: this.mode, won, score: this.score, orbs: this.eaten, gold: this.goldEaten,
       length: this.player.cells.length + this.player.grow, time: this.elapsed,
       level: this.cfg.level, difficulty: this.cfg.difficulty, loseReason: this.loseReason,
       duel: this.bot ? { p: this.player.orbs, b: this.bot.orbs } : null,
     });
+  }
+
+  // The snake shines in one colour (gold star / white map-change immunity), without dark outlines.
+  drawTinted(g, pts, skin, o, color) {
+    const b = this.board, dpr = this.view.dpr, pad = b.cell * 2;
+    const x0 = b.x - pad, y0 = b.y - pad, w = b.w + pad * 2, h = b.h + pad * 2;
+    if (!this.tc || this.tc.width !== Math.ceil(w * dpr) || this.tc.height !== Math.ceil(h * dpr)) {
+      this.tc = document.createElement('canvas');
+      this.tc.width = Math.ceil(w * dpr); this.tc.height = Math.ceil(h * dpr);
+    }
+    const c = this.tc.getContext('2d');
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.clearRect(0, 0, this.tc.width, this.tc.height);
+    c.setTransform(dpr, 0, 0, dpr, -x0 * dpr, -y0 * dpr);
+    drawSnake(c, pts, skin, { ...o, shadow: false, glow: 0, ghost: false, clip: null });
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.globalCompositeOperation = 'source-atop';
+    c.globalAlpha = color === '#FFFFFF' ? 0.8 : 0.66;
+    c.fillStyle = color;
+    c.fillRect(0, 0, this.tc.width, this.tc.height);
+    g.save();
+    g.globalCompositeOperation = 'lighter';
+    const sp = glowSprite(color, 64);
+    g.globalAlpha = 0.34 + 0.08 * Math.sin(this.t * 10);
+    for (let i = 0; i < pts.length; i += 2) g.drawImage(sp, pts[i].x - this.R * 2.6, pts[i].y - this.R * 2.6, this.R * 5.2, this.R * 5.2);
+    g.restore();
+    g.drawImage(this.tc, x0, y0, w, h);
+    g.save();
+    g.globalCompositeOperation = 'lighter';
+    g.globalAlpha = 0.3;
+    g.drawImage(this.tc, x0, y0, w, h);
+    g.restore();
+  }
+
+  // Guided level 0: controls -> red orb -> golden orb -> obstacles / force field.
+  tutorialUpdate() {
+    const t = this.tut, p = this.player;
+    if (t.step === 0 && t.turns >= 2) { t.step = 1; this.ui.tutStep(1); }
+    else if (t.step === 1 && p.orbs >= 1) {
+      t.step = 2;
+      this.spawnOrb('gold');
+      for (const o of this.orbs) if (o.type === 'gold') o.life = Infinity;
+      this.ui.tutStep(2);
+    } else if (t.step === 2 && this.goldEaten >= 1) {
+      t.step = 3;
+      this.startWarning(true);
+      this.spawnItem('shield');
+      this.ui.tutStep(3);
+    }
   }
 
   // ---------------------------------------------------------------- render
@@ -681,6 +1031,7 @@ export class Game {
       const warn = o.life !== Infinity && this.t - o.born > o.life - 2;
       drawOrb(g, b.cx(o.x), b.cy(o.y), b.cell, o.type, this.t, { spawnK: orbSpawnK(o, this.t), warn });
     }
+    for (const it of this.items) drawItem(g, it, b.cx(it.x), b.cy(it.y), b.cell, this.t);
     this.fx.drawUnder(g);
     this.drawWarning(g);
 
@@ -695,13 +1046,18 @@ export class Game {
       const fat = 1 + Math.min(0.22, (len - 3) * 0.0055);
       g.save();
       if (s.a.appear < 1) g.globalAlpha = s.a.appear;
-      drawSnake(g, pts, s.skin, {
+      if (s === this.player) this.headPx = pts[0];
+      const opts = {
         R: this.R, mouth: s.a.mouth, blink: s.a.blink, tongue: s.a.tongue, squash: s.a.squash,
         bulges: s.a.bulges.filter((q) => q.delay <= 0), glow: s.boostT > 0 ? clamp(s.boostT / 0.6, 0, 1) : 0,
         ghost: s.ghostT > 0 && this.state === 'play', death: s.a.death, t: this.t, breaks, fat, clip,
-      });
+      };
+      if (s === this.player && s.alive && (this.pw.star > 0 || this.whiteT > 0)) this.drawTinted(g, pts, s.skin, opts, this.pw.star > 0 ? '#FFD36A' : '#FFFFFF');
+      else drawSnake(g, pts, s.skin, opts);
       g.restore();
     }
+
+    drawAuras(g, this, this.t);
 
     // death: the whole board drains of colour (one blend op instead of a filter per sprite)
     if (this.player.a.death > 0.01) {

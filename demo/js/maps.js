@@ -26,6 +26,7 @@ export const MAPDEF = {
   13: { shape: 'islands', bridge: 'wood', spike: 2, portals: true, amb: { kind: 'feather', colors: ['#FFFFFF', '#E8F6FF'] }, shore: '#ffffff', mood: 'rgba(80,120,180,0.02)' },
   14: { shape: 'pools', bridge: 'stone', portals: true, glow: '#3FD8FF', glowK: 0.2, amb: { kind: 'star', colors: ['#FFFFFF', '#BFE8FF', '#FFF3C4'] }, shore: '#b8f0ff', mood: 'rgba(10,20,70,0.18)' },
   15: { shape: 'river', bridge: 'stone', slow: true, amb: { kind: 'wisp', colors: ['#7FE8FF', '#B8F8FF'] }, shore: '#a0d8e8', glow: '#2A9AC0', glowK: 0.08, mood: 'rgba(10,20,40,0.24)' },
+  17: { shape: 'pools', bridge: 'wood', portals: true, spike: 1, glow: '#7A5CFF', glowK: 0.1, amb: { kind: 'leaf', colors: ['#E87532', '#D6A83D', '#B85A32'] }, shore: '#e6c08a', mood: 'rgba(60,20,0,0.12)' },
   16: { shape: 'channel', bridge: 'metal', glow: '#20E6FF', glowK: 0.2, amb: { kind: 'rain', colors: ['#9FD8FF', '#FF7AE0'] }, shore: '#c8ffff', mood: 'rgba(30,0,60,0.20)' },
 };
 
@@ -292,10 +293,11 @@ function thinFix(cells) {
   return n;
 }
 
-function cluster(cells, list, gap) {
+function cluster(cells, list, gap, avoid) {
   // is any cell of the formation closer than `gap` to a solid / hazard / portal?
   for (const [x, y] of list) {
     if (!inb(x, y) || x < 1 || y < 1 || x > COLS - 2 || y > ROWS - 2 || inSafe(x, y)) return true;
+    if (avoid && avoid.has(idx(x, y))) return true;
     for (let j = -gap; j <= gap; j++) for (let i = -gap; i <= gap; i++) {
       if (!inb(x + i, y + j)) continue;
       const t = cells[idx(x + i, y + j)];
@@ -306,7 +308,7 @@ function cluster(cells, list, gap) {
   return false;
 }
 
-function placeForms(cells, r, obs, nSprites, count, tier, kind) {
+function placeForms(cells, r, obs, nSprites, count, tier, kind, avoid) {
   // kind: T.SOLID (with sprite) or T.SPIKE. Formations are mirrored across x -> 11 - x.
   const forms = TIERS[tier];
   let placed = 0;
@@ -320,7 +322,7 @@ function placeForms(cells, r, obs, nSprites, count, tier, kind) {
     const all = center ? list : list.concat(mirror);
     // the mirrored copy must not touch the original
     if (!center && list.some(([x, y]) => mirror.some(([mx, my]) => Math.abs(mx - x) <= 2 && Math.abs(my - y) <= 2))) continue;
-    if (cluster(cells, all, kind === T.SPIKE ? 2 : 2)) continue;
+    if (cluster(cells, all, 2, avoid)) continue;
     const before = thinCells(cells).length;
     const saved = all.map(([x, y]) => cells[idx(x, y)]);
     all.forEach(([x, y]) => { cells[idx(x, y)] = kind; });
@@ -331,6 +333,29 @@ function placeForms(cells, r, obs, nSprites, count, tier, kind) {
     if (kind === T.SOLID) all.forEach(([x, y]) => obs.push({ x, y, s: Math.floor(r() * nSprites) }));
     placed += all.length;
   }
+}
+
+// Obstacle formations and (from level 3) mirrored spike pairs. `avoid` = cells that must stay free.
+function populateObstacles(cells, r, obs, map, n, d, avoid) {
+  const tier = n <= 2 ? 0 : n <= 5 ? 1 : n <= 8 ? 2 : 3;
+  const nSprites = MX[map].obs;
+  const lethalNow = () => { let c = 0; for (const t of cells) if (t === T.LETHAL || t === T.SPIKE) c++; return c; };
+  const budget = Math.max(0, Math.round((d.id === 'easy' ? 14 : d.id === 'hard' ? 26 : 20) + n * 0.6) - lethalNow() * 0.5);
+  const solids = Math.min(budget, Math.round((3 + n * 0.8 + (map - 1) * 0.15) * d.obst));
+  placeForms(cells, r, obs, nSprites, solids, tier, T.SOLID, avoid);
+  if (n >= 3) placeForms(cells, r, obs, nSprites, Math.min(6, Math.round(Math.floor((n - 1) / 2) * d.hazard)), tier, T.SPIKE, avoid);
+}
+
+// Level 5 / 10 event: every obstacle and spike jumps to a new composed layout.
+export function reshuffleObstacles(level, salt, avoidKeys) {
+  const { cells, map, n } = level;
+  const d = DIFFS[level.diff] || DIFFS.normal;
+  for (let k = 0; k < cells.length; k++) if (cells[k] === T.SOLID || cells[k] === T.SPIKE) cells[k] = T.FLOOR;
+  level.obs = [];
+  const r = rng(map * 31337 + n * 977 + salt * 7919);
+  populateObstacles(cells, r, level.obs, map, n, d, new Set(avoidKeys));
+  level.reachable = reach(cells, level.spawn, level.portals);
+  return level;
 }
 
 // ------------------------------------------------------------------ level builder
@@ -375,15 +400,8 @@ function buildOnce(map, n, diffId, attempt) {
     }
   }
 
-  // composed obstacle formations and (from level 3) mirrored spike pairs
-  const tier = n <= 2 ? 0 : n <= 5 ? 1 : n <= 8 ? 2 : 3;
   const obs = [];
-  const nSprites = MX[map].obs;
-  const lethalNow = () => { let c = 0; for (const t of cells) if (t === T.LETHAL || t === T.SPIKE) c++; return c; };
-  const budget = Math.max(0, Math.round((d.id === 'easy' ? 14 : d.id === 'hard' ? 26 : 20) + n * 0.6) - lethalNow() * 0.5);
-  const solids = Math.min(budget, Math.round((3 + n * 0.8 + (map - 1) * 0.15) * d.obst));
-  placeForms(cells, r, obs, nSprites, solids, tier, T.SOLID);
-  if (n >= 3) placeForms(cells, r, obs, nSprites, Math.min(6, Math.round(Math.floor((n - 1) / 2) * d.hazard)), tier, T.SPIKE);
+  populateObstacles(cells, r, obs, map, n, d, null);
 
   // anything still unreachable becomes terrain (water / void / lava) so orbs never spawn there
   const seen = reach(cells, spawn, portals);

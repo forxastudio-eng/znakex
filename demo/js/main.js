@@ -78,6 +78,7 @@ function frame(now) {
   }
   const game = ui.game;
   if (game) {
+    if (game.state === 'play' && !game.paused) { store.S().stats.playSec += dt; }
     if (!game.paused) game.update(dt);
     game.render();
     amb.g.clearRect(0, 0, view.W, view.H);
