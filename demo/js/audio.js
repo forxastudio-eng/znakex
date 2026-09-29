@@ -51,7 +51,7 @@ async function load(name) {
   if (pending.has(name)) return pending.get(name);
   const job = (async () => {
     if (!ctx) return null;
-    for (const ext of ['ogg', 'mp3']) {
+    for (const ext of ['ogg', 'mp3', 'wav']) {
       try {
         const r = await fetch(`assets/audio/${name}.${ext}`);
         if (!r.ok) continue;

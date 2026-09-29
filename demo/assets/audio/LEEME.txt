@@ -1,0 +1,2 @@
+Pon aquí los audios (.ogg, .mp3 o .wav) con los nombres de ZNAKEX_Prompts_Audio_v2.md.
+Los que falten simplemente no suenan.
