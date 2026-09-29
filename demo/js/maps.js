@@ -71,12 +71,6 @@ function reach(cells, from, portals) {
   return seen;
 }
 
-function freeCount(cells) {
-  let n = 0;
-  for (const t of cells) if (t !== T.SOLID && t !== T.LETHAL && t !== T.SPIKE) n++;
-  return n;
-}
-
 function fillRect(cells, x, y, w, h, v, respectSafe = true) {
   for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) {
     if (!inb(i, j)) continue;
@@ -86,51 +80,35 @@ function fillRect(cells, x, y, w, h, v, respectSafe = true) {
 }
 
 // ------------------------------------------------------------------ terrain shapes
-function shapeRiver(cells, r, n, d, vertical) {
-  const bridges = Math.max(1, (n <= 3 ? 3 : n <= 6 ? 2 : 1) + d.bridges);
-  const t = n >= 8 ? 3 : 2;
-  const y0 = 4 + Math.floor(r() * 4);
+function shapeRiver(cells, r, n, d) {
+  // horizontal river, two or three wide crossings (3 cells wide on early / easy levels)
+  const bridges = n <= 3 ? 3 : 2;
+  const bw = n <= 4 || d.bridges > 0 ? 3 : 2;
+  const t = 2;
+  const y0 = 4 + Math.floor(r() * 3);
   const shift = n >= 4 && r() < 0.6 ? (r() < 0.5 ? -1 : 1) : 0;
-  const cut = 3 + Math.floor(r() * 5);
-  const bx = [];
+  const cut = 4 + Math.floor(r() * 4);
   const gap = COLS / (bridges + 1);
-  for (let b = 1; b <= bridges; b++) bx.push(Math.max(1, Math.min(COLS - 2, Math.round(gap * b + (r() - 0.5) * 2))));
+  const bx = [];
+  for (let b = 1; b <= bridges; b++) bx.push(Math.max(1, Math.min(COLS - bw - 1, Math.round(gap * b - bw / 2 + (r() - 0.5) * 2))));
   for (let x = 0; x < COLS; x++) {
     const yy = y0 + (x >= cut ? shift : 0);
-    const isBridge = bx.some((b) => Math.abs(b - x) <= (n <= 5 && d.bridges >= 0 ? 0 : 0));
-    for (let j = 0; j < t; j++) {
-      const cx = vertical ? yy + j : x;
-      const cy = vertical ? x : yy + j;
-      if (!inb(cx, cy)) continue;
-      cells[idx(cx, cy)] = isBridge ? T.BRIDGE : T.LETHAL;
-    }
+    const isBridge = bx.some((b) => x >= b && x < b + bw);
+    for (let j = 0; j < t; j++) cells[idx(x, yy + j)] = isBridge ? T.BRIDGE : T.LETHAL;
+    if (x === cut && shift) for (let j = 0; j < t + 1; j++) if (cells[idx(x, y0 + j)] === T.FLOOR) cells[idx(x, y0 + j)] = T.LETHAL;
   }
-  // wider bridges on easy / early levels
-  if (n <= 4 || d.bridges > 0) {
-    for (const b of bx) for (let j = 0; j < t + 1; j++) {
-      const x = Math.min(COLS - 1, b + 1);
-      const yy = y0 + (x >= cut ? shift : 0);
-      const cx = vertical ? yy + j : x;
-      const cy = vertical ? x : yy + j;
-      if (inb(cx, cy) && cells[idx(cx, cy)] === T.LETHAL) cells[idx(cx, cy)] = T.BRIDGE;
-    }
-  }
-  if (n >= 7) { // a second, thinner river near the top
-    const yb = 1 + Math.floor(r() * 2);
-    const b2 = 2 + Math.floor(r() * 7);
-    for (let x = 0; x < COLS; x++) if (cells[idx(x, yb)] === T.FLOOR) cells[idx(x, yb)] = Math.abs(x - b2) <= (d.bridges >= 0 ? 1 : 0) ? T.BRIDGE : T.LETHAL;
-  }
+  if (n >= 7) shapePools(cells, r, 2, d, false); // a couple of extra pools instead of a second river
 }
 
 function shapePools(cells, r, n, d, big) {
-  const count = Math.min(6, 2 + Math.floor((n + 1) / 3) + (d.bridges < 0 ? 1 : 0));
+  const count = Math.min(4, 1 + Math.floor((n + 2) / 3) + (d.bridges < 0 ? 1 : 0) - (d.bridges > 0 ? 1 : 0));
   const sizes = big ? [[4, 2], [3, 3], [5, 2], [2, 3]] : [[3, 2], [2, 2], [4, 2], [2, 3], [3, 3]];
   const placed = [];
   for (let tries = 0; tries < 80 && placed.length < count; tries++) {
     const [w, h] = sizes[Math.floor(r() * sizes.length)];
     const x = Math.floor(r() * (COLS - w + 1));
     const y = Math.floor(r() * 10); // upper part of the board only
-    if (placed.some((p) => x < p.x + p.w + 2 && x + w + 2 > p.x && y < p.y + p.h + 2 && y + h + 2 > p.y)) continue;
+    if (placed.some((p) => x < p.x + p.w + 3 && x + w + 3 > p.x && y < p.y + p.h + 3 && y + h + 3 > p.y)) continue;
     let bad = false;
     for (let j = y - 1; j < y + h + 1; j++) for (let i = x - 1; i < x + w + 1; i++) {
       if (inb(i, j) && (inSafe(i, j) || cells[idx(i, j)] !== T.FLOOR)) bad = true;
@@ -149,66 +127,69 @@ function shapePools(cells, r, n, d, big) {
 
 function shapeCross(cells, r, n, d) {
   const y0 = 7 + (r() < 0.5 ? 0 : 1);
-  const bridges = Math.max(1, (n <= 4 ? 3 : n <= 7 ? 2 : 1) + d.bridges);
-  const bx = [];
+  const bridges = n <= 5 ? 3 : 2;
+  const bw = n <= 5 ? 3 : 2;
   const gap = COLS / (bridges + 1);
-  for (let b = 1; b <= bridges; b++) bx.push(Math.round(gap * b));
+  const bx = [];
+  for (let b = 1; b <= bridges; b++) bx.push(Math.max(0, Math.min(COLS - bw, Math.round(gap * b - bw / 2))));
   for (let x = 0; x < COLS; x++) for (let j = 0; j < 2; j++) {
-    cells[idx(x, y0 + j)] = bx.some((b) => Math.abs(b - x) <= (n <= 5 ? 1 : 0)) ? T.BRIDGE : T.LETHAL;
+    cells[idx(x, y0 + j)] = bx.some((b) => x >= b && x < b + bw) ? T.BRIDGE : T.LETHAL;
   }
-  // vertical arm in the upper half with one crossing
-  const vx = 5 + (r() < 0.5 ? 0 : 1);
-  const cross = 2 + Math.floor(r() * 3);
+  // vertical arm in the upper half with a wide crossing
+  const vx = 5;
+  const cross = 2 + Math.floor(r() * 2);
   for (let y = 0; y < y0; y++) for (let i = 0; i < 2; i++) {
-    cells[idx(vx + i, y)] = Math.abs(cross - y) <= (n <= 6 ? 1 : 0) ? T.BRIDGE : T.LETHAL;
+    cells[idx(vx + i, y)] = y >= cross && y < cross + 3 ? T.BRIDGE : T.LETHAL;
   }
 }
 
 function shapeChannel(cells, r, n, d) {
-  // a vertical channel through the upper part plus a horizontal branch
+  // a vertical channel through the upper part, crossed by wide bridges, plus a short branch
   const vx = 4 + Math.floor(r() * 3);
-  const bridges = Math.max(1, (n <= 4 ? 2 : 1) + d.bridges);
-  const by = [];
-  for (let b = 1; b <= bridges; b++) by.push(Math.round((9 / (bridges + 1)) * b));
+  const bridges = n <= 5 ? 2 : 1;
+  const by = n <= 5 ? [1, 6] : [3];
   for (let y = 0; y < 10; y++) for (let i = 0; i < 2; i++) {
-    cells[idx(vx + i, y)] = by.some((q) => Math.abs(q - y) <= (n <= 5 ? 1 : 0)) ? T.BRIDGE : T.LETHAL;
+    cells[idx(vx + i, y)] = by.slice(0, bridges).some((q) => y >= q && y < q + 3) ? T.BRIDGE : T.LETHAL;
   }
-  const hy = 9 + Math.floor(r() * 2);
-  const bx = 1 + Math.floor(r() * (vx - 1));
-  for (let x = 0; x < COLS; x++) {
-    if (inSafe(x, hy)) continue;
-    cells[idx(x, hy)] = x >= bx - 1 && x <= bx + 1 ? T.BRIDGE : T.LETHAL;
+  if (n >= 4) {
+    const hy = 9 + Math.floor(r() * 2);
+    const left = r() < 0.5;
+    const len = 3 + Math.floor(n / 4);
+    for (let i = 0; i < len; i++) {
+      const x = left ? vx - 1 - i : vx + 2 + i;
+      if (x >= 0 && x < COLS && !inSafe(x, hy)) cells[idx(x, hy)] = T.LETHAL;
+    }
   }
-  if (n >= 6) shapePools(cells, r, Math.max(2, n - 4), d, false);
+  if (n >= 7) shapePools(cells, r, 3, d, false);
 }
 
 function shapeLagoon(cells, r, n, d) {
-  const cx = 4 + Math.floor(r() * 3), cy = 3 + Math.floor(r() * 2);
-  const parts = [[cx, cy, 6, 4], [cx - 2, cy + 1, 3, 3], [cx + 3, cy + 2, 3, 3]];
+  const cx = 4 + Math.floor(r() * 3), cy = 2 + Math.floor(r() * 2);
+  const parts = [[cx, cy, 5, 4], [cx - 2, cy + 1, 3, 2], [cx + 4, cy + 2, 2, 3]];
   for (const [x, y, w, h] of parts) fillRect(cells, x, y, w, h, T.LETHAL);
-  if (d.bridges >= 0) {
-    const by = cy + 2;
-    for (let x = cx - 2; x <= cx + 8; x++) if (cells[idx(x, by)] === T.LETHAL) cells[idx(x, by)] = T.BRIDGE;
+  if (d.bridges >= 0 || n <= 6) { // a dock crossing the lagoon, two rows wide
+    const by = cy + 1;
+    for (let x = cx - 2; x <= cx + 6; x++) for (let j = 0; j < 2; j++) if (cells[idx(x, by + j)] === T.LETHAL) cells[idx(x, by + j)] = T.BRIDGE;
   }
-  if (n >= 5) shapePools(cells, r, Math.max(2, n - 3), d, false);
+  if (n >= 6) shapePools(cells, r, 3, d, false);
 }
 
 function shapeIslands(cells, r, n, d) {
   cells.fill(T.LETHAL);
   const w = Math.max(5, 9 - Math.floor(n / 5) - (d.bridges < 0 ? 1 : 0));
-  const A = { x: 1, y: 10, w: 10, h: 8 };
-  const B = { x: 1 + Math.floor(r() * 2), y: 5, w: Math.max(4, w - 2), h: 4 };
-  const C = { x: 6 + Math.floor(r() * 2), y: 2, w: 5, h: 3 };
-  const D = { x: 1 + Math.floor(r() * 3), y: 0, w: 6, h: 2 };
+  const A = { x: 0, y: 10, w: 12, h: 8 };
+  const B = { x: 1 + Math.floor(r() * 2), y: 5, w: Math.max(6, w - 1), h: 4 };
+  const C = { x: 6 + Math.floor(r() * 2), y: 1, w: 5, h: 3 };
+  const D = { x: 0, y: 0, w: 5, h: 3 };
   for (const p of [A, B, C, D]) fillRect(cells, p.x, p.y, p.w, p.h, T.FLOOR, false);
-  const link = (x, y0, y1) => { for (let y = y0; y <= y1; y++) if (cells[idx(x, y)] === T.LETHAL) cells[idx(x, y)] = T.BRIDGE; };
-  const linkH = (y, x0, x1) => { for (let x = x0; x <= x1; x++) if (cells[idx(x, y)] === T.LETHAL) cells[idx(x, y)] = T.BRIDGE; };
+  const link = (x, y0, y1) => { for (let y = y0; y <= y1; y++) for (let i = 0; i < 3; i++) if (inb(x + i, y) && cells[idx(x + i, y)] === T.LETHAL) cells[idx(x + i, y)] = T.BRIDGE; };
+  const linkH = (y, x0, x1) => { for (let x = x0; x <= x1; x++) for (let j = 0; j < 2; j++) if (cells[idx(x, y + j)] === T.LETHAL) cells[idx(x, y + j)] = T.BRIDGE; };
   link(B.x + 1, B.y + B.h, A.y - 1);
   linkH(B.y + 1, B.x + B.w, C.x - 1);
   link(C.x + 1, C.y + C.h, B.y + 1);
   link(D.x + 1, D.y + D.h, B.y - 1);
   // holes in the islands
-  const holes = Math.min(6, Math.floor(n / 2) + (d.bridges < 0 ? 1 : 0));
+  const holes = Math.min(3, Math.floor(n / 4) + (d.bridges < 0 ? 1 : 0));
   for (let i = 0; i < holes; i++) {
     const x = Math.floor(r() * COLS), y = Math.floor(r() * ROWS);
     if (cells[idx(x, y)] === T.FLOOR && !inSafe(x, y)) cells[idx(x, y)] = T.LETHAL;
@@ -261,17 +242,108 @@ function connect(cells, spawn, portals) {
   }
 }
 
+// ------------------------------------------------------------------ designed layouts
+// Obstacles come in small formations placed mirrored around the vertical axis, so every board
+// reads as a composed arena instead of scattered rocks. Formations keep at least two free cells
+// between each other, and a placement is rejected if it would create a dead end or a one-cell
+// corridor.
+const dry = (t) => t !== T.SOLID && t !== T.LETHAL && t !== T.SPIKE;
+
+const FORMS = {
+  pillar: [[0, 0]],
+  pair: [[0, 0], [1, 0]],
+  post: [[0, 0], [0, 1]],
+  elbow: [[0, 0], [1, 0], [0, 1]],
+  bar: [[0, 0], [1, 0], [2, 0]],
+  block: [[0, 0], [1, 0], [0, 1], [1, 1]],
+};
+// which formations each level tier may use
+const TIERS = [
+  ['pillar', 'pair'],
+  ['pillar', 'pair', 'post'],
+  ['pair', 'post', 'elbow'],
+  ['post', 'elbow', 'bar', 'block'],
+];
+
+function thinCells(cells) {
+  // dry cells that are not part of any fully dry 2x2 block: one-cell corridors, spurs and pockets
+  const ok = (x, y) => inb(x, y) && dry(cells[idx(x, y)]);
+  const list = [];
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+    if (!ok(x, y)) continue;
+    let in2 = false;
+    for (const [ax, ay] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) {
+      if (ok(x + ax, y + ay) && ok(x + ax + 1, y + ay) && ok(x + ax, y + ay + 1) && ok(x + ax + 1, y + ay + 1)) { in2 = true; break; }
+    }
+    if (!in2) list.push(idx(x, y));
+  }
+  return list;
+}
+
+// Turn thin spots into hazard terrain (a natural shoreline) until every walkable cell has room.
+function thinFix(cells) {
+  let n = 0;
+  for (let round = 0; round < 8; round++) {
+    const list = thinCells(cells).filter((k) => cells[k] !== T.PORTAL);
+    if (!list.length) return n;
+    for (const k of list) cells[k] = T.LETHAL;
+    n += list.length;
+  }
+  return n;
+}
+
+function cluster(cells, list, gap) {
+  // is any cell of the formation closer than `gap` to a solid / hazard / portal?
+  for (const [x, y] of list) {
+    if (!inb(x, y) || x < 1 || y < 1 || x > COLS - 2 || y > ROWS - 2 || inSafe(x, y)) return true;
+    for (let j = -gap; j <= gap; j++) for (let i = -gap; i <= gap; i++) {
+      if (!inb(x + i, y + j)) continue;
+      const t = cells[idx(x + i, y + j)];
+      if (t === T.SOLID || t === T.SPIKE || t === T.PORTAL) return true;
+    }
+    if (cells[idx(x, y)] !== T.FLOOR) return true;
+  }
+  return false;
+}
+
+function placeForms(cells, r, obs, nSprites, count, tier, kind) {
+  // kind: T.SOLID (with sprite) or T.SPIKE. Formations are mirrored across x -> 11 - x.
+  const forms = TIERS[tier];
+  let placed = 0;
+  for (let tries = 0; tries < 300 && placed < count; tries++) {
+    const name = kind === T.SPIKE ? (r() < 0.6 ? 'pillar' : 'pair') : forms[Math.floor(r() * forms.length)];
+    const shape = FORMS[name];
+    const ox = 1 + Math.floor(r() * 5), oy = 1 + Math.floor(r() * 14);
+    const list = shape.map(([a, b]) => [ox + a, oy + b]);
+    const mirror = list.map(([x, y]) => [COLS - 1 - x, y]);
+    const center = list.some(([x]) => x >= 5) ; // formation crossing the axis: place once
+    const all = center ? list : list.concat(mirror);
+    // the mirrored copy must not touch the original
+    if (!center && list.some(([x, y]) => mirror.some(([mx, my]) => Math.abs(mx - x) <= 2 && Math.abs(my - y) <= 2))) continue;
+    if (cluster(cells, all, kind === T.SPIKE ? 2 : 2)) continue;
+    const before = thinCells(cells).length;
+    const saved = all.map(([x, y]) => cells[idx(x, y)]);
+    all.forEach(([x, y]) => { cells[idx(x, y)] = kind; });
+    const seen = reach(cells, { x: 5, y: 15 }, []);
+    let lost = 0;
+    for (let k = 0; k < cells.length; k++) if (dry(cells[k]) && !seen[k]) lost++;
+    if (lost > 0 || thinCells(cells).length > before) { all.forEach(([x, y], i) => { cells[idx(x, y)] = saved[i]; }); continue; }
+    if (kind === T.SOLID) all.forEach(([x, y]) => obs.push({ x, y, s: Math.floor(r() * nSprites) }));
+    placed += all.length;
+  }
+}
+
 // ------------------------------------------------------------------ level builder
-export function buildLevel(map, n, diffId = 'normal') {
+function buildOnce(map, n, diffId, attempt) {
   const d = DIFFS[diffId] || DIFFS.normal;
   const def = MAPDEF[map];
-  const seed = map * 7919 + n * 104729 + (diffId === 'easy' ? 11 : diffId === 'hard' ? 23 : 0) * 1231;
+  const seed = map * 7919 + n * 104729 + (diffId === 'easy' ? 11 : diffId === 'hard' ? 23 : 0) * 1231 + attempt * 65537;
   const r = rng(seed);
   const cells = new Uint8Array(COLS * ROWS);
   const spawn = { x: 5, y: 15, dir: 'up', len: 3 };
 
   switch (def.shape) {
-    case 'river': shapeRiver(cells, r, n, d, false); break;
+    case 'river': shapeRiver(cells, r, n, d); break;
     case 'pools': shapePools(cells, r, n, d, map === 12 || map === 3); break;
     case 'cross': shapeCross(cells, r, n, d); break;
     case 'channel': shapeChannel(cells, r, n, d); break;
@@ -282,16 +354,10 @@ export function buildLevel(map, n, diffId = 'normal') {
   if (def.slow) patches(cells, r, n, T.SLOW, 1 + Math.floor(n / 4), [[3, 2], [2, 2], [4, 2]]);
   if (def.ice) patches(cells, r, n, T.ICE, 2 + Math.floor(n / 3), [[4, 3], [3, 3], [5, 2]]);
 
-  // hazards (single lethal cells)
-  const hazards = Math.round((n >= 2 ? Math.floor(n * 0.7) : 0) * d.hazard) + (def.shape === 'islands' ? 0 : 0);
-  for (let i = 0, placed = 0; i < 80 && placed < Math.min(hazards, 9); i++) {
-    const x = 1 + Math.floor(r() * (COLS - 2)), y = 1 + Math.floor(r() * (ROWS - 3));
-    if (inSafe(x, y) || cells[idx(x, y)] !== T.FLOOR) continue;
-    cells[idx(x, y)] = T.SPIKE;
-    placed++;
-  }
-
   connect(cells, spawn, []);
+  let fixed = thinFix(cells);
+  connect(cells, spawn, []);
+  fixed += thinFix(cells);
 
   // portals
   const portals = [];
@@ -309,39 +375,42 @@ export function buildLevel(map, n, diffId = 'normal') {
     }
   }
 
-  // obstacles, keeping the board connected
-  const want = Math.round((3 + n * 0.9 + (map - 1) * 0.25) * d.obst);
+  // composed obstacle formations and (from level 3) mirrored spike pairs
+  const tier = n <= 2 ? 0 : n <= 5 ? 1 : n <= 8 ? 2 : 3;
   const obs = [];
   const nSprites = MX[map].obs;
-  let free0 = freeCount(cells);
-  for (let tries = 0; tries < 400 && obs.length < want; tries++) {
-    const x = Math.floor(r() * COLS), y = Math.floor(r() * ROWS);
-    if (inSafe(x, y) || cells[idx(x, y)] !== T.FLOOR) continue;
-    if (portals.some(([a, b]) => (Math.abs(a.x - x) + Math.abs(a.y - y) <= 1) || (Math.abs(b.x - x) + Math.abs(b.y - y) <= 1))) continue;
-    // keep a little breathing room between obstacles
-    if (obs.some((o) => Math.abs(o.x - x) + Math.abs(o.y - y) < 3)) continue;
-    cells[idx(x, y)] = T.SOLID;
-    const seen = reach(cells, spawn, portals);
-    let ok = true, unreachable = 0;
-    for (let k = 0; k < cells.length; k++) {
-      const t = cells[k];
-      if (t !== T.SOLID && t !== T.LETHAL && t !== T.SPIKE && !seen[k]) unreachable++;
-    }
-    if (unreachable > 3) ok = false;
-    if (!ok) { cells[idx(x, y)] = T.FLOOR; continue; }
-    obs.push({ x, y, s: Math.floor(r() * nSprites) });
-  }
+  const lethalNow = () => { let c = 0; for (const t of cells) if (t === T.LETHAL || t === T.SPIKE) c++; return c; };
+  const budget = Math.max(0, Math.round((d.id === 'easy' ? 14 : d.id === 'hard' ? 26 : 20) + n * 0.6) - lethalNow() * 0.5);
+  const solids = Math.min(budget, Math.round((3 + n * 0.8 + (map - 1) * 0.15) * d.obst));
+  placeForms(cells, r, obs, nSprites, solids, tier, T.SOLID);
+  if (n >= 3) placeForms(cells, r, obs, nSprites, Math.min(6, Math.round(Math.floor((n - 1) / 2) * d.hazard)), tier, T.SPIKE);
 
   // anything still unreachable becomes terrain (water / void / lava) so orbs never spawn there
   const seen = reach(cells, spawn, portals);
+  let fixedDead = 0; void fixedDead;
   const deadFill = def.shape === 'islands' || def.shape === 'cross' || def.shape === 'river' || def.shape === 'pools' || def.shape === 'lagoon' || def.shape === 'channel' ? T.LETHAL : T.SOLID;
   for (let k = 0; k < cells.length; k++) {
     const t = cells[k];
-    if (t !== T.SOLID && t !== T.LETHAL && t !== T.SPIKE && !seen[k]) cells[k] = deadFill === T.LETHAL ? T.LETHAL : T.SOLID;
+    if (t !== T.SOLID && t !== T.LETHAL && t !== T.SPIKE && !seen[k]) { cells[k] = deadFill === T.LETHAL ? T.LETHAL : T.SOLID; fixed++; }
   }
   for (const [a, b] of portals) { if (!seen[idx(a.x, a.y)] || !seen[idx(b.x, b.y)]) { cells[idx(a.x, a.y)] = T.FLOOR; cells[idx(b.x, b.y)] = T.FLOOR; } }
 
   const reachable = reach(cells, spawn, portals);
-  void free0;
-  return { map, n, diff: d.id, cells, obs, portals, spawn, reachable, def };
+  return { map, n, diff: d.id, cells, obs, portals, spawn, reachable, def, fixed };
 }
+
+// Quality gate: enough walkable floor and no heavy after-the-fact trimming; otherwise redraw the level.
+export function buildLevel(map, n, diffId = 'normal') {
+  const minFree = def13(map) ? 132 : diffId === 'easy' ? 172 : diffId === 'normal' ? 164 : 156;
+  let best = null, bestScore = -1e9;
+  for (let attempt = 0; attempt < 24; attempt++) {
+    const L = buildOnce(map, n, diffId, attempt);
+    let free = 0;
+    for (const t of L.cells) if (t !== T.SOLID && t !== T.LETHAL && t !== T.SPIKE) free++;
+    const score = Math.min(free - minFree, 0) * 2 - L.fixed;
+    if (score > bestScore) { best = L; bestScore = score; }
+    if (free >= minFree && L.fixed <= 8) return L;
+  }
+  return best;
+}
+const def13 = (map) => map === 13;

@@ -116,18 +116,23 @@ const L = (rows) => rows.map((r) => r.padEnd(12, '.'));
 
 // Story difficulty presets (used by maps.js for terrain and by storyLevel for pace).
 export const DIFFS = {
-  easy: { id: 'easy', label: 'FÁCIL', speed: 0.86, target: 0.8, obst: 0.65, hazard: 0.6, bridges: 1, reward: 0.6, gold: 1.3, color: '#7FD05A' },
-  normal: { id: 'normal', label: 'NORMAL', speed: 1, target: 1, obst: 1, hazard: 1, bridges: 0, reward: 1, gold: 1, color: '#E8B04A' },
-  hard: { id: 'hard', label: 'DIFÍCIL', speed: 1.16, target: 1.25, obst: 1.4, hazard: 1.5, bridges: -1, reward: 1.7, gold: 0.8, color: '#E0524A' },
+  easy: { id: 'easy', label: 'FÁCIL', speed: 0.85, target: 1, obst: 0.6, hazard: 0.5, bridges: 1, reward: 0.6, gold: 1.3, color: '#7FD05A' },
+  normal: { id: 'normal', label: 'NORMAL', speed: 1, target: 1, obst: 0.9, hazard: 0.8, bridges: 0, reward: 1, gold: 1, color: '#E8B04A' },
+  hard: { id: 'hard', label: 'DIFÍCIL', speed: 1.12, target: 1, obst: 1.15, hazard: 1.1, bridges: -1, reward: 1.7, gold: 0.8, color: '#E0524A' },
 };
+
+// Orbs needed: easy 8-20, normal 10-26, hard 12-31 (never more than a 216-cell board can comfortably hold)
+const TARGET_BASE = { easy: 8, normal: 10, hard: 12 };
+const TARGET_MAP = { easy: 0.3, normal: 0.4, hard: 0.5 };
+const TARGET_LVL = { easy: 0.9, normal: 1.1, hard: 1.3 };
 
 export function storyLevel(map, n, diff = 'normal') {
   const d = DIFFS[diff] || DIFFS.normal;
   return {
     map, n, diff: d.id, mapInfo: MAPS[map - 1],
-    target: Math.round((10 + 0.8 * (map - 1) + 1.2 * (n - 1)) * d.target),
-    speed: (4.2 + 0.15 * (map - 1) + 0.12 * (n - 1)) * d.speed,
-    goldChance: Math.min(0.5, (0.1 + (0.15 * (n - 1)) / 9) * d.gold),
+    target: Math.round(TARGET_BASE[d.id] + TARGET_MAP[d.id] * (map - 1) + TARGET_LVL[d.id] * (n - 1)),
+    speed: (3.7 + 0.05 * (map - 1) + 0.1 * (n - 1)) * d.speed,
+    goldChance: Math.min(0.35, (0.08 + (0.1 * (n - 1)) / 9) * d.gold),
     reward: Math.round(ECONOMY.levelReward(map, n) * d.reward),
     spawn: { x: 5, y: 15, dir: 'up', len: 3 },
     guardian: n === 10,
