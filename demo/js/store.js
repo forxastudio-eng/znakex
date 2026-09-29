@@ -46,6 +46,10 @@ export function load() {
     delete state.story;
   }
   if (!['easy', 'normal', 'hard'].includes(state.diff)) state.diff = 'normal';
+  // skins removed in v0.6: forget them and fall back to the starter snake
+  state.owned = state.owned.filter((id) => SKINS.some((s) => s.id === id));
+  if (!state.owned.includes('basica')) state.owned.unshift('basica');
+  if (!SKINS.some((s) => s.id === state.equipped)) state.equipped = 'basica';
   if (CONFIG.tester) {
     // tester build: every skin owned and a large coin balance
     state.owned = SKINS.map((s) => s.id);

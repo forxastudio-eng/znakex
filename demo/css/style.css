@@ -291,6 +291,11 @@ svg.path { position: absolute; inset: 0; width: 100%; height: 100%; overflow: vi
 .skin-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .skin-name { text-align: center; margin-top: -0.4rem; }
 .rarity { display: inline-block; padding: 0.15rem 0.7rem; border-radius: 0.2rem; font-family: 'Barlow Condensed'; font-weight: 700; letter-spacing: 0.16em; font-size: 0.85rem; color: #120d06; }
+.cat-tabs { display: flex; gap: 0.35rem; overflow-x: auto; padding: 0.1rem 0.1rem 0.5rem; scrollbar-width: none; }
+.cat-tabs::-webkit-scrollbar { display: none; }
+.cat { flex: none; font-family: 'Bebas Neue'; font-size: 1.05rem; letter-spacing: 0.08em; padding: 0.3rem 0.7rem; border-radius: 999px;
+  color: var(--cc); background: rgba(0, 0, 0, 0.35); border: 1.5px solid color-mix(in srgb, var(--cc) 55%, transparent); }
+.cat.on { color: #1A140C; background: var(--cc); border-color: var(--cc); box-shadow: 0 0 0.7rem color-mix(in srgb, var(--cc) 60%, transparent); }
 .grid-head { grid-column: 1 / -1; font-family: 'Bebas Neue'; font-size: 1.3rem; letter-spacing: 0.12em; color: var(--honey); margin-top: 0.4rem; }
 .skin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
 .skin-card { position: relative; aspect-ratio: 0.82; border-radius: 0.5rem; overflow: hidden; background: rgba(10, 14, 11, 0.55); box-shadow: inset 0 0 0 2px var(--line); display: flex; flex-direction: column; transition: transform .2s; }
@@ -591,5 +596,7 @@ svg.path { position: absolute; inset: 0; width: 100%; height: 100%; overflow: vi
 .ptw { position: relative; aspect-ratio: 1; width: 100%; }
 .ptw img.pt { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ptw .fr { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; z-index: 1; }
-.ptw.has-fr img.pt { position: absolute; inset: 11%; width: 78%; height: 78%; border-radius: 8%; }
+.ptw.has-fr img.pt { position: absolute; inset: var(--fi, 11%); width: calc(100% - 2 * var(--fi, 11%)); height: calc(100% - 2 * var(--fi, 11%)); aspect-ratio: auto; border-radius: 6%; }
+.ptw.r-normal { --fi: 22.5%; } .ptw.r-especial { --fi: 12%; } .ptw.r-mitico { --fi: 14.5%; }
+.ptw.r-legendario { --fi: 11.5%; } .ptw.r-temporada { --fi: 17%; }
 .ptw.big { width: 11rem; border-radius: .6rem; }

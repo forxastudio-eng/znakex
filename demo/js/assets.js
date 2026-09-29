@@ -1,7 +1,6 @@
 // Image preloader with progress callback.
-import { SKINS, BOTS } from './data.js';
+import { BOTS, skinById } from './data.js';
 import { MX } from './mapmanifest.js';
-import { SKIN_MODS } from './skinmods.js';
 import { PW_FILES, KIT_FILES, BANNER_FILES } from './newmanifest.js';
 
 export const IMG = {};
@@ -44,13 +43,17 @@ export const MANIFEST = [
   ...KIT_FILES.map((n) => `ui/v3/${n}.png`),
   ...BANNER_FILES.map((n) => `ui/banners/${n}.png`),
   'ui/season_badge.png', 'maps/season1.jpg',
-  ...[...new Set([...SKINS.map((s) => s.art || s.id), ...Object.values(BOTS).map((b) => b.art || b.id)])]
-    .flatMap((k) => ['head', 'body', 'tail'].map((p) => `skins2/${k}/${p}.png`)),
-  ...Object.entries(SKIN_MODS).flatMap(([id, m]) => [
-    ...Array.from({ length: m.variants }, (_, i) => `skins2/${id}/variant${i}.png`),
-    ...Array.from({ length: m.specials }, (_, i) => `skins2/${id}/special${i}.png`),
-  ]),
 ];
+
+// Skin art is loaded on demand (64 skins would be too much memory on a phone): the equipped
+// skin and the duel rivals at start, any other one when the gallery shows it or a game uses it.
+const skinFiles = (k) => ['head', 'm0', 'm1', 'm2', 'sp', 'tail', ...(skinById(k).tongueImg ? ['tongue'] : [])].map((p) => `skins3/${k}/${p}.webp`);
+const skinLoads = new Map();
+export function ensureSkin(id) {
+  const k = skinById(id).art || skinById(id).id;
+  if (!skinLoads.has(k)) skinLoads.set(k, Promise.all(skinFiles(k).filter((f) => !IMG[f]).map(loadOne)));
+  return skinLoads.get(k);
+}
 
 function loadOne(src) {
   return new Promise((resolve) => {
@@ -62,10 +65,12 @@ function loadOne(src) {
   });
 }
 
-export async function loadAll(onProgress) {
+export async function loadAll(onProgress, startSkins = []) {
   let done = 0;
-  const total = MANIFEST.length;
-  await Promise.all(MANIFEST.map((src) => loadOne(src).then(() => onProgress(++done / total))));
+  const list = [...MANIFEST, ...new Set([...startSkins, ...Object.values(BOTS).map((b) => b.art || b.id)].flatMap(skinFiles))];
+  const total = list.length;
+  await Promise.all(list.map((src) => loadOne(src).then(() => onProgress(++done / total))));
+  for (const k of startSkins) skinLoads.set(k, Promise.resolve());
 }
 
 export const url = (p) => `assets/${p}`;

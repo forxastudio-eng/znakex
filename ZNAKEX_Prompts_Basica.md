@@ -70,3 +70,13 @@ Los que van con fondo magenta (`#FF00FF`) son los verdes y turquesas; el resto c
 - Si el generador cambia formas: repite `same shapes, same pose, same layout, change only the colors`.
 - Si el negro o el blanco se pierden sobre el suelo del juego, dímelo y subo el contraste del contorno al recortarlos.
 - Nombres al subir: `SKINS/basicas/01_verde.png`, `02_rojo.png`, `03_azul.png`, `04_amarillo.png`, `05_morado.png`, `06_naranja.png`, `07_rosa.png`, `08_turquesa.png`, `09_negro.png`, `10_blanco.png` y el modelo base en `SKINS/basica_base.png`.
+
+## Proporciones en el juego (v0.6)
+
+La serpiente se dibuja por casillas: cabeza (1) + módulo especial (2) + módulos A, B, C en ciclo (1 cada uno) + cola (1). Al recortar, el grosor real del cuerpo se toma del **módulo repetible**, y los módulos A/B/C se escalan a ese mismo grosor (en las hojas actuales salen dibujados más grandes). Para futuras hojas, si puedes, añade al final del prompt:
+
+```text
+All body modules A, B, C, the special module, the repeating module and the tail base share EXACTLY the same body thickness. Modules A, B and C are about 1.3x as long as they are thick; the special module is about 2.6x as long as it is thick; the tail is short, about 3x as long as it is thick at its base.
+```
+
+No hace falta generar módulos de giro: el juego los crea doblando los propios módulos de cada skin.

@@ -7,7 +7,7 @@ import { IMG } from './assets.js';
 import * as cloud from './cloud.js';
 import * as audio from './audio.js';
 import * as store from './store.js';
-import { url } from './assets.js';
+import { url, ensureSkin } from './assets.js';
 import { drawSnake, pathPoints } from './snakedraw.js';
 import { fmt, TAU, ease, clamp, rand } from './util.js';
 import { Game } from './game.js';
@@ -380,12 +380,14 @@ export class UI {
     this.setBg('deep');
     const S = this.S();
     let sel = S.equipped;
+    let cat = 'all';
     const e = el(`<section>
       ${this.topbar('SKINS')}
       <div class="skin-stage"><canvas id="stage"></canvas></div>
       <div class="skin-name" id="sn"></div>
       <div class="scroll" style="margin-top:.4rem">
         <div class="t-label dim" style="text-align:center;font-size:.85rem;margin-bottom:.5rem" id="col"></div>
+        <div id="tabs"></div>
         <div class="skin-grid stagger" id="grid"></div>
       </div>
       <div id="act" style="padding:.5rem 0 .2rem"></div>
@@ -393,28 +395,32 @@ export class UI {
     </section>`);
     const grid = $(e, '#grid');
     const paintGrid = () => {
-      $(e, '#col').textContent = `COLECCIÓN ${S.owned.length}/${SKINS.length} · DEMO`;
+      $(e, '#col').textContent = `COLECCIÓN ${S.owned.length}/${SKINS.length}`;
       const card = (s, i) => {
         const own = S.owned.includes(s.id);
         const rc = RARITY[s.rarity].color;
         return `<button class="skin-card ${own ? '' : 'locked'} ${s.id === sel ? 'sel' : ''}" data-act="sk" data-id="${s.id}" style="--rc:${rc};--i:${i}">
-          <div class="ptw"><img class="pt" src="${url('skins/' + s.id + '.jpg')}" alt="">${frameImg(s.rarity)}</div>
+          <div class="ptw r-${s.rarity}"><img class="pt" src="${url('skins/' + s.id + '.jpg')}" alt="">${frameImg(s.rarity)}</div>
           ${own ? '' : `<img class="lk" src="${icon('lock')}" alt="">`}
           ${S.equipped === s.id ? `<img class="eq" src="${icon('check')}" alt="">` : ''}
           <span class="rl" style="background:${rc}">${RARITY[s.rarity].label}</span>
           <div class="foot">${own ? (S.equipped === s.id ? 'EQUIPADA' : 'TUYA') : s.season ? 'TEMPORADA' : `<img src="${icon('coin')}" alt="">${fmt(skinPrice(s))}`}</div>
         </button>`;
       };
-      const basics = SKINS.filter((s) => s.basic);
-      let html = `<div class="grid-head">BÁSICAS · 10 COLORES</div>${basics.map(card).join('')}`;
-      let n = basics.length;
-      for (const r of ['especial', 'mitico', 'legendario', 'temporada']) {
-        const list = SKINS.filter((s) => !s.basic && s.rarity === r);
-        if (!list.length) continue;
-        html += `<div class="grid-head" style="color:${RARITY[r].color}">${RARITY[r].label}S · ${list.length}</div>${list.map((s) => card(s, n++)).join('')}`;
+      // quality categories: básicas, normales, especiales, míticas, legendarias and season skins
+      const groups = [
+        ['basic', 'BÁSICAS', '#C9D2B4', SKINS.filter((s) => s.basic)],
+        ...['normal', 'especial', 'mitico', 'legendario', 'temporada'].map((r) => [r, { normal: 'NORMALES', especial: 'ESPECIALES', mitico: 'MÍTICAS', legendario: 'LEGENDARIAS', temporada: 'TEMPORADA' }[r], RARITY[r].color, SKINS.filter((s) => !s.basic && s.rarity === r)]),
+      ].filter((gr) => gr[3].length);
+      const tabs = `<div class="cat-tabs">${[['all', 'TODAS', '#E8E2C8'], ...groups.map(([k, l, c]) => [k, l, c])].map(([k, l, c]) =>
+        `<button class="cat ${cat === k ? 'on' : ''}" data-act="cat" data-cat="${k}" style="--cc:${c}">${l}</button>`).join('')}</div>`;
+      let html = '', n = 0;
+      for (const [k, l, c, list] of groups) {
+        if (cat !== 'all' && cat !== k) continue;
+        const own = list.filter((s) => S.owned.includes(s.id)).length;
+        html += `<div class="grid-head" style="color:${c}">${l} · ${own}/${list.length}</div>${list.map((s) => card(s, n++)).join('')}`;
       }
-      const normals = SKINS.filter((s) => !s.basic && s.rarity === 'normal');
-      if (normals.length) html = html.replace(/<div class="grid-head">BÁSICAS[^]*?(?=<div class="grid-head" style="color)/, (m) => m + `<div class="grid-head" style="color:${RARITY.normal.color}">NORMALES · ${normals.length}</div>${normals.map((s) => card(s, n++)).join('')}`);
+      $(e, '#tabs').innerHTML = tabs;
       grid.innerHTML = html;
     };
     const paintInfo = () => {
@@ -439,6 +445,7 @@ export class UI {
     };
     paintGrid();
     paintInfo();
+    ensureSkin(sel);
 
     // animated preview
     const cv = $(e, '#stage');
@@ -484,7 +491,8 @@ export class UI {
 
     this.wire(e, {
       toseason: () => this.go('season'),
-      sk: (b) => { sel = b.dataset.id; grid.querySelectorAll('.skin-card').forEach((c) => c.classList.toggle('sel', c.dataset.id === sel)); paintInfo(); },
+      cat: (b) => { cat = b.dataset.cat; paintGrid(); },
+      sk: (b) => { sel = b.dataset.id; ensureSkin(sel); grid.querySelectorAll('.skin-card').forEach((c) => c.classList.toggle('sel', c.dataset.id === sel)); paintInfo(); },
       equip: () => { S.equipped = sel; store.save(); paintGrid(); paintInfo(); this.toast('¡Skin equipada!'); },
       buy: () => {
         const s = skinById(sel);
@@ -517,7 +525,7 @@ export class UI {
     const o = this.overlay(`<div class="overlay dark">
       <div class="panel strong"><div class="inner">
         <div class="t-label glow-amber">¡SKIN DESBLOQUEADA!</div>
-        <div class="ptw big" style="box-shadow:0 0 2rem ${RARITY[s.rarity].color};animation:pop .6s var(--ease) both"><img class="pt" src="${url('skins/' + s.id + '.jpg')}" alt="">${frameImg(s.rarity)}</div>
+        <div class="ptw big r-${s.rarity}" style="box-shadow:0 0 2rem ${RARITY[s.rarity].color};animation:pop .6s var(--ease) both"><img class="pt" src="${url('skins/' + s.id + '.jpg')}" alt="">${frameImg(s.rarity)}</div>
         <div class="ov-title worn">${s.name.toUpperCase()}</div>
         <span class="rarity" style="background:${RARITY[s.rarity].color}">${RARITY[s.rarity].label}</span>
         <button class="btn-primary" data-act="ok" style="width:100%"><span class="worn">GENIAL</span></button>
@@ -764,11 +772,11 @@ export class UI {
       ${this.topbar('TIENDA', back)}
       <div class="scroll stagger">
         <div class="panel" ${stag(0)} style="margin-bottom:1rem"><div class="inner" style="display:grid;grid-template-columns:7rem 1fr;gap:.8rem;align-items:center">
-          <img src="${url('skins/forest.jpg')}" style="width:7rem;border-radius:.5rem;box-shadow:0 0 1.2rem rgba(232,176,74,.5)">
+          <img src="${url('skins/pirata.jpg')}" style="width:7rem;border-radius:.5rem;box-shadow:0 0 1.2rem rgba(232,176,74,.5)">
           <div><div class="t-display worn glow-amber" style="font-size:2rem">PACK DE INICIO</div>
             <div class="t-label" style="font-size:.9rem">SKIN RARA + 5.000 MONEDAS</div>
             <div class="dim" style="font-size:.8rem">Oferta única · −80 %</div>
-            <button class="btn small" data-act="buy" data-coins="5000" data-skin="forest" style="margin-top:.4rem">1,99 US$</button></div>
+            <button class="btn small" data-act="buy" data-coins="5000" data-skin="pirata" style="margin-top:.4rem">1,99 US$</button></div>
         </div></div>
         <div class="pack-grid">
           ${ECONOMY.packs.map((p, i) => `<button class="pack ${p.tag ? 'best' : ''}" data-act="buy" data-coins="${p.coins}" ${stag(i + 1)}>
@@ -1038,7 +1046,8 @@ export class UI {
     if (cfg.mode === 'duel') meta.track('duelplay');
     if (this.game) this.game = null;
     this.closeOverlays();
-    this.go('game', cfg);
+    // the equipped skin art is loaded on demand; it is almost always ready already
+    ensureSkin(this.S().equipped).then(() => this.go('game', cfg));
   }
 
   scr_game(cfg) {
@@ -1071,7 +1080,7 @@ export class UI {
         : cfg.level.season ? `${cfg.level.guardian ? 'GUARDIÁN · ' : ''}TEMPORADA · NIVEL ${cfg.level.n}`
           : `${cfg.level.guardian ? 'GUARDIÁN · ' : ''}NIVEL ${cfg.level.map}-${cfg.level.n} · ${cfg.level.mapInfo.name} · ${DIFFS[cfg.level.diff].label}`;
     } else if (mode === 'classic') {
-      hc.innerHTML = `<div class="hud-obj"><img src="${icon('mode_classic')}" alt=""><span id="ho">LARGO 3</span></div><div class="t-label dim" style="font-size:.75rem">RÉCORD ${fmt(S.best.classic)}</div>`;
+      hc.innerHTML = `<div class="hud-obj"><img src="${icon('mode_classic')}" alt=""><span id="ho">LARGO 4</span></div><div class="t-label dim" style="font-size:.75rem">RÉCORD ${fmt(S.best.classic)}</div>`;
       $(e, '#tl').textContent = 'CLÁSICO';
     } else if (mode === 'frenzy') {
       hc.innerHTML = `<div class="timer-big" id="tm">1:00</div><div class="t-label dim" style="font-size:.75rem">RÉCORD ${fmt(S.best.frenzy)}</div>`;

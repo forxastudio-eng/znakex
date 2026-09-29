@@ -167,3 +167,13 @@ SKIN: "BRONZE COLOSSUS SERPENT" – an ancient war-golem serpent. Palette: bronz
 - Si los cuernos salen enormes: `head including horns fits in 420 x 380 px, horns short and thick`.
 - Si mezcla piezas, genera dos hojas: `ROW 1–2` (portada, efectos, cabeza) y `ROW 3–4` (cuerpo, especial, cola).
 - Sube las hojas a `SKINS/nuevas/` y los marcos a `Pantallas/marcos/`, y avísame para recortarlas y añadirlas a la tienda.
+
+## Proporciones en el juego (v0.6)
+
+La serpiente se dibuja por casillas: cabeza (1) + módulo especial (2) + módulos A, B, C en ciclo (1 cada uno) + cola (1). Al recortar, el grosor real del cuerpo se toma del **módulo repetible**, y los módulos A/B/C se escalan a ese mismo grosor (en las hojas actuales salen dibujados más grandes). Para futuras hojas, si puedes, añade al final del prompt:
+
+```text
+All body modules A, B, C, the special module, the repeating module and the tail base share EXACTLY the same body thickness. Modules A, B and C are about 1.3x as long as they are thick; the special module is about 2.6x as long as it is thick; the tail is short, about 3x as long as it is thick at its base.
+```
+
+No hace falta generar módulos de giro: el juego los crea doblando los propios módulos de cada skin.

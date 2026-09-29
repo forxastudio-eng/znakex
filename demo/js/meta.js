@@ -1,7 +1,7 @@
 // Retention layer: run statistics, daily / weekly missions, 7-day streak, season pass and achievements.
 import * as store from './store.js';
 import { CONFIG } from './config.js';
-import { SKINS } from './data.js';
+import { SKINS, SEASON_MAP } from './data.js';
 
 const S = () => store.S();
 const dayKey = (d = new Date()) => d.toISOString().slice(0, 10);
@@ -107,8 +107,8 @@ export function claimStreak(double = false) {
 export const SEASON = {
   id: 'season1', name: 'HARVEST MOON HOLLOW', ends: '2026-10-31T23:59:59Z', tiers: 10, xpPerTier: 100,
   price: '4,99 €', bonusCoins: 5000,
-  free: [{ c: 50 }, { c: 50 }, { c: 75 }, { c: 75 }, { c: 100 }, { c: 100 }, { c: 150 }, { c: 150 }, { c: 200 }, { c: 300 }],
-  prem: [{ c: 150 }, { c: 200 }, { c: 250 }, { c: 300 }, { c: 350 }, { c: 400 }, { c: 450 }, { c: 500 }, { c: 600 }, { skin: 'harvest' }],
+  free: [{ c: 50 }, { c: 50 }, { c: 75 }, { c: 75 }, { skin: 'maiz' }, { c: 100 }, { c: 150 }, { c: 150 }, { c: 200 }, { skin: 'farol' }],
+  prem: [{ c: 150 }, { c: 200 }, { c: 250 }, { skin: 'espantapajaros' }, { c: 350 }, { c: 400 }, { skin: 'bruja' }, { c: 500 }, { c: 600 }, { skin: 'calabaza' }],
 };
 
 export function seasonLeft() { return Math.max(0, new Date(SEASON.ends).getTime() - Date.now()); }
@@ -155,11 +155,7 @@ export function seasonMapAccess(level) {
 export function seasonSkinUnlock() {
   const st = S();
   if (store.seasonCleared() < 20) return false;
-  if (SKINS.some((s) => s.id === 'harvest')) {
-    if (!st.owned.includes('harvest')) { st.owned.push('harvest'); store.save(); return true; }
-    return false;
-  }
-  if (!st.season.done) { st.season.done = true; store.addCoins(1500); store.save(); return true; } // public build: coins until the season skins arrive
+  if (!st.owned.includes(SEASON_MAP.skin)) { st.owned.push(SEASON_MAP.skin); store.save(); return true; }
   return false;
 }
 

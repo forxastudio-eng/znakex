@@ -365,7 +365,7 @@ function buildOnce(map, n, diffId, attempt) {
   const seed = map * 7919 + n * 104729 + (diffId === 'easy' ? 11 : diffId === 'hard' ? 23 : 0) * 1231 + attempt * 65537;
   const r = rng(seed);
   const cells = new Uint8Array(COLS * ROWS);
-  const spawn = { x: 5, y: 15, dir: 'up', len: 3 };
+  const spawn = { x: 5, y: 14, dir: 'up', len: 4 };
 
   switch (def.shape) {
     case 'river': shapeRiver(cells, r, n, d); break;

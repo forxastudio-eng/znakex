@@ -92,7 +92,7 @@ export class Game {
   setup() {
     const { mode, level } = this.cfg;
     const skin = skinById(this.cfg.skinId);
-    let layout = null, theme = 'court', spawn = { x: 5, y: 15, dir: 'up', len: 3 }, opts = {};
+    let layout = null, theme = 'court', spawn = { x: 5, y: 14, dir: 'up', len: 4 }, opts = {};
     if (mode === 'story') {
       this.lv = buildLevel(level.map, level.n, level.diff);
       spawn = this.lv.spawn;
@@ -109,7 +109,7 @@ export class Game {
       opts.spawns = [{ x: spawn.x, y: spawn.y, img: 'tiles/court/rune1.png' }];
     } else if (mode === 'frenzy') {
       theme = 'glade';
-      spawn = { x: 5, y: 12, dir: 'up', len: 3 };
+      spawn = { x: 5, y: 12, dir: 'up', len: 4 };
       this.baseSpeed = 6.4;
       this.goldChance = 1;
       opts.spawns = [{ x: spawn.x, y: spawn.y, img: 'tiles/glade/rune1.png' }];
@@ -120,10 +120,10 @@ export class Game {
       this.target = this.botCfg.target;
       this.baseSpeed = 4.8;
       this.goldChance = this.cfg.difficulty === 'hard' ? 0.18 : 0.1;
-      spawn = { x: 5, y: 15, dir: 'up', len: 3 };
+      spawn = { x: 5, y: 14, dir: 'up', len: 4 };
       opts.spawns = [
-        { x: 5, y: 15, img: 'tiles/ritual/spawn0.png' },
-        { x: 6, y: 2, img: 'tiles/ritual/spawn2.png' },
+        { x: 5, y: 14, img: 'tiles/ritual/spawn0.png' },
+        { x: 6, y: 3, img: 'tiles/ritual/spawn2.png' },
       ];
     }
     this.board = mode === 'story' ? new MapBoard(this.lv) : new Board(theme, layout, opts);
@@ -131,7 +131,7 @@ export class Game {
     this.snakes = [this.player];
     if (mode === 'duel') {
       const b = this.botCfg;
-      this.bot = new Snake({ ...b, id: b.id }, { x: 6, y: 2, dir: 'down', len: 3 }, true);
+      this.bot = new Snake({ ...b, id: b.id }, { x: 6, y: 3, dir: 'down', len: 4 }, true);
       this.bot.speedMult = b.speed;
       this.snakes.push(this.bot);
     }

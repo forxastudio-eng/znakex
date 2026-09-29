@@ -45,7 +45,7 @@ const tipTimer = setInterval(() => {
 
 const t0 = performance.now();
 Promise.all([
-  loadAll((p) => ui.cur && ui.cur.progress && ui.cur.progress(p)),
+  loadAll((p) => ui.cur && ui.cur.progress && ui.cur.progress(p), [...new Set([store.S().equipped, 'basica'])]),
   document.fonts ? document.fonts.ready : Promise.resolve(),
   new Promise((r) => setTimeout(r, 900)), // let the splash breathe
 ]).then(() => {
