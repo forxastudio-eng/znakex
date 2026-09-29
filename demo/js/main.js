@@ -15,7 +15,8 @@ const amb = { g: ambCanvas.getContext('2d'), fx: new Ambient(34, ['#FFE7A0', '#E
 function resize() {
   const r = app.getBoundingClientRect();
   document.documentElement.style.fontSize = (r.width / 27) + 'px';
-  const dpr = Math.min(2.5, window.devicePixelRatio || 1);
+  const low = store.S().settings.lowfx;
+  const dpr = Math.min(low ? 1.5 : 2, window.devicePixelRatio || 1);
   view.W = r.width; view.H = r.height; view.dpr = dpr;
   for (const c of [gameCanvas, ambCanvas]) {
     c.width = Math.round(r.width * dpr);
@@ -28,6 +29,7 @@ function resize() {
 }
 
 store.load();
+document.body.classList.toggle('lowfx', !!store.S().settings.lowfx);
 const ui = new UI(app, view);
 window.addEventListener('resize', resize);
 resize();
@@ -54,9 +56,26 @@ Promise.all([
 
 // ------------------------------------------------------------------ loop
 let last = performance.now();
+let perfN = 0, perfSum = 0;
 function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
+  const raw = (now - last) / 1000;
+  const dt = Math.min(0.05, raw);
   last = now;
+  // one-off check on the first seconds of play: on a slow phone switch to low graphics automatically
+  const set = store.S().settings;
+  if (!set.perfChecked && ui.game && ui.game.state === 'play' && raw < 0.5) {
+    perfSum += raw; perfN++;
+    if (perfN >= 150) {
+      set.perfChecked = true;
+      if (perfSum / perfN > 0.026 && !set.lowfx) {
+        set.lowfx = true;
+        document.body.classList.add('lowfx');
+        ui.lowfxAuto = true;
+        resize();
+      }
+      store.save();
+    }
+  }
   const game = ui.game;
   if (game) {
     if (!game.paused) game.update(dt);

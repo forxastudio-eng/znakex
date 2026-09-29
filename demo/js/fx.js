@@ -30,6 +30,7 @@ export class FX {
     this.flashes = [];
     this.shakeT = 0;
     this.shakeMag = 0;
+    this.cap = 900;
   }
 
   clear() {
@@ -41,7 +42,7 @@ export class FX {
   }
 
   emit(o) {
-    if (this.parts.length > 900) return;
+    if (this.parts.length > this.cap) return;
     this.parts.push({
       x: o.x, y: o.y, vx: o.vx || 0, vy: o.vy || 0,
       life: 0, max: o.life || 0.8, size: o.size || 4, color: o.color || '#ffffff',

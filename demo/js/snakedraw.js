@@ -257,7 +257,6 @@ export function drawSnake(g, pts, skin, o) {
   g.save();
   if (o.clip) { g.beginPath(); g.rect(o.clip.x, o.clip.y, o.clip.w, o.clip.h); g.clip(); }
   if (o.ghost) g.globalAlpha = 0.45 + 0.4 * (0.5 + 0.5 * Math.sin(t * 22));
-  if (o.death) g.filter = `grayscale(${Math.round(o.death * 100)}%) brightness(${(1 - o.death * 0.3).toFixed(2)})`;
   const base = g.getTransform();
 
   // boost aura (and a faint permanent aura for glowing skins)
@@ -278,26 +277,25 @@ export function drawSnake(g, pts, skin, o) {
     g.restore();
   }
 
-  // soft drop shadow (drawn far away and pulled back with the shadow offset)
+  // soft drop shadow: a few stacked translucent strokes (no shadowBlur, which is very slow on phones)
   if (o.shadow !== false) {
     g.save();
-    const off = 20000;
-    g.shadowColor = 'rgba(6,8,4,0.45)';
-    g.shadowBlur = R * 0.8 * base.a;
-    g.shadowOffsetX = (off + R * 0.25) * base.a;
-    g.shadowOffsetY = R * 0.45 * base.d;
-    g.strokeStyle = '#000';
+    g.translate(R * 0.25, R * 0.45);
+    g.strokeStyle = '#060804';
     g.lineCap = 'round';
     g.lineJoin = 'round';
-    g.lineWidth = R * 1.9;
-    for (const smp of S) {
-      g.beginPath();
-      let started = false;
-      for (const s of smp) {
-        if (s.d > total - tailLen * 0.4) break;
-        if (!started) { g.moveTo(s.x - off, s.y); started = true; } else g.lineTo(s.x - off, s.y);
+    for (const [w, a] of [[2.5, 0.07], [2.1, 0.09], [1.75, 0.12]]) {
+      g.globalAlpha = a;
+      g.lineWidth = R * w;
+      for (const smp of S) {
+        g.beginPath();
+        let started = false;
+        for (const s of smp) {
+          if (s.d > total - tailLen * 0.4) break;
+          if (!started) { g.moveTo(s.x, s.y); started = true; } else g.lineTo(s.x, s.y);
+        }
+        g.stroke();
       }
-      g.stroke();
     }
     g.restore();
   }
@@ -391,14 +389,10 @@ function drawHead(g, x, y, ang, R, art, skin, o, hd) {
   g.translate(0, -sq * R * 0.2);
   g.scale(1 + sq * 0.1, 1 + sq * 0.14);
   g.save();
-  const m = g.getTransform();
-  const sc = Math.hypot(m.a, m.b);
-  g.shadowColor = 'rgba(6,8,4,0.5)';
-  g.shadowBlur = R * 0.6 * sc;
-  g.shadowOffsetX = R * 0.25 * sc;
-  g.shadowOffsetY = R * 0.4 * sc;
-  g.drawImage(img, -w / 2, -h / 2, w, h);
+  g.globalAlpha *= 0.32;
+  g.drawImage(glowSprite('#000000', 64), -w * 0.55 + R * 0.25, -h * 0.5 + R * 0.4, w * 1.1, h * 1.05);
   g.restore();
+  g.drawImage(img, -w / 2, -h / 2, w, h);
   if (skin.eyeGlow) {
     g.globalCompositeOperation = 'lighter';
     g.globalAlpha = 0.22 + 0.1 * Math.sin((o.t || 0) * 3);

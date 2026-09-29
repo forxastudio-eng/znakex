@@ -522,6 +522,9 @@ export class UI {
         <div class="set-row"><span class="l"><img src="${icon('play')}">EFECTOS DE SONIDO</span><button class="toggle ${set.sfx ? 'on' : ''}" data-act="tg" data-k="sfx"></button></div>
         <div class="demo-note" style="text-align:left">El sonido llega en la siguiente fase.</div>
         <div class="set-row"><span class="l"><img src="${icon('hz_wind')}">VIBRACIÓN</span><button class="toggle ${set.vibration ? 'on' : ''}" data-act="tg" data-k="vibration"></button></div>
+        <div class="set-row"><span class="l"><img src="${icon('hz_dark')}">MODO DALTÓNICO</span><button class="toggle ${set.colorblind ? 'on' : ''}" data-act="tg" data-k="colorblind"></button></div>
+        <div class="set-row"><span class="l"><img src="${icon('hz_wind')}">GRÁFICOS BAJOS</span><button class="toggle ${set.lowfx ? 'on' : ''}" data-act="tg" data-k="lowfx"></button></div>
+        <div class="demo-note" style="text-align:left">Menos partículas y sin desenfoques: para móviles antiguos. Se activa solo si el juego va lento.</div>
         <div class="sec">CONTROLES</div>
         <div class="ctl-grid">${[['swipe', 'DESLIZAR'], ['buttons', 'FLECHAS'], ['joystick', 'PALANCA'], ['tap', 'TOQUES']].map(([v, l]) => `<button class="ctl ${set.controls === v ? 'on' : ''}" data-act="ctl" data-v="${v}"><span class="ctl-ic ctl-${v}"></span>${l}</button>`).join('')}</div>
         <div class="demo-note" id="ctlinfo" style="text-align:left;margin-top:.3rem">${CONTROL_INFO[set.controls] || ''}</div>
@@ -537,7 +540,7 @@ export class UI {
       ${this.nav('settings')}
     </section>`);
     this.wire(e, {
-      tg: (b) => { set[b.dataset.k] = !set[b.dataset.k]; b.classList.toggle('on', set[b.dataset.k]); store.save(); },
+      tg: (b) => { set[b.dataset.k] = !set[b.dataset.k]; b.classList.toggle('on', set[b.dataset.k]); if (b.dataset.k === 'lowfx') { document.body.classList.toggle('lowfx', set.lowfx); window.dispatchEvent(new Event('resize')); } store.save(); },
       ctl: (b) => { set.controls = b.dataset.v; e.querySelectorAll('[data-act=ctl]').forEach((x) => x.classList.toggle('on', x === b)); $(e, '#ctlinfo').textContent = CONTROL_INFO[set.controls]; store.save(); },
       coins: () => { store.addCoins(5000); this.toast('+5.000 monedas'); },
       wheel: () => { S.wheelDay = ''; store.save(); this.toast('Ruleta disponible'); },
@@ -758,6 +761,7 @@ export class UI {
       <div id="fxl"></div>
     </section>`);
     this.hudEl = e;
+    document.body.classList.add('in-game');
     const mode = cfg.mode;
     const hc = $(e, '#hc');
     if (mode === 'story') {
@@ -785,7 +789,7 @@ export class UI {
     requestAnimationFrame(() => { if (this.game === game) game.resize(); });
     return {
       el: e,
-      destroy: () => { if (this.game === game) this.game = null; },
+      destroy: () => { document.body.classList.remove('in-game'); if (this.game === game) this.game = null; },
     };
   }
 

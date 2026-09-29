@@ -15,7 +15,7 @@ const DEFAULTS = () => ({
   duelWins: { day: '', count: 0 },
   wheelDay: '',
   mode: 'story',
-  settings: { vibration: true, controls: 'swipe', music: true, sfx: true },
+  settings: { vibration: true, controls: 'swipe', music: true, sfx: true, lowfx: false, colorblind: false, perfChecked: false },
   tutorialSeen: false,
 });
 

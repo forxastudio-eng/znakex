@@ -6,7 +6,7 @@ import { MapBoard } from './mapboard.js';
 import { buildLevel, MAPDEF } from './maps.js';
 import { drawSnake } from './snakedraw.js';
 import { drawOrb, orbSpawnK } from './orbs.js';
-import { FX, Ambient, MapAmbient } from './fx.js';
+import { FX, Ambient, MapAmbient, glowSprite } from './fx.js';
 import { botThink } from './bot.js';
 import { DIRS, OPPOSITE, rand, clamp, lerp, ease, vibrate } from './util.js';
 
@@ -113,7 +113,10 @@ export class Game {
       this.snakes.push(this.bot);
     }
     const amb = theme === 'glade' ? ['#FFE08A', '#FFF3C0', '#FFC94A'] : theme === 'ritual' ? ['#FFB040', '#FF6A3A', '#FFE0A0'] : ['#E8F5A0', '#FFE7A0', '#B8F0A0'];
-    this.ambient = mode === 'story' ? new MapAmbient(MAPDEF[level.map].amb.kind, MAPDEF[level.map].amb.colors) : new Ambient(26, amb);
+    this.low = !!(this.cfg.settings && this.cfg.settings.lowfx);
+    this.board.low = this.low;
+    this.ambient = mode === 'story' ? new MapAmbient(MAPDEF[level.map].amb.kind, MAPDEF[level.map].amb.colors, this.low ? 10 : 34) : new Ambient(this.low ? 8 : 26, amb);
+    if (this.low) this.fx.cap = 220;
     this.resize();
     // first orbs
     if (mode === 'frenzy') for (let i = 0; i < 5; i++) this.spawnOrb('gold', true);
@@ -190,11 +193,9 @@ export class Game {
       g.fillStyle = `rgba(255,30,30,${a * 0.55})`;
       g.fillRect(x, y, s, s);
       g.globalCompositeOperation = 'lighter';
-      const gr = g.createRadialGradient(x + s / 2, y + s / 2, s * 0.1, x + s / 2, y + s / 2, s * 0.95);
-      gr.addColorStop(0, `rgba(255,60,40,${a * 0.75})`);
-      gr.addColorStop(1, 'rgba(255,60,40,0)');
-      g.fillStyle = gr;
-      g.fillRect(x - s * 0.5, y - s * 0.5, s * 2, s * 2);
+      g.globalAlpha = Math.min(1, a * 0.9);
+      g.drawImage(glowSprite('#FF3C28', 64), x - s * 0.5, y - s * 0.5, s * 2, s * 2);
+      g.globalAlpha = 1;
       g.globalCompositeOperation = 'source-over';
       g.strokeStyle = `rgba(255,80,70,${Math.min(1, a + 0.25)})`;
       g.lineWidth = Math.max(1.5, s * 0.05);
@@ -348,6 +349,7 @@ export class Game {
   }
 
   emitTrail(s) {
+    if (this.low && Math.random() < 0.5) return;
     const tail = s.cells[s.cells.length - 1];
     const x = this.board.cx(tail.x) + rand(-6, 6), y = this.board.cy(tail.y) + rand(-6, 6);
     if (s.boostT > 0) {
@@ -698,6 +700,16 @@ export class Game {
         bulges: s.a.bulges.filter((q) => q.delay <= 0), glow: s.boostT > 0 ? clamp(s.boostT / 0.6, 0, 1) : 0,
         ghost: s.ghostT > 0 && this.state === 'play', death: s.a.death, t: this.t, breaks, fat, clip,
       });
+      g.restore();
+    }
+
+    // death: the whole board drains of colour (one blend op instead of a filter per sprite)
+    if (this.player.a.death > 0.01) {
+      g.save();
+      g.globalCompositeOperation = 'saturation';
+      g.globalAlpha = this.player.a.death;
+      g.fillStyle = '#808080';
+      g.fillRect(b.x - b.frame - 4, b.y - b.frame - 4, b.w + b.frame * 2 + 8, b.h + b.frame * 2 + 8);
       g.restore();
     }
 

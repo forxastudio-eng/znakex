@@ -330,7 +330,7 @@ svg.path { position: absolute; inset: 0; width: 100%; height: 100%; overflow: vi
 
 /* ------------------------------------------------------------ game HUD */
 .hud { position: absolute; left: 0; right: 0; top: 0; padding: calc(env(safe-area-inset-top, 0px) + 0.7rem) 0.8rem 0; display: grid; grid-template-columns: 3.3rem 1fr 5.2rem; gap: 0.6rem; align-items: start; }
-.hud-center { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; padding: 0.35rem 0.8rem; border-radius: 0.6rem; background: rgba(10, 14, 11, 0.5); border: 1.5px solid var(--line); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); min-height: 3.3rem; justify-content: center; }
+.hud-center { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; padding: 0.35rem 0.8rem; border-radius: 0.6rem; background: rgba(10, 14, 11, 0.5); border: 1.5px solid var(--line); min-height: 3.3rem; justify-content: center; }
 .hud-obj { display: flex; align-items: center; gap: 0.45rem; font-family: 'Bebas Neue'; font-size: 1.9rem; letter-spacing: 0.05em; line-height: 1; }
 .hud-obj img { width: 1.9rem; height: 1.9rem; border-radius: 0.25rem; }
 .hud-bar { width: 100%; min-width: 11rem; height: 0.55rem; border-radius: 0.4rem; background: rgba(0,0,0,.55); overflow: hidden; }
@@ -357,7 +357,7 @@ svg.path { position: absolute; inset: 0; width: 100%; height: 100%; overflow: vi
 .timer-big.hurry { color: #FF7A5A; animation: bump .5s infinite; }
 
 .dpad { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 0.6rem); transform: translateX(-50%); display: grid; grid-template-columns: repeat(3, 4.4rem); grid-template-rows: repeat(2, 4rem); gap: 0.35rem; pointer-events: auto; }
-.dpad button { position: relative; border-radius: 1.1rem; background: rgba(12, 18, 14, 0.5); border: 1.5px solid var(--line); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); box-shadow: 0 0.3rem 0.8rem rgba(0,0,0,.45); transition: transform .08s, background .12s; }
+.dpad button { position: relative; border-radius: 1.1rem; background: rgba(12, 18, 14, 0.5); border: 1.5px solid var(--line); box-shadow: 0 0.3rem 0.8rem rgba(0,0,0,.45); transition: transform .08s, background .12s; }
 .dpad button i { position: absolute; left: 50%; top: 50%; width: 0; height: 0; border-left: 0.75rem solid transparent; border-right: 0.75rem solid transparent; border-bottom: 1rem solid var(--bone); transform: translate(-50%, -60%); filter: drop-shadow(0 0 0.3rem rgba(232,176,74,.4)); }
 .dpad .r i { transform: translate(-40%, -50%) rotate(90deg); }
 .dpad .d i { transform: translate(-50%, -40%) rotate(180deg); }
@@ -371,7 +371,6 @@ svg.path { position: absolute; inset: 0; width: 100%; height: 100%; overflow: vi
 .joy { position: absolute; width: 8.4rem; height: 8.4rem; margin: -4.2rem 0 0 -4.2rem; border-radius: 50%; pointer-events: none; z-index: 5;
   background: radial-gradient(circle, rgba(14, 20, 16, 0.25) 40%, rgba(14, 20, 16, 0.55) 70%);
   border: 2px solid rgba(242, 239, 230, 0.45); box-shadow: 0 0 1.4rem rgba(0,0,0,.45), inset 0 0 1rem rgba(232,176,74,.15);
-  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
   opacity: 0; transform: scale(0.7); transition: opacity .18s, transform .22s var(--ease); }
 .joy.show { opacity: 1; transform: none; }
 .joy .knob { position: absolute; left: 50%; top: 50%; width: 3.4rem; height: 3.4rem; border-radius: 50%; transform: translate(-50%, -50%);
@@ -458,8 +457,7 @@ svg.path { position: absolute; inset: 0; width: 100%; height: 100%; overflow: vi
 
 /* ------------------------------------------------------------ story difficulty */
 .diffbar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; margin: 0.15rem 0 0.35rem; position: relative; z-index: 2; }
-.dchip { padding: 0.4rem 0.2rem; border-radius: 0.5rem; border: 1.5px solid var(--line); background: rgba(10, 14, 11, 0.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  font-family: 'Barlow Condensed'; font-weight: 700; letter-spacing: 0.12em; font-size: 1rem; color: var(--bone-dim); transition: transform .12s, box-shadow .2s; }
+.dchip { padding: 0.4rem 0.2rem; border-radius: 0.5rem; border: 1.5px solid var(--line); background: rgba(10, 14, 11, 0.55); font-family: 'Barlow Condensed'; font-weight: 700; letter-spacing: 0.12em; font-size: 1rem; color: var(--bone-dim); transition: transform .12s, box-shadow .2s; }
 .dchip.on { color: #fff; border-color: var(--dc); background: color-mix(in srgb, var(--dc) 28%, rgba(10,14,11,.7)); box-shadow: 0 0 0.9rem color-mix(in srgb, var(--dc) 55%, transparent); }
 .dchip:active { transform: scale(0.95); }
 .dtag { margin-left: 0.4rem; padding: 0.05rem 0.45rem; border-radius: 0.25rem; border: 1px solid var(--dc); color: var(--dc); font-size: 0.75rem; letter-spacing: 0.12em; }
@@ -469,3 +467,8 @@ svg.path { position: absolute; inset: 0; width: 100%; height: 100%; overflow: vi
 .warn-banner i { width: 1.1rem; height: 1.1rem; border-radius: 50%; background: #FF3A2A; box-shadow: 0 0 0.9rem #FF3A2A; animation: warnblink 0.6s ease-in-out infinite alternate; }
 @keyframes warnbanner { 0% { opacity: 0; transform: translateX(-50%) scale(.85); } 5% { opacity: 1; transform: translateX(-50%) scale(1); } 90% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes warnblink { from { opacity: .35; } to { opacity: 1; } }
+
+/* low graphics mode: no blur anywhere, calmer overlays */
+.lowfx *, .lowfx *::before, .lowfx *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+.lowfx .panel, .lowfx .pill { background: rgba(14, 20, 16, 0.86) !important; }
+.in-game .panel, .in-game .pill { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(14, 20, 16, 0.82); }

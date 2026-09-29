@@ -408,12 +408,12 @@ export class MapBoard extends Board {
       g.drawImage(sp, tc.x - r, tc.y - r, r * 2, r * 2);
     }
     // drifting canopy light
-    g.globalCompositeOperation = 'soft-light';
-    for (let k = 0; k < 3; k++) {
+    g.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < (this.low ? 0 : 1); k++) {
       const px = this.w * (0.5 + 0.45 * Math.sin(t * 0.07 + k * 2.1));
       const py = this.h * (0.5 + 0.45 * Math.cos(t * 0.05 + k * 1.3));
-      const r = this.w * 0.55;
-      g.globalAlpha = 0.3;
+      const r = this.w * 0.42;
+      g.globalAlpha = 0.08;
       const sp = glowSprite('#FFE7A0', 128);
       g.drawImage(sp, px - r, py - r, r * 2, r * 2);
     }
