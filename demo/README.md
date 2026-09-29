@@ -4,7 +4,7 @@ Primera demo del juego: HTML5 + Canvas, empaquetada como APK de Android (WebView
 
 ## Probar
 
-- **Android:** instala `releases/ZNAKEX-tester-0.3.1.apk` (todo desbloqueado: 16 mapas × 3 dificultades, 160 niveles por dificultad, 30 skins, 999.999 monedas) o `releases/ZNAKEX-0.3.1.apk` (progresión normal).
+- **Android:** instala `releases/ZNAKEX-tester-0.3.2.apk` (todo desbloqueado: 16 mapas × 3 dificultades, 160 niveles por dificultad, 30 skins, 999.999 monedas) o `releases/ZNAKEX-0.3.2.apk` (progresión normal).
   Hay que permitir "instalar apps de origen desconocido". Los dos APK pueden convivir en el móvil.
 - **Navegador:** sirve la carpeta `demo/` con cualquier servidor estático (`npx http-server demo`) y abre `index.html`.
   Añade `?tester=1` a la URL para el modo tester.
@@ -15,6 +15,7 @@ Controles (Ajustes): deslizar, flechas en pantalla, palanca flotante (aparece do
 
 - Modos: Historia con 3 dificultades (Fácil / Normal / Difícil, progreso y recompensas independientes; 16 mapas × 10 niveles; cada mapa con sus propios suelos, muros, terreno peligroso, partículas ambientales y colores extraídos de su ficha; el nivel 10 es el Guardián). Objetivos de 8 a 31 orbes según dificultad y nivel, velocidad moderada, y tableros diseñados con formaciones simétricas, pasillos de al menos 2 casillas y puentes anchos, Clásico, Orbes Frenéticos (60 s, sin muros) y Duelo contra bot (3 dificultades).
 - Orbe rojo (+1) y dorado (+3 y velocidad x2), combos, lengua, mordisco, bulto al tragar, engorde progresivo y estela propia de cada skin.
+- Al empezar cada partida, los obstáculos, el agua, la lava y los pinchos parpadean en rojo 5 s con el aviso «Evita los obstáculos». El tablero va pegado a la parte alta y las flechas quedan centradas bajo el mapa.
 - Muerte con revivir (anuncio simulado o 100 / 200 monedas), pausa, victoria, resultados y récords.
 - 30 skins dibujadas con la cabeza, el cuerpo y la cola reales de cada ficha: las 20 especiales de `SKINS/` y la básica en 10 colores (250–500 monedas). Ruleta diaria, tienda de monedas (compras simuladas), ajustes.
 - Cada mapa tiene mecánicas propias: agua, lava, arenas movedizas, hielo, portales, según su ficha.

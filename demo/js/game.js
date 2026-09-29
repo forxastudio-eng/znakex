@@ -122,11 +122,22 @@ export class Game {
 
   resize() {
     const { W, H, dpr } = this.view;
-    const pad = this.cfg.settings && this.cfg.settings.controls === 'buttons';
-    this.board.layoutIn(W, H, H * 0.118, pad ? H * 0.2 : H * 0.08);
+    const buttons = this.cfg.settings && this.cfg.settings.controls === 'buttons';
+    const rem = parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+    // board as high as possible: right under the HUD (pause, objective, score)
+    const hud = this.ui.hudEl && this.ui.hudEl.querySelector('.hud');
+    const hr = hud && hud.getBoundingClientRect();
+    const top = hr && hr.height > 0 ? hr.bottom + 2 : rem * 4.6;
+    // room under the board: a strip for the warning banner, then the d-pad (buttons) or the level tag
+    const strip = rem * 2.6;
+    const padH = buttons ? rem * 8.4 + rem * 1.1 : 0;
+    const bottom = buttons ? strip + padH : rem * 2.6;
+    this.board.layoutIn(W, H, top, bottom, true);
     this.board.prerender(dpr);
     this.ambient.resize(this.board.w, this.board.h);
     this.R = this.board.cell * 0.34;
+    const under = this.board.y + this.board.h + this.board.frame; // first free pixel below the frame
+    if (this.ui.placeUnderBoard) this.ui.placeUnderBoard(under, H, strip);
   }
 
   // ---------------------------------------------------------------- orbs
@@ -146,6 +157,50 @@ export class Game {
     if (!instant) {
       this.fx.burst(x, y, 10, { type: 'dot', color: type === 'gold' ? ['#FFE08A', '#FFC23A'] : ['#FF8A8A', '#FF3A4A'], speed: 90, size: 5, life: 0.5 });
     }
+  }
+
+  // ---------------------------------------------------------------- obstacle warning
+  // For the first seconds every dangerous cell (obstacles, water, lava, spikes) pulses red.
+  startWarning() {
+    this.resize(); // the HUD has its final size by now
+    const b = this.board, cells = [];
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+      const k = y * COLS + x;
+      if (b.solid[k] || (b.lethal && b.lethal[k])) cells.push({ x, y });
+    }
+    this.warnCells = cells;
+    this.warnDur = 5;
+    if (cells.length) {
+      this.warnT = this.warnDur;
+      if (this.ui.warnBanner) this.ui.warnBanner(this.warnDur);
+    }
+  }
+
+  drawWarning(g) {
+    if (!(this.warnT > 0) || !this.warnCells || !this.warnCells.length) return;
+    const b = this.board, s = b.cell;
+    const el = this.warnDur - this.warnT;
+    const fade = Math.min(1, el / 0.3, this.warnT / 0.6);
+    const pulse = 0.5 + 0.5 * Math.sin(el * Math.PI * 2 * 1.7 - Math.PI / 2);
+    const a = fade * (0.28 + 0.5 * pulse);
+    g.save();
+    for (const c of this.warnCells) {
+      const x = b.x + c.x * s, y = b.y + c.y * s;
+      g.globalCompositeOperation = 'source-over';
+      g.fillStyle = `rgba(255,30,30,${a * 0.55})`;
+      g.fillRect(x, y, s, s);
+      g.globalCompositeOperation = 'lighter';
+      const gr = g.createRadialGradient(x + s / 2, y + s / 2, s * 0.1, x + s / 2, y + s / 2, s * 0.95);
+      gr.addColorStop(0, `rgba(255,60,40,${a * 0.75})`);
+      gr.addColorStop(1, 'rgba(255,60,40,0)');
+      g.fillStyle = gr;
+      g.fillRect(x - s * 0.5, y - s * 0.5, s * 2, s * 2);
+      g.globalCompositeOperation = 'source-over';
+      g.strokeStyle = `rgba(255,80,70,${Math.min(1, a + 0.25)})`;
+      g.lineWidth = Math.max(1.5, s * 0.05);
+      g.strokeRect(x + 1.5, y + 1.5, s - 3, s - 3);
+    }
+    g.restore();
   }
 
   // ---------------------------------------------------------------- input
@@ -191,11 +246,13 @@ export class Game {
     this.ambient.update(dt, this.t);
     for (const s of this.snakes) this.animate(s, dt);
 
+    if (this.warnT > 0) this.warnT -= dtReal;
     if (this.state === 'intro') {
       for (const s of this.snakes) s.a.appear = clamp(this.stateT / 0.7, 0, 1);
       if (this.stateT > 0.75) {
         this.setState('countdown');
         this.ui.countdown(() => { if (this.state === 'countdown') this.setState('play'); });
+        this.startWarning();
       }
       return;
     }
@@ -623,6 +680,7 @@ export class Game {
       drawOrb(g, b.cx(o.x), b.cy(o.y), b.cell, o.type, this.t, { spawnK: orbSpawnK(o, this.t), warn });
     }
     this.fx.drawUnder(g);
+    this.drawWarning(g);
 
     // snakes
     const clip = this.mode === 'frenzy' ? { x: b.x - 2, y: b.y - 2, w: b.w + 4, h: b.h + 4 } : null;

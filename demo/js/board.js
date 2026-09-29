@@ -110,14 +110,14 @@ export class Board {
   }
 
   // Place the board inside the canvas area (css px).
-  layoutIn(W, H, top, bottom) {
+  layoutIn(W, H, top, bottom, alignTop = false) {
     const cell = Math.floor(Math.min(W / 13.1, (H - top - bottom) / 19.2));
     this.cell = cell;
     this.w = cell * COLS;
     this.h = cell * ROWS;
     this.frame = Math.round(cell * 0.62);
     this.x = Math.round((W - this.w) / 2);
-    this.y = Math.round(top + (H - top - bottom - this.h) / 2);
+    this.y = alignTop ? Math.round(top + this.frame + Math.max(2, cell * 0.12)) : Math.round(top + (H - top - bottom - this.h) / 2);
     this.W = W; this.H = H;
   }
 

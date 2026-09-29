@@ -782,6 +782,7 @@ export class UI {
     this.updateCoinsRunTip = null;
     e.querySelectorAll('.dpad button').forEach((b) => b.addEventListener('pointerdown', (ev) => { ev.preventDefault(); game.input(b.dataset.dir); }));
     this.wire(e, { pause: () => this.pause() });
+    requestAnimationFrame(() => { if (this.game === game) game.resize(); });
     return {
       el: e,
       destroy: () => { if (this.game === game) this.game = null; },
@@ -790,11 +791,39 @@ export class UI {
 
   fxLayer() { return this.hudEl && $(this.hudEl, '#fxl'); }
 
+  // keeps the warning strip and the d-pad in the free space under the board
+  placeUnderBoard(under, H, strip) {
+    const e = this.hudEl;
+    if (!e) return;
+    this.warnTop = under + 4;
+    const tag = e.querySelector('.hud-bottom');
+    if (tag && e.querySelector('.dpad')) { tag.style.bottom = 'auto'; tag.style.top = `${Math.round(under + 6)}px`; tag.style.justifyContent = 'center'; }
+    const pad = e.querySelector('.dpad');
+    if (pad) {
+      const rem = parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16;
+      const ph = rem * 8.35;
+      const free = H - (under + strip);
+      const inset = parseFloat(window.getComputedStyle(document.documentElement).getPropertyValue('--sab')) || 0;
+      const bot = Math.max(rem * 0.6 + inset, (free - ph) / 2 + inset * 0.5);
+      pad.style.bottom = `calc(${Math.round(bot)}px + env(safe-area-inset-bottom, 0px))`;
+    }
+  }
+
+  warnBanner(sec) {
+    const layer = this.hudEl; // not #fxl: the countdown rewrites that layer
+    if (!layer) return;
+    const w = el(`<div class="warn-banner" style="top:${Math.round(this.warnTop || 0)}px;animation-duration:${sec}s"><i></i>EVITA LOS OBSTÁCULOS</div>`);
+    layer.appendChild(w);
+    setTimeout(() => w.remove(), sec * 1000 + 100);
+  }
+
   countdown(done) {
     const layer = this.fxLayer();
     const ctl = this.S().settings.controls || 'swipe';
-    if (this.hudEl) {
+    if (this.hudEl && ctl !== 'buttons') {
       const h = el(`<div class="ctl-hint"><span class="ctl-ic ctl-${ctl}"></span>${CONTROL_INFO[ctl]}</div>`);
+      const dp = this.hudEl.querySelector('.dpad');
+      if (dp) h.style.bottom = `${Math.round(window.innerHeight - dp.getBoundingClientRect().top + 8)}px`;
       this.hudEl.appendChild(h);
       setTimeout(() => h.classList.add('out'), 3200);
       setTimeout(() => h.remove(), 3800);
