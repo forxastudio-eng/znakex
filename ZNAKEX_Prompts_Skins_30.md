@@ -45,8 +45,39 @@ ROW 2, left: (3) HEAD – ONE single head in strict TOP-DOWN DORSAL VIEW (the ca
 ROW 3: (4) BODY MODULES – three different body modules A, B and C side by side, all EXACTLY the same height (about 250 px) and about 290 px wide, lying horizontally, with straight flat left and right edges so they chain seamlessly; A, B and C share the palette but have different pattern arrangements.
 ROW 4, left to right: (5) SPECIAL MODULE – same size as the body modules, horizontal, visibly more ornate (the signature piece of the skin); (6) REPEATING MODULE – a plain, calm, seamlessly repeatable body module of the same size (used for the whole rest of the body); (7) TAIL – tapering tail tip pointing RIGHT, same height at its base as the body modules, about 460 px long.
 
+HEAD VARIETY (Mythic and Legendary skins only): see "HEAD SILHOUETTE" in the skin description; Normal and Special heads stay simple (no horns unless the skin says so).
+
 CONSISTENCY: identical scale for head, modules and tail; body thickness equals the tail base and is about 85% of the head width so head, body and tail join cleanly.
 ```
+
+---
+
+# Ajuste: cabezas distintas en Míticas y Legendarias
+
+Para que las cabezas no se parezcan entre sí, **cada Mítica y cada Legendaria (skins 17 a 30) añade a su línea `Head:` una silueta propia** (cuernos, astas, cresta, corona, aletas…). Copia la frase de la tabla al final del párrafo `Head:` del prompt, o pégala como línea aparte antes de `Detail level`.
+
+Reglas para que **no rompa el juego** (pégalas también en la plantilla maestra, en el punto 3 HEAD):
+
+```text
+HEAD SILHOUETTE RULES (Mythic and Legendary only): the head may carry horns, antlers, a crest, a crown, side fins or a mane, but ALL of it must be attached to the skull, symmetrical left-to-right, and seen from above. The complete head including every ornament must fit inside a box of at most 420 px wide by 380 px long. The snout tip stays the top-most point of the silhouette; horns, antlers and crests sweep sideways and BACKWARD, never forward past the snout. Every ornament is a solid, thick shape (at least 14 px thick) with a clean outline: no hair-thin spikes, no floating or detached pieces, no chains or strings hanging loose, no glow halos drawn as part of the head.
+```
+
+| # | Skin | Silueta de la cabeza (añadir al prompt) |
+| --- | --- | --- |
+| 17 | Dragón de Jade | `HEAD SILHOUETTE: two branching gold-tipped jade antlers sweeping backward and short side whisker fins.` |
+| 18 | Serpiente Aurora | `HEAD SILHOUETTE: no horns; a soft mane of two thick aurora ribbon streamers flowing back from the skull.` |
+| 19 | Serpiente Arrecife | `HEAD SILHOUETTE: a branching coral crown on the back of the skull and two small anemone tufts by the eyes.` |
+| 20 | Serpiente de Ámbar | `HEAD SILHOUETTE: two broad translucent insect-wing fins on the sides of the skull.` |
+| 21 | Serpiente Vidriera | `HEAD SILHOUETTE: a round rose-window disc crest behind the skull.` |
+| 22 | Serpiente Mecanismo | `HEAD SILHOUETTE: a small brass gear crown with two short pipe chimneys.` |
+| 23 | Serpiente Sirena | `HEAD SILHOUETTE: a scallop-shell crown and two fin-shaped ears.` |
+| 24 | Serpiente Origami | `HEAD SILHOUETTE: a folded-paper beak-shaped snout and a triangular folded crest.` |
+| 25 | Dragón Celestial | `HEAD SILHOUETTE: two long swept-back golden horns with cloud-curl tips.` |
+| 26 | Serpiente Fénix | `HEAD SILHOUETTE: a tall crest of five flame-feather plumes fanning backward.` |
+| 27 | Serpiente Eclipse | `HEAD SILHOUETTE: two silver crescent horns curving around the sides of the skull.` |
+| 28 | Serpiente Prisma | `HEAD SILHOUETTE: a crown of five crystal spikes of different heights on the back of the skull.` |
+| 29 | Wyrm de la Tempestad | `HEAD SILHOUETTE: two heavy swept-back silver horns and small armored side fins.` |
+| 30 | Emperador Dorado | `HEAD SILHOUETTE: a tall jeweled imperial crown fixed to the skull with two gold cheek plates.` |
 
 ---
 
