@@ -111,39 +111,25 @@ export const MAPS = [
 
 
 // ------------------------------------------------------------------ levels
-// Legend: . floor | P pillar | T totem | C column (2 wide, with c) | W wall block
+// Legend for ASCII layouts (duel arena): . floor | P pillar | T totem | C column (2 wide, with c) | W wall block
 const L = (rows) => rows.map((r) => r.padEnd(12, '.'));
 
-const LAYOUTS = [
-  L(['', '', '..P......P..', '', '', '', '', '', '', '', '', '', '', '', '..P......P..', '', '', '']),
-  L(['', '', '..P......P..', '', '', '', '', '', '.....T......', '', '', '', '', '', '..P......P..', '', '', '']),
-  L(['', '', '.Cc......Cc.', '', '', '....P..P....', '', '', '.Cc......Cc.', '', '', '....P..P....', '', '', '.Cc......Cc.', '', '', '']),
-  L(['', '', '..P......P..', '', '', '.....T......', '', '', '...WWWWWW...', '', '', '......T.....', '', '', '..P......P..', '', '', '']),
-  L(['', '', '', '', '.WWWW..WWWW.', '', '', '..P......P..', '', '', '..P......P..', '', '', '.WWWW..WWWW.', '', '', '', '']),
-  L(['', '', '...W....W...', '...W....W...', '...W....W...', '...W....W...', '', '', '..Cc....Cc..', '', '', '...W....W...', '...W....W...', '...W....W...', '...W....W...', '', '', '']),
-  L(['', '', '', '..WWW..WWW..', '..W......W..', '..W......W..', '', '', '....T..T....', '', '', '', '..W......W..', '..W......W..', '..WWW..WWW..', '', '', '']),
-  L(['', '', 'WWWWWWWW....', '', '', '....WWWWWWWW', '', '', 'WWWWWWWW....', '', '', '....WWWWWWWW', '', '', 'WWWWWWWW....', '', '', '']),
-  L(['', '', '.P..P..P..P.', '', '', '.P..P..P..P.', '', '', '.P..P..P..P.', '', '', '.P..P..P..P.', '', '', '.P..P..P..P.', '', '', '']),
-  L(['', '', '.WWW....WWW.', '.W........W.', '.W..T..T..W.', '', '....WWWW....', '', '.Cc..PP..Cc.', '', '....WWWW....', '', '.W..T..T..W.', '.W........W.', '.WWW....WWW.', '', '', '']),
-];
+// Story difficulty presets (used by maps.js for terrain and by storyLevel for pace).
+export const DIFFS = {
+  easy: { id: 'easy', label: 'FÁCIL', speed: 0.86, target: 0.8, obst: 0.65, hazard: 0.6, bridges: 1, reward: 0.6, gold: 1.3, color: '#7FD05A' },
+  normal: { id: 'normal', label: 'NORMAL', speed: 1, target: 1, obst: 1, hazard: 1, bridges: 0, reward: 1, gold: 1, color: '#E8B04A' },
+  hard: { id: 'hard', label: 'DIFÍCIL', speed: 1.16, target: 1.25, obst: 1.4, hazard: 1.5, bridges: -1, reward: 1.7, gold: 0.8, color: '#E0524A' },
+};
 
-const SPAWN_OVERRIDE = { 8: { x: 10, y: 15 } };
-
-export function storyLevel(map, n) {
-  // odd maps use the layouts as drawn, even maps mirror them left-right
-  const mirror = map % 2 === 0;
-  let layout = LAYOUTS[(n - 1) % LAYOUTS.length];
-  if (mirror) layout = layout.map((r) => r.split('').reverse().join('').replace(/cC/g, 'Cc'));
-  const sp = { x: 5, y: 15, dir: 'up', len: 3, ...(SPAWN_OVERRIDE[n] || {}) };
-  if (mirror) sp.x = 11 - sp.x;
+export function storyLevel(map, n, diff = 'normal') {
+  const d = DIFFS[diff] || DIFFS.normal;
   return {
-    map, n, mapInfo: MAPS[map - 1],
-    layout,
-    target: Math.round(10 + 0.8 * (map - 1) + 1.2 * (n - 1)),
-    speed: 4.2 + 0.15 * (map - 1) + 0.12 * (n - 1),
-    goldChance: 0.1 + (0.15 * (n - 1)) / 9,
-    reward: ECONOMY.levelReward(map, n),
-    spawn: sp,
+    map, n, diff: d.id, mapInfo: MAPS[map - 1],
+    target: Math.round((10 + 0.8 * (map - 1) + 1.2 * (n - 1)) * d.target),
+    speed: (4.2 + 0.15 * (map - 1) + 0.12 * (n - 1)) * d.speed,
+    goldChance: Math.min(0.5, (0.1 + (0.15 * (n - 1)) / 9) * d.gold),
+    reward: Math.round(ECONOMY.levelReward(map, n) * d.reward),
+    spawn: { x: 5, y: 15, dir: 'up', len: 3 },
     guardian: n === 10,
   };
 }

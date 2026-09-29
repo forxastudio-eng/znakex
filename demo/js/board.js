@@ -384,7 +384,7 @@ export function randomFreeCell(board, occupied, avoid) {
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
       const k = y * COLS + x;
-      if (board.solid[k] || occupied.has(k)) continue;
+      if (board.solid[k] || occupied.has(k) || (board.orbBlocked && board.orbBlocked[k])) continue;
       if (avoid && Math.abs(avoid.x - x) + Math.abs(avoid.y - y) < 3) continue;
       free.push({ x, y });
     }

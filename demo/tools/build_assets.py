@@ -474,18 +474,18 @@ if __name__ == "__main__":
 # Boxes are (x0, y0, x1, y1) in 1264x848 sheet space (BASICA is 2x and gets scaled).
 # head: (box, snout direction) | body: (box, axis 'h'/'v') | tail: (box, tip direction)
 SKIN_SPRITES = {
-    "basica":   ("BASICA.png", ((28, 428, 122, 572), "up"), ((680, 415, 757, 550), "v"), ((1005, 398, 1065, 568), "down"), None),
+    "basica":   ("BASICA.png", ((28, 428, 122, 572), "up"), ((687, 440, 763, 495), "v"), ((1005, 398, 1065, 568), "down"), None),
     "inferno":  ("magnific_02-inferno-serpent-rarity_rgRba4yxtc.jpg", ((535, 165, 665, 300), "down"), ((545, 408, 655, 512), "h"), ((890, 410, 1032, 485), "right"), None),
     "frost":    ("magnific_03-frostbite-dragon-rarit_dtKVGvZXSL.jpg", ((45, 372, 172, 532), "down"), ((690, 395, 775, 505), "v"), ((990, 378, 1062, 528), "up"), None),
     "samurai":  ("magnific_04-samurai-serpent-rarity_4Rp7jbb9Aa.jpg", ((458, 82, 602, 258), "up"), ((75, 540, 300, 645), "h"), ((58, 685, 320, 752), "right"), (1055, 528, 1215, 688)),
-    "ghost":    ("magnific_05-ghost-serpent-rarity-e_fHUtehKCDY.jpg", ((92, 468, 182, 602), "up"), ((470, 272, 710, 362), "h"), ((466, 438, 802, 528), "right"), (918, 635, 1062, 782)),
+    "ghost":    ("magnific_05-ghost-serpent-rarity-e_fHUtehKCDY.jpg", ((92, 468, 182, 602), "up"), ((474, 273, 548, 361), "h"), ((551, 438, 802, 528), "right"), (918, 635, 1062, 782)),
     "cyber":    ("magnific_06-cyber-snake-rarity-leg_dtKVn0sXSL.jpg", ((70, 138, 148, 278), "down"), ((440, 140, 650, 238), "h"), ((862, 146, 1025, 220), "right"), None),
     "forest":   ("magnific_07-forest-guardian-rarity_xSZ5QK1jfW.jpg", ((62, 248, 162, 385), "up"), ((470, 385, 600, 500), "h"), ((838, 402, 1018, 475), "right"), None),
     "crystal":  ("magnific_08-crystal-serpent-rarity_yiMUsXdPW9.jpg", ((310, 183, 428, 342), "up"), ((318, 455, 598, 555), "h"), ((92, 688, 198, 798), "down"), (1043, 438, 1208, 598)),
     "solar":    ("magnific_10-solar-serpent-rarity-m_rgRbFMgxtc.jpg", ((572, 182, 668, 300), "up"), ((520, 428, 695, 508), "h"), ((866, 436, 1034, 496), "right"), (848, 630, 1003, 785)),
     "toxic":    ("magnific_11-toxic-mutant-rarity-ep_1l3qFk1r4r.jpg", ((62, 388, 162, 528), "up"), ((62, 682, 205, 782), "h"), ((638, 688, 802, 780), "right"), None),
     "sakura":   ("magnific_12-sakura-spirit-rarity-e_lJzrry0gv9.jpg", ((743, 152, 812, 252), "up"), ((60, 394, 320, 492), "h"), ((46, 650, 355, 740), "right"), None),
-    "scorpion": ("magnific_13-desert-scorpion-rarity_xSZ5KyDjfW.jpg", ((670, 142, 755, 248), "down"), ((75, 348, 400, 442), "h"), ((1036, 362, 1208, 422), "right"), None),
+    "scorpion": ("magnific_13-desert-scorpion-rarity_xSZ5KyDjfW.jpg", ((670, 142, 755, 248), "down"), ((75, 348, 400, 442), "h"), ((728, 354, 972, 428), "right"), None),
     "cosmic":   ("magnific_14-cosmic-void-rarity-myt_u5Jva6MQLD.jpg", ((66, 408, 142, 508), "up"), ((218, 410, 310, 516), "h"), ((874, 408, 928, 518), "down"), None),
     "abyssal":  ("magnific_15-abyssal-serpent-rarity_lJzrjY0gv9.jpg", ((588, 82, 702, 218), "down"), ((812, 105, 937, 195), "h"), ((1068, 368, 1205, 442), "right"), (788, 668, 918, 802)),
     "knight":   ("magnific_16-knight-serpent-rarity-_KL6FHHTkqp.jpg", ((962, 62, 1052, 172), "down"), ((95, 428, 180, 558), "h"), ((1060, 438, 1232, 544), "right"), (852, 683, 962, 798)),
@@ -494,9 +494,10 @@ SKIN_SPRITES = {
     "quetzal":  ("magnific_create-a-professional-2d-_9Ze79lLNYZ.jpeg", ((612, 28, 794, 220), "down"), ((603, 476, 820, 552), "h"), ((1066, 478, 1232, 548), "right"), (855, 660, 958, 765)),
     "ember":    ("magnific_create-a-professional-2d-_LwAkUiDswO.png", ((488, 260, 618, 392), "up"), ((640, 470, 740, 585), "v"), ((962, 462, 1038, 592), "up"), (845, 675, 968, 800)),
     "umbra":    ("magnific_create-a-professional-2d-_tCLXuQdmZJ.jpeg", ((666, 52, 790, 222), "up"), ((674, 405, 762, 530), "v"), ((1002, 398, 1078, 538), "down"), (900, 678, 1025, 803)),
-    "kitsune":  ("magnific_void-kitsune-rarity-mythi_P3D79Nh42C.jpg", ((608, 78, 732, 232), "down"), ((178, 470, 258, 575), "v"), ((502, 528, 562, 748), "down"), None),
+    "kitsune":  ("magnific_void-kitsune-rarity-mythi_P3D79Nh42C.jpg", ((608, 78, 732, 232), "down"), ((186, 485, 254, 605), "v"), ((502, 528, 562, 748), "down"), None),
 }
 
+HEAD_TOL = {"kitsune": 36}
 ROT_TO_UP = {"up": None, "down": Image.ROTATE_180, "left": Image.ROTATE_270, "right": Image.ROTATE_90}
 ROT_TO_RIGHT = {"right": None, "left": Image.ROTATE_180, "up": Image.ROTATE_270, "down": Image.ROTATE_90}
 
@@ -508,7 +509,7 @@ def sheet_image(fname):
     return im
 
 
-def knock_out(im, sides="tblr", tol=46):
+def knock_out(im, sides="tblr", tol=46, force=False):
     """Flood-fill the flat panel background from the chosen crop borders."""
     import numpy as np
     from scipy import ndimage
@@ -520,8 +521,12 @@ def knock_out(im, sides="tblr", tol=46):
     if "l" in sides: border.append(a[:, 0:3, :].reshape(-1, 3))
     if "r" in sides: border.append(a[:, w - 3:w, :].reshape(-1, 3))
     bgc = np.median(np.concatenate(border), axis=0)
+    if bgc.sum() < 120 and not force:  # near-black sheet: dark sprites must not be eaten by the fill
+        tol = min(tol, 16)
     diff = np.abs(a - bgc).sum(axis=2)
     cand = diff < tol
+    # cut hairline gaps in dark outlines so the fill cannot leak into dark sprites
+    cand = ndimage.binary_opening(cand, iterations=1)
     seed = np.zeros((h, w), bool)
     if "t" in sides: seed[0, :] = True
     if "b" in sides: seed[h - 1, :] = True
@@ -530,6 +535,9 @@ def knock_out(im, sides="tblr", tol=46):
     lab, n = ndimage.label(cand)
     keep = set(np.unique(lab[seed & cand])) - {0}
     bg = np.isin(lab, list(keep))
+    bg = ndimage.binary_dilation(bg, iterations=1) & (diff < tol * 1.5)
+    obj = ndimage.binary_fill_holes(~bg)
+    bg = ~obj
     # soften: partial alpha for pixels close to the background colour next to it
     alpha = np.where(bg, 0, 255).astype(np.float32)
     near = (~bg) & (diff < tol * 1.8) & ndimage.binary_dilation(bg, iterations=2)
@@ -554,14 +562,17 @@ def skin_sprites():
         os.makedirs(d, exist_ok=True)
         # head: facing up
         hb, hdir = head
-        hi = knock_out(sh.crop(hb))
+        hi = knock_out(sh.crop(hb), tol=HEAD_TOL.get(sid, 46), force=sid in HEAD_TOL)
         if ROT_TO_UP[hdir] is not None:
             hi = hi.transpose(ROT_TO_UP[hdir])
         hi.save(os.path.join(d, "head.png"), optimize=True)
         # body: horizontal texture, flood only across the sides of the tube
         bb, axis = body
         bi = sh.crop(bb)
-        bi = knock_out(bi, "tb" if axis == "h" else "lr")
+        if sid == "basica":
+            bi = knock_out(bi, "lr", 20)
+        else:
+            bi = knock_out(bi, "tb" if axis == "h" else "lr")
         if axis == "v":
             bi = bi.transpose(Image.ROTATE_90)
         bi.save(os.path.join(d, "body.png"), optimize=True)
@@ -698,3 +709,45 @@ MAP_FLOOR_BOX = {12: [(133, 383, 213, 460), (234, 383, 314, 460), (133, 383, 213
 
 if __name__ == "__main__":
     map_floors()
+
+
+# Extra body modules per skin, in 1264x848 sheet space: (box, axis)
+#   variants: distinct straight modules that alternate along the body
+#   specials: core / emblem segments inserted every few segments
+SKIN_MODULES = {
+    "cosmic": dict(variants=[((219, 419, 308, 508), "h"), ((329, 419, 418, 508), "h"), ((439, 419, 528, 508), "h")],
+                   specials=[((1116, 417, 1206, 509), "h")]),
+    "solar": dict(specials=[((1063, 402, 1214, 520), "h")]),
+    "ember": dict(specials=[((1112, 466, 1196, 588), "v")]),
+    "umbra": dict(specials=[((1137, 403, 1213, 533), "v")]),
+    "kitsune": dict(specials=[((392, 558, 470, 745), "v")]),
+    "toxic": dict(specials=[((447, 688, 602, 784), "h")]),
+    "mushroom": dict(specials=[((964, 524, 1196, 598), "h")]),
+    "vampire": dict(specials=[((1015, 435, 1190, 530), "h")]),
+    "abyssal": dict(specials=[((946, 509, 1068, 578), "h"), ((1079, 509, 1201, 578), "h")]),
+    "knight": dict(specials=[((895, 432, 1010, 545), "h")]),
+}
+
+
+def skin_modules():
+    import json
+    manifest = {}
+    for sid, spec in SKIN_MODULES.items():
+        fname = SKIN_SPRITES[sid][0]
+        sh = Image.open(src("SKINS", fname)).convert("RGB")
+        d = os.path.join(OUT, "skins2", sid)
+        os.makedirs(d, exist_ok=True)
+        manifest[sid] = {"variants": 0, "specials": 0}
+        for kind in ("variants", "specials"):
+            for i, (box, axis) in enumerate(spec.get(kind, [])):
+                im = knock_out(sh.crop(box), "tb" if axis == "h" else "lr")
+                if axis == "v":
+                    im = im.transpose(Image.ROTATE_90)
+                im.save(os.path.join(d, f"{kind[:-1]}{i}.png"), optimize=True)
+                manifest[sid][kind] += 1
+    with open(os.path.join(ROOT, "demo", "js", "skinmods.js"), "w") as f:
+        f.write("// Generated by tools/build_assets.py (skin_modules)\nexport const SKIN_MODS = " + json.dumps(manifest, indent=1) + ";\n")
+
+
+if __name__ == "__main__":
+    skin_modules()

@@ -1,10 +1,12 @@
 // Sprite snake renderer: the real head / body / tail art from each skin sheet.
-// The body texture is mapped along the (smoothed) path in thin strips so it
-// bends with the snake; the tail texture continues the path; the head is the
-// sheet's top-down head rotated to the movement direction.
-import { clamp } from './util.js';
+// The body is a sequence of the sheet's own modules (straight, variants and
+// special segments) mapped along the smoothed path in thin strips so it bends
+// with the snake. The head is the sheet's top-down head; neck and tail base are
+// blended into the body so the pieces read as one animal.
+import { clamp, lerp, smoothstep } from './util.js';
 import { glowSprite } from './fx.js';
 import { IMG } from './assets.js';
+import { SKIN_MODS } from './skinmods.js';
 
 // Chaikin corner cutting, keeps both ends.
 function chaikin(pts, iters) {
@@ -48,44 +50,106 @@ function resample(pts, step, d0) {
 // ------------------------------------------------------------------ skin art
 const meta = new Map();
 
+function canvasOf(img, w, h) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.drawImage(img, 0, 0, w, h);
+  return { c, g };
+}
+
+// Vertical extent of a module's core (rows that are opaque across at least half of
+// its length, so fins and stray edge pixels do not count) plus its average colour.
+// leftEdgeOnly measures just the first columns (the base of a tail).
+function measure(img, leftEdgeOnly) {
+  const W = leftEdgeOnly ? Math.min(10, img.width) : img.width;
+  const { g } = canvasOf(img, img.width, img.height);
+  let top = 0, bot = img.height - 1, r = 0, gg = 0, b = 0, n = 0;
+  try {
+    const d = g.getImageData(0, 0, W, img.height).data;
+    const cnt = new Float32Array(img.height);
+    for (let y = 0; y < img.height; y++) {
+      for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4;
+        if (d[i + 3] > 160) {
+          cnt[y]++;
+          if (x % 2 === 0) { r += d[i]; gg += d[i + 1]; b += d[i + 2]; n++; }
+        }
+      }
+    }
+    const need = W * 0.5;
+    let first = -1, last = -1;
+    for (let y = 0; y < img.height; y++) if (cnt[y] >= need) { if (first < 0) first = y; last = y; }
+    if (first >= 0) { top = first; bot = last; }
+  } catch { n = 0; }
+  const avg = n ? [r / n, gg / n, b / n] : [90, 110, 70];
+  const hex = (k) => '#' + avg.map((v) => Math.min(255, Math.round(v * k)).toString(16).padStart(2, '0')).join('');
+  return { img, top, bot: Math.max(bot, top + 1), fill: hex(1), dark: hex(0.35) };
+}
+
+// Thickness of a tail where it meets the body: measured a little way in (past the
+// rounded cap), on the columns 8% to 30% of its length.
+function measureBase(img) {
+  const x0 = Math.floor(img.width * 0.08), x1 = Math.max(x0 + 2, Math.floor(img.width * 0.3));
+  const W = x1 - x0;
+  const { g } = canvasOf(img, img.width, img.height);
+  let top = 0, bot = img.height - 1;
+  try {
+    const d = g.getImageData(x0, 0, W, img.height).data;
+    let first = -1, last = -1;
+    for (let y = 0; y < img.height; y++) {
+      let c = 0;
+      for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] > 160) c++;
+      if (c >= W * 0.5) { if (first < 0) first = y; last = y; }
+    }
+    if (first >= 0) { top = first; bot = last; }
+  } catch { /* keep full height */ }
+  return { top, bot: Math.max(bot, top + 1) };
+}
+
+// Opaque width per row of the (upright) head sprite, as a fraction of its width.
+function headProfile(img) {
+  const { g } = canvasOf(img, img.width, img.height);
+  const rows = new Float32Array(img.height);
+  let maxW = 1;
+  try {
+    const d = g.getImageData(0, 0, img.width, img.height).data;
+    for (let y = 0; y < img.height; y++) {
+      let n = 0, first = -1, last = -1;
+      for (let x = 0; x < img.width; x++) {
+        if (d[(y * img.width + x) * 4 + 3] > 140) { n++; if (first < 0) first = x; last = x; }
+      }
+      rows[y] = first < 0 ? 0 : (last - first + 1);
+      if (rows[y] > maxW) maxW = rows[y];
+    }
+  } catch { rows.fill(img.width); maxW = img.width; }
+  return { rows, maxW };
+}
+
 export function skinArt(skin) {
   const key = skin.art || skin.id;
   if (meta.has(key)) return meta.get(key);
   const head = IMG[`skins2/${key}/head.png`], body = IMG[`skins2/${key}/body.png`], tail = IMG[`skins2/${key}/tail.png`];
   if (!head || !body || !tail) return null;
-  const m = { head, body, tail, ...measure(body, false) };
-  m.tailProf = measure(tail, true);
+  const main = measure(body, false);
+  const mods = SKIN_MODS[key] || { variants: 0, specials: 0 };
+  const variants = [], specials = [];
+  for (let i = 0; i < mods.variants; i++) { const im = IMG[`skins2/${key}/variant${i}.png`]; if (im) variants.push(measure(im, false)); }
+  for (let i = 0; i < mods.specials; i++) { const im = IMG[`skins2/${key}/special${i}.png`]; if (im) specials.push(measure(im, false)); }
+  const tailM = measureBase(tail);
+  const hp = headProfile(head);
+  const m = {
+    head, tail, main, variants, specials, tailProf: tailM, hp,
+    fill: main.fill, dark: main.dark,
+    thick: main.bot - main.top + 1,
+  };
   meta.set(key, m);
   return m;
 }
 
-// Opaque vertical extent of a texture (whole image, or only its left edge for
-// tails) plus its average colour.
-function measure(img, leftEdgeOnly) {
-  const c = document.createElement('canvas');
-  const W = leftEdgeOnly ? Math.min(10, img.width) : img.width;
-  c.width = W; c.height = img.height;
-  const g = c.getContext('2d');
-  g.drawImage(img, 0, 0);
-  let top = img.height, bot = 0, r = 0, gg = 0, b = 0, n = 0;
-  try {
-    const d = g.getImageData(0, 0, W, img.height).data;
-    for (let y = 0; y < img.height; y++) {
-      for (let x = 0; x < W; x += leftEdgeOnly ? 1 : 2) {
-        const i = (y * W + x) * 4;
-        if (d[i + 3] > 160) {
-          if (y < top) top = y;
-          if (y > bot) bot = y;
-          r += d[i]; gg += d[i + 1]; b += d[i + 2]; n++;
-        }
-      }
-    }
-  } catch { top = 0; bot = img.height - 1; n = 0; }
-  if (top > bot) { top = 0; bot = img.height - 1; }
-  const avg = n ? [r / n, gg / n, b / n] : [90, 110, 70];
-  const hex = (k) => '#' + avg.map((v) => Math.min(255, Math.round(v * k)).toString(16).padStart(2, '0')).join('');
-  return { top, bot: Math.max(bot, top + 1), fill: hex(1), dark: hex(0.35) };
-}
+const BLOCKY = new Set(['samurai', 'vampire', 'knight', 'scorpion', 'cyber', 'ghost', 'abyssal', 'crystal']);
+const SPECIAL_GAP = 5.5; // cells of plain body between special segments
+const CELL_PER_R = 1 / 0.34;
 
 /**
  * pts: polyline head -> tail (css px). o: {
@@ -99,6 +163,7 @@ export function drawSnake(g, pts, skin, o) {
   if (!art) return;
   const R = o.R * (o.fat || 1);
   const t = o.t || 0;
+  const unit = (2 * R) / art.thick; // sheet pixels -> screen pixels, from the body thickness
 
   // strands split at wrap-around jumps, smoothed and finely resampled
   const strands = [];
@@ -127,7 +192,56 @@ export function drawSnake(g, pts, skin, o) {
     }
   }
 
-  // thickness profile: swallowed orbs travel down the body as bulges
+  // --- head geometry (needed for the neck blend)
+  const hRatio = clamp(art.head.width / art.thick, 1.12, 1.9) * (skin.headScale || 1);
+  const hw = 2 * R * hRatio;
+  const hh = hw * (art.head.height / art.head.width);
+  const fwd = R * (0.25 + (skin.headShift || 0));
+  const neck = R * 0.7;
+  // where the body starts, the head is this wide (in body-thickness units)
+  const rowPx = hh / art.head.height;
+  const rowAt = clamp(Math.round(art.head.height / 2 + (neck + fwd) / rowPx), 0, art.head.height - 1);
+  const headThere = (art.hp.rows[rowAt] / art.head.width) * hw;
+  const neckK = clamp(headThere / (2 * R), 0.62, 1);
+  const neckLen = R * 1.7;
+
+  // --- tail geometry: scaled by the sheet's own proportions, base blended into the body
+  const tailBase = art.tailProf.bot - art.tailProf.top + 1;
+  const tailRatio = clamp(tailBase / art.thick, 0.6, 1.12);
+  const tailScale = (2 * R * tailRatio) / tailBase;
+  const tailImgW = art.tail.width, tailImgH = art.tail.height;
+  const tailLen = Math.min(tailImgW * tailScale, total * 0.42, R * (skin.tailLen || 5.4));
+  const tailStart = total - tailLen;
+  const tailBlend = R * 2.2;
+
+  // --- module plan: variants cycle, a special segment appears every few cells
+  const trimFrac = BLOCKY.has(skin.art || skin.id) ? 0 : 0.03;
+  const gapPx = SPECIAL_GAP * R * CELL_PER_R;
+  const cycle = art.variants.length ? art.variants : [art.main];
+  const plan = [];
+  {
+    let d = neck, k = 0, sinceSpecial = 0, sp = 0;
+    while (d < tailStart + R && plan.length < 90) {
+      let m;
+      if (art.specials.length && sinceSpecial >= gapPx) {
+        m = art.specials[sp++ % art.specials.length];
+        sinceSpecial = 0;
+      } else {
+        m = cycle[k++ % cycle.length];
+      }
+      const cut = trimFrac * m.img.width;
+      const len = (m.img.width - cut * 2) * unit;
+      plan.push({ m, start: d, len, cut });
+      d += len;
+      sinceSpecial += len;
+    }
+  }
+  const planAt = (d) => {
+    for (let i = plan.length - 1; i >= 0; i--) if (d >= plan[i].start) return plan[i];
+    return plan[0];
+  };
+
+  // thickness profile: swallowed orbs bulge, the neck and tail base blend
   const bulges = o.bulges || [];
   const thick = (d) => {
     let k = 1;
@@ -135,16 +249,10 @@ export function drawSnake(g, pts, skin, o) {
       const x = (d - b.d) / (R * 1.3);
       if (x > -3 && x < 3) k += b.amp * Math.exp(-x * x);
     }
+    if (d < neck + neckLen) k *= lerp(neckK, 1, smoothstep(neck, neck + neckLen, d));
+    if (d > tailStart - tailBlend && d <= tailStart) k *= lerp(1, tailRatio, smoothstep(tailStart - tailBlend, tailStart, d));
     return k;
   };
-
-  // the tail texture covers the last stretch of the path
-  const tailImgW = art.tail.width, tailImgH = art.tail.height;
-  const tailBase = art.tailProf.bot - art.tailProf.top + 1;
-  const tailScale = (2 * R * 0.95) / tailBase;
-  const tailLen = Math.min(tailImgW * tailScale, total * 0.42, R * (skin.tailLen || 5.2));
-  const tailStart = total - tailLen;
-  const neck = R * 0.8; // body strips start just behind the head centre
 
   g.save();
   if (o.clip) { g.beginPath(); g.rect(o.clip.x, o.clip.y, o.clip.w, o.clip.h); g.clip(); }
@@ -198,9 +306,9 @@ export function drawSnake(g, pts, skin, o) {
   g.lineCap = 'round';
   g.lineJoin = 'round';
   for (const smp of S) {
-    for (const [col, w] of [[art.dark, 1.95], [art.fill, 1.55]]) {
+    for (const [col, w] of [[art.dark, 1.9], [art.fill, 1.5]]) {
       g.strokeStyle = col;
-      g.lineWidth = R * w;
+      g.lineWidth = R * w * Math.min(1, tailRatio + 0.15);
       g.beginPath();
       let started = false;
       for (const s of smp) {
@@ -213,9 +321,6 @@ export function drawSnake(g, pts, skin, o) {
   }
 
   // textured strips, from the tail towards the head
-  const bw = art.body.width, bh = art.body.height;
-  const bodyScale = (2 * R) / (art.bot - art.top + 1);
-  const repeat = bw * bodyScale;
   const dw = step * 2.3;
   for (let si = S.length - 1; si >= 0; si--) {
     const smp = S[si];
@@ -233,13 +338,15 @@ export function drawSnake(g, pts, skin, o) {
         const cy = ((art.tailProf.top + art.tailProf.bot) / 2 - tailImgH / 2) * tailScale;
         g.drawImage(art.tail, sx, 0, Math.min(sw, tailImgW - sx), tailImgH, -dw / 2, -h / 2 - cy, dw, h);
       } else {
+        const seg = planAt(s.d);
+        const im = seg.m.img;
         const k = thick(s.d);
-        const u = ((s.d - neck) % repeat + repeat) % repeat;
-        const sx = (u / repeat) * bw;
-        const sw = Math.max(1, step / bodyScale);
-        const h = bh * bodyScale * k;
-        const cy = ((art.top + art.bot) / 2 - bh / 2) * bodyScale * k;
-        g.drawImage(art.body, sx, 0, Math.min(sw, bw - sx), bh, -dw / 2, -h / 2 - cy, dw, h);
+        const span = im.width - seg.cut * 2;
+        const sx = clamp(seg.cut + ((s.d - seg.start) / seg.len) * span, 0, im.width - 1);
+        const sw = Math.max(1, step / unit);
+        const h = im.height * unit * k;
+        const cy = ((seg.m.top + seg.m.bot) / 2 - im.height / 2) * unit * k;
+        g.drawImage(im, sx, 0, Math.min(sw, im.width - sx), im.height, -dw / 2, -h / 2 - cy, dw, h);
       }
     }
   }
@@ -251,17 +358,15 @@ export function drawSnake(g, pts, skin, o) {
   while (k1 < S[0].length - 1 && S[0][k1].d < R * 1.2) k1++;
   const s1 = S[0][k1];
   const ang = Math.atan2(s0.y - s1.y, s0.x - s1.x);
-  drawHead(g, s0.x, s0.y, ang, R, art, skin, o);
+  drawHead(g, s0.x, s0.y, ang, R, art, skin, o, { hw, hh, fwd });
   g.restore();
 }
 
-function drawHead(g, x, y, ang, R, art, skin, o) {
+function drawHead(g, x, y, ang, R, art, skin, o, hd) {
   const img = art.head;
-  const w = R * 2 * 1.55 * (skin.headScale || 1);
-  const h = w * (img.height / img.width);
+  const { hw: w, hh: h, fwd } = hd;
   const sq = clamp(o.squash || 0, 0, 1);
   const tg = clamp(Math.max(o.tongue || 0, (o.mouth || 0) > 0.4 ? o.mouth : 0), 0, 1);
-  const fwd = R * (0.25 + (skin.headShift || 0));
   g.save();
   g.translate(x, y);
   g.rotate(ang + Math.PI / 2); // the sprite faces up (-y)

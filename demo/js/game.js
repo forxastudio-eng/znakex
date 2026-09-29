@@ -1,10 +1,12 @@
 // Game controller: rules for the four modes, grid movement with smooth
 // interpolation, eating, growth, golden boost, combos, death, revive and win.
 import { COLS, ROWS, BOTS, DUEL_LAYOUT, skinById } from './data.js';
-import { Board, randomFreeCell, mapTheme } from './board.js';
+import { Board, randomFreeCell } from './board.js';
+import { MapBoard } from './mapboard.js';
+import { buildLevel, MAPDEF } from './maps.js';
 import { drawSnake } from './snakedraw.js';
 import { drawOrb, orbSpawnK } from './orbs.js';
-import { FX, Ambient } from './fx.js';
+import { FX, Ambient, MapAmbient } from './fx.js';
 import { botThink } from './bot.js';
 import { DIRS, OPPOSITE, rand, clamp, lerp, ease, vibrate } from './util.js';
 
@@ -72,13 +74,11 @@ export class Game {
     const skin = skinById(this.cfg.skinId);
     let layout = null, theme = 'court', spawn = { x: 5, y: 15, dir: 'up', len: 3 }, opts = {};
     if (mode === 'story') {
-      theme = mapTheme(level.mapInfo);
-      layout = level.layout;
-      spawn = level.spawn;
+      this.lv = buildLevel(level.map, level.n, level.diff);
+      spawn = this.lv.spawn;
       this.target = level.target;
       this.baseSpeed = level.speed;
       this.goldChance = level.goldChance;
-      opts.spawns = [{ x: spawn.x, y: spawn.y, img: 'tiles/court/rune1.png' }];
     } else if (mode === 'classic') {
       this.baseSpeed = 4.6;
       this.goldChance = 0.14;
@@ -103,7 +103,7 @@ export class Game {
         { x: 6, y: 2, img: 'tiles/ritual/spawn2.png' },
       ];
     }
-    this.board = new Board(theme, layout, opts);
+    this.board = mode === 'story' ? new MapBoard(this.lv) : new Board(theme, layout, opts);
     this.player = new Snake(skin, spawn);
     this.snakes = [this.player];
     if (mode === 'duel') {
@@ -113,7 +113,7 @@ export class Game {
       this.snakes.push(this.bot);
     }
     const amb = theme === 'glade' ? ['#FFE08A', '#FFF3C0', '#FFC94A'] : theme === 'ritual' ? ['#FFB040', '#FF6A3A', '#FFE0A0'] : ['#E8F5A0', '#FFE7A0', '#B8F0A0'];
-    this.ambient = new Ambient(26, amb);
+    this.ambient = mode === 'story' ? new MapAmbient(MAPDEF[level.map].amb.kind, MAPDEF[level.map].amb.colors) : new Ambient(26, amb);
     this.resize();
     // first orbs
     if (mode === 'frenzy') for (let i = 0; i < 5; i++) this.spawnOrb('gold', true);
@@ -246,7 +246,9 @@ export class Game {
 
     for (const s of this.snakes) {
       if (!s.alive) continue;
-      const speed = this.baseSpeed * (s.speedMult || 1) * (s.boostT > 0 ? (this.mode === 'frenzy' ? 1.25 : 1.85) : 1);
+      const hd = s.cells[0];
+      const bogged = this.board.isSlow && hd && this.board.isSlow(hd.x, hd.y);
+      const speed = this.baseSpeed * (s.speedMult || 1) * (s.boostT > 0 ? (this.mode === 'frenzy' ? 1.25 : 1.85) : 1) * (bogged ? 0.55 : 1);
       const interval = 1 / speed;
       s.interval = interval;
       s.acc += dt;
@@ -317,7 +319,7 @@ export class Game {
   step(s) {
     if (s.isBot) {
       s.dir = botThink(s, this.player, this.board, this.orbs, { mistake: this.botCfg.mistake, aggression: this.botCfg.aggression, useGold: this.cfg.difficulty === 'hard' });
-    } else if (s.queue.length) {
+    } else if (s.queue.length && !(this.board.isIce && this.board.isIce(s.cells[0].x, s.cells[0].y))) {
       const d = s.queue.shift();
       if (d !== OPPOSITE[s.dir]) s.dir = d;
     }
@@ -333,6 +335,7 @@ export class Game {
     let reason = null;
     if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) reason = 'wall';
     else if (this.board.isSolid(nx, ny)) reason = 'obstacle';
+    else if (this.board.isLethal && this.board.isLethal(nx, ny)) reason = 'hazard';
     else if (s.ghostT <= 0) {
       const selfLen = s.grow > 0 ? s.cells.length : s.cells.length - 1;
       for (let i = 0; i < selfLen; i++) if (s.cells[i].x === nx && s.cells[i].y === ny) { reason = 'self'; break; }
@@ -348,6 +351,20 @@ export class Game {
     if (reason) {
       this.die(s, reason, nx, ny);
       return;
+    }
+    // portals: come out of the twin, still heading the same way
+    const portal = this.board.portalAt ? this.board.portalAt(nx, ny) : null;
+    if (portal) {
+      const fromX = this.board.cx(nx), fromY = this.board.cy(ny);
+      const col = portal.pair === 0 ? '#38E8FF' : '#FF5AE8';
+      this.fx.flash(fromX, fromY, col, this.R * 6, 0.4);
+      this.fx.ring(fromX, fromY, col, this.R * 4, 0.5, 5);
+      nx = portal.x; ny = portal.y;
+      const tx = this.board.cx(nx), ty = this.board.cy(ny);
+      this.fx.flash(tx, ty, col, this.R * 6, 0.45);
+      this.fx.ring(tx, ty, col, this.R * 4.5, 0.6, 5);
+      this.fx.burst(tx, ty, 16, { type: 'spark', color: col, speed: 260, size: 4, life: 0.5 });
+      vibrate(20, this.cfg.settings.vibration);
     }
     s.snapshot();
     s.prev = s.cells.map((c) => ({ ...c }));

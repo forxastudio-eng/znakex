@@ -275,3 +275,114 @@ export class Ambient {
     g.restore();
   }
 }
+
+// Ambient particles that belong to a map: fireflies, petals, snow, embers, bubbles…
+export class MapAmbient {
+  constructor(kind, colors, n = 34) {
+    this.kind = kind;
+    this.colors = colors;
+    this.n = kind === 'rain' ? 70 : kind === 'snow' ? 60 : kind === 'star' ? 36 : n;
+    this.p = [];
+  }
+
+  resize(w, h) {
+    this.w = w; this.h = h;
+    this.p = Array.from({ length: this.n }, () => this.spawn(true));
+  }
+
+  spawn(anywhere) {
+    const k = this.kind, w = this.w, h = this.h;
+    const c = this.colors[Math.floor(Math.random() * this.colors.length)];
+    const p = { x: rand(w), y: rand(h), vx: 0, vy: 0, s: rand(2, 4.5), ph: rand(TAU), f: rand(0.6, 1.6), rot: rand(TAU), vr: rand(-2, 2), c, life: 1 };
+    switch (k) {
+      case 'petal': case 'leaf': case 'feather':
+        p.y = anywhere ? rand(h) : -10; p.vx = rand(4, 22); p.vy = rand(14, 34); p.s = rand(4, 7); break;
+      case 'snow': p.y = anywhere ? rand(h) : -6; p.vx = rand(-6, 6); p.vy = rand(18, 46); p.s = rand(1.4, 3.6); break;
+      case 'rain': p.y = anywhere ? rand(h) : -20; p.x = rand(w + 60); p.vx = -40; p.vy = rand(420, 620); p.s = rand(8, 16); break;
+      case 'ember': p.y = anywhere ? rand(h) : h + 8; p.vx = rand(-10, 10); p.vy = rand(-52, -18); p.s = rand(1.6, 3.6); break;
+      case 'bubble': p.y = anywhere ? rand(h) : h + 8; p.vx = rand(-6, 6); p.vy = rand(-40, -14); p.s = rand(2.5, 6.5); break;
+      case 'spore': case 'wisp': p.y = anywhere ? rand(h) : h + 8; p.vx = rand(-8, 8); p.vy = rand(-24, -8); p.s = rand(2, k === 'wisp' ? 6 : 4); break;
+      case 'sand': p.x = anywhere ? rand(w) : -12; p.vx = rand(60, 140); p.vy = rand(-6, 10); p.s = rand(8, 20); break;
+      case 'dust': p.vx = rand(-6, 6); p.vy = rand(-8, 4); p.s = rand(1.5, 3.2); break;
+      case 'star': case 'sparkle': p.vx = 0; p.vy = 0; p.s = rand(1.8, 4.2); break;
+      default: p.vx = rand(-8, 8); p.vy = rand(-26, -8); break; // firefly
+    }
+    return p;
+  }
+
+  update(dt, t) {
+    const k = this.kind;
+    for (let i = 0; i < this.p.length; i++) {
+      const q = this.p[i];
+      q.rot += q.vr * dt;
+      switch (k) {
+        case 'petal': case 'leaf': case 'feather':
+          q.x += (q.vx + Math.sin(t * 1.4 + q.ph) * 16) * dt; q.y += q.vy * dt; break;
+        case 'snow': q.x += (q.vx + Math.sin(t + q.ph) * 8) * dt; q.y += q.vy * dt; break;
+        case 'rain': q.x += q.vx * dt; q.y += q.vy * dt; break;
+        case 'sand': q.x += q.vx * dt; q.y += (q.vy + Math.sin(t * 2 + q.ph) * 6) * dt; break;
+        case 'star': case 'sparkle': break;
+        default: q.x += (q.vx + Math.sin(t * q.f + q.ph) * 10) * dt; q.y += q.vy * dt;
+      }
+      const out = q.y < -24 || q.y > this.h + 24 || q.x < -60 || q.x > this.w + 60;
+      if (out && k !== 'star' && k !== 'sparkle' && k !== 'dust') this.p[i] = this.spawn(false);
+      if (out && (k === 'dust')) this.p[i] = this.spawn(true);
+    }
+  }
+
+  draw(g, t, alpha = 1) {
+    const k = this.kind;
+    g.save();
+    for (const q of this.p) {
+      const tw = 0.5 + 0.5 * Math.sin(t * 2.2 * q.f + q.ph);
+      switch (k) {
+        case 'petal': case 'leaf': case 'feather': {
+          g.globalAlpha = alpha * 0.85;
+          g.save();
+          g.translate(q.x, q.y);
+          g.rotate(q.rot);
+          g.scale(1, 0.5 + 0.5 * Math.abs(Math.sin(q.rot * 1.3)));
+          g.fillStyle = q.c;
+          g.beginPath();
+          if (k === 'feather') g.ellipse(0, 0, q.s * 1.5, q.s * 0.35, 0, 0, TAU);
+          else g.ellipse(0, 0, q.s, q.s * (k === 'leaf' ? 0.5 : 0.7), 0, 0, TAU);
+          g.fill();
+          g.restore();
+          break;
+        }
+        case 'snow': g.globalAlpha = alpha * 0.85; g.fillStyle = q.c; g.beginPath(); g.arc(q.x, q.y, q.s, 0, TAU); g.fill(); break;
+        case 'rain': g.globalAlpha = alpha * 0.4; g.strokeStyle = q.c; g.lineWidth = 1.2; g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(q.x + 3, q.y + q.s); g.stroke(); break;
+        case 'sand': g.globalAlpha = alpha * 0.22; g.strokeStyle = q.c; g.lineWidth = 1.6; g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(q.x - q.s, q.y - 1); g.stroke(); break;
+        case 'bubble':
+          g.globalAlpha = alpha * (0.4 + 0.3 * tw); g.strokeStyle = q.c; g.lineWidth = 1.3; g.beginPath(); g.arc(q.x, q.y, q.s, 0, TAU); g.stroke();
+          g.globalAlpha = alpha * 0.3; g.fillStyle = '#fff'; g.beginPath(); g.arc(q.x - q.s * 0.35, q.y - q.s * 0.35, q.s * 0.2, 0, TAU); g.fill();
+          break;
+        case 'star': case 'sparkle': {
+          g.globalCompositeOperation = 'lighter';
+          g.globalAlpha = alpha * tw;
+          const sp = glowSprite(q.c, 64);
+          g.drawImage(sp, q.x - q.s * 2, q.y - q.s * 2, q.s * 4, q.s * 4);
+          g.fillStyle = '#fff';
+          g.beginPath();
+          for (let i = 0; i < 4; i++) {
+            const a = (i * Math.PI) / 2;
+            g.lineTo(q.x + Math.cos(a) * q.s * 1.7 * tw, q.y + Math.sin(a) * q.s * 1.7 * tw);
+            g.lineTo(q.x + Math.cos(a + Math.PI / 4) * q.s * 0.3, q.y + Math.sin(a + Math.PI / 4) * q.s * 0.3);
+          }
+          g.closePath(); g.fill();
+          g.globalCompositeOperation = 'source-over';
+          break;
+        }
+        default: {
+          g.globalCompositeOperation = 'lighter';
+          g.globalAlpha = alpha * (k === 'wisp' ? 0.45 : 0.4 + 0.6 * tw);
+          const sp = glowSprite(q.c, 64);
+          const r = q.s * (k === 'ember' ? 2.4 : k === 'wisp' ? 4 : 3);
+          g.drawImage(sp, q.x - r, q.y - r, r * 2, r * 2);
+          g.globalCompositeOperation = 'source-over';
+        }
+      }
+    }
+    g.restore();
+  }
+}

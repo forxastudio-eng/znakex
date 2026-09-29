@@ -1,5 +1,5 @@
 // Screens, overlays and HUD (DOM layer over the canvases).
-import { MODES, MAPS, SKINS, RARITY, BOTS, ECONOMY, TIPS, skinById, skinPrice, storyLevel } from './data.js';
+import { MODES, MAPS, SKINS, RARITY, BOTS, ECONOMY, TIPS, DIFFS, skinById, skinPrice, storyLevel } from './data.js';
 import * as store from './store.js';
 import { url } from './assets.js';
 import { drawSnake, pathPoints } from './snakedraw.js';
@@ -162,7 +162,7 @@ export class UI {
       const m = MODES[idx];
       $(e, '#mn').textContent = m.name;
       const cs = store.currentStory();
-      $(e, '#ms').textContent = m.id === 'story' ? `MAPA ${ROMAN[cs.map - 1]} · NIVEL ${cs.level}`
+      $(e, '#ms').textContent = m.id === 'story' ? `MAPA ${ROMAN[cs.map - 1]} · NIVEL ${cs.level} · ${DIFFS[S.diff].label}`
         : m.id === 'classic' ? `RÉCORD ${fmt(S.best.classic)}`
           : m.id === 'frenzy' ? `RÉCORD ${fmt(S.best.frenzy)}` : 'FÁCIL · MEDIO · DIFÍCIL';
       S.mode = m.id;
@@ -180,7 +180,7 @@ export class UI {
   playMode(id) {
     if (id === 'story') {
       const cs = store.currentStory();
-      this.startGame({ mode: 'story', level: storyLevel(cs.map, cs.level) });
+      this.startGame({ mode: 'story', level: storyLevel(cs.map, cs.level, this.S().diff) });
     } else if (id === 'duel') this.go('duel');
     else this.startGame({ mode: id });
   }
@@ -217,6 +217,7 @@ export class UI {
     this.setBg('deep');
     const e = el(`<section>
       ${this.topbar('MAPAS')}
+      ${this.diffBar(this.S().diff)}
       <div class="t-label dim" style="text-align:center;font-size:.9rem;margin:.2rem 0 .5rem">NIVELES ${store.totalCleared()}/160${CONFIG.tester ? ' · MODO TESTER' : ''}</div>
       <div class="scroll stagger">
         ${MAPS.map((m, i) => {
@@ -234,6 +235,7 @@ export class UI {
       ${this.nav('maps')}
     </section>`);
     this.wire(e, {
+      dif: (b) => { this.S().diff = b.dataset.d; store.save(); this.go('maps'); },
       open: (b) => this.go('levels', { map: Number(b.dataset.map) }),
       locked: () => this.toast('Completa los 10 niveles del mapa anterior'),
     });
@@ -241,15 +243,21 @@ export class UI {
   }
 
   // ------------------------------------------------------------ level select
+  diffBar(active) {
+    return `<div class="diffbar">${Object.values(DIFFS).map((d) => `<button class="dchip ${d.id === active ? 'on' : ''}" data-act="dif" data-d="${d.id}" style="--dc:${d.color}">${d.label}</button>`).join('')}</div>`;
+  }
+
   scr_levels({ map = 1, sel }) {
     this.setBg('deep');
-    const cl = store.clearedLevels(map);
-    const open = store.unlockedUpTo(map);
+    const dif = this.S().diff;
+    const cl = store.clearedLevels(map, dif);
+    const open = store.unlockedUpTo(map, dif);
     let selected = sel || Math.min(10, cl + 1);
     const P = [[50, 93], [74, 84], [52, 75], [26, 66], [48, 57], [74, 48], [52, 39], [26, 30], [46, 21], [58, 9]];
     const e = el(`<section style="background:url(${url(MAPS[map - 1].key)}) center/cover">
       <div style="position:absolute;inset:0;background:linear-gradient(to bottom, rgba(6,9,6,.55), rgba(6,9,6,.2) 30%, rgba(6,9,6,.35) 70%, rgba(6,9,6,.9))"></div>
       ${this.topbar(MAPS[map - 1].name, 'maps')}
+      ${this.diffBar(dif)}
       <div class="levels-wrap" id="lw">
         <svg class="path" viewBox="0 0 100 100" preserveAspectRatio="none">
           <polyline points="${P.map((p) => p.join(',')).join(' ')}" fill="none" stroke="rgba(242,239,230,.55)" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
@@ -258,7 +266,7 @@ export class UI {
           const n = i + 1;
           const st = n <= cl ? 'cleared' : n === cl + 1 ? 'current' : n <= open ? 'cleared' : 'locked';
           const img = n === 10 ? (st === 'locked' ? 'locked' : 'guardian') : st;
-          const rw = storyLevel(map, n).reward;
+          const rw = storyLevel(map, n, dif).reward;
           return `<button class="level-node ${st} ${n === 10 ? 'guardian' : ''}" data-act="lv" data-n="${n}" style="left:${x}%;top:${y}%">
             <img src="${url('ui/nodes/' + img + '.png')}" alt="">${n === 10 ? '' : `<span class="num">${n}</span>`}
             <span class="rw"><img src="${icon('coin')}" alt="">${rw}</span></button>`;
@@ -268,12 +276,12 @@ export class UI {
     </section>`);
     const paint = () => {
       e.querySelectorAll('.level-node').forEach((n) => n.classList.toggle('sel', Number(n.dataset.n) === selected));
-      const L = storyLevel(map, selected);
+      const L = storyLevel(map, selected, dif);
       const locked = selected > open;
       $(e, '#lp').innerHTML = `<div class="inner level-panel">
         <div>
           <div class="t-display worn" style="font-size:2.1rem">${selected === 10 ? 'GUARDIÁN · ' : ''}NIVEL ${map}-${selected}</div>
-          <div class="obj"><img src="${icon('orb_red')}" alt="">RECOGE ${L.target} ORBES</div>
+          <div class="obj"><img src="${icon('orb_red')}" alt="">RECOGE ${L.target} ORBES <span class="dtag" style="--dc:${DIFFS[dif].color}">${DIFFS[dif].label}</span></div>
           <div class="obj dim"><img src="${icon('coin')}" alt="">${selected <= cl ? `REPETIR: +${ECONOMY.replayReward}` : `RECOMPENSA: +${L.reward}`}</div>
         </div>
         <button class="btn-primary" data-act="play" style="min-height:4rem;font-size:2.1rem;padding:0 1.4rem" ${locked ? 'disabled' : ''}>${locked ? '<img src="' + icon('lock') + '" style="width:2rem;border-radius:.2rem">' : '<span class="worn">JUGAR</span>'}</button>
@@ -282,9 +290,13 @@ export class UI {
     paint();
     this.wire(e, {
       lv: (b) => { selected = Number(b.dataset.n); paint(); },
+      dif: (b) => {
+        this.S().diff = b.dataset.d; store.save();
+        this.go('levels', { map });
+      },
       play: () => {
         if (selected > open) return this.toast('Supera el nivel anterior para desbloquearlo');
-        this.startGame({ mode: 'story', level: storyLevel(map, selected) });
+        this.startGame({ mode: 'story', level: storyLevel(map, selected, dif) });
       },
     });
     return { el: e };
@@ -750,7 +762,7 @@ export class UI {
     const hc = $(e, '#hc');
     if (mode === 'story') {
       hc.innerHTML = `<div class="hud-obj"><img src="${icon('orb_red')}" alt=""><span id="ho">0 / ${cfg.level.target}</span></div><div class="hud-bar"><i id="hb"></i></div>`;
-      $(e, '#tl').textContent = `${cfg.level.guardian ? 'GUARDIÁN · ' : ''}NIVEL ${cfg.level.map}-${cfg.level.n} · ${cfg.level.mapInfo.name}`;
+      $(e, '#tl').textContent = `${cfg.level.guardian ? 'GUARDIÁN · ' : ''}NIVEL ${cfg.level.map}-${cfg.level.n} · ${cfg.level.mapInfo.name} · ${DIFFS[cfg.level.diff].label}`;
     } else if (mode === 'classic') {
       hc.innerHTML = `<div class="hud-obj"><img src="${icon('mode_classic')}" alt=""><span id="ho">LARGO 3</span></div><div class="t-label dim" style="font-size:.75rem">RÉCORD ${fmt(S.best.classic)}</div>`;
       $(e, '#tl').textContent = 'CLÁSICO';
@@ -996,7 +1008,7 @@ export class UI {
     if (res.mode === 'story') {
       const L = cfg.level;
       if (res.won) {
-        const first = store.markCleared(L.map, L.n);
+        const first = store.markCleared(L.map, L.n, L.diff);
         coins = first ? L.reward : ECONOMY.replayReward;
         html = `<div class="t-label glow-amber">${L.guardian ? '¡GUARDIÁN DERROTADO!' : '¡OBJETIVO CUMPLIDO!'}</div>
           <div class="ov-title worn">NIVEL SUPERADO</div>
@@ -1062,7 +1074,7 @@ export class UI {
       if (cr) cr.textContent = '+0';
     }
     this.wire(o, {
-      next: () => this.startGame({ mode: 'story', level: storyLevel(cfg.level.map, cfg.level.n + 1) }),
+      next: () => this.startGame({ mode: 'story', level: storyLevel(cfg.level.map, cfg.level.n + 1, cfg.level.diff) }),
       retry: () => this.startGame(cfg),
       levels: () => { this.game = null; this.go('levels', { map: cfg.level.map, sel: Math.min(10, cfg.level.n + (res.won ? 1 : 0)) }); },
       nextmap: () => { this.game = null; this.go('levels', { map: cfg.level.map + 1 }); },

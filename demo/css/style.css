@@ -455,3 +455,11 @@ svg.path { position: absolute; inset: 0; width: 100%; height: 100%; overflow: vi
 
 .toast { position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%); padding: 0.6rem 1.2rem; border-radius: 0.4rem; background: rgba(10, 14, 11, 0.85); border: 1px solid var(--amber); font-family: 'Barlow Condensed'; font-weight: 700; letter-spacing: 0.1em; animation: rise .35s var(--ease) both; white-space: nowrap; }
 .demo-note { font-family: 'Barlow Condensed'; font-weight: 600; letter-spacing: 0.1em; font-size: 0.8rem; color: var(--bone-dim); text-align: center; }
+
+/* ------------------------------------------------------------ story difficulty */
+.diffbar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.4rem; margin: 0.15rem 0 0.35rem; position: relative; z-index: 2; }
+.dchip { padding: 0.4rem 0.2rem; border-radius: 0.5rem; border: 1.5px solid var(--line); background: rgba(10, 14, 11, 0.55); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  font-family: 'Barlow Condensed'; font-weight: 700; letter-spacing: 0.12em; font-size: 1rem; color: var(--bone-dim); transition: transform .12s, box-shadow .2s; }
+.dchip.on { color: #fff; border-color: var(--dc); background: color-mix(in srgb, var(--dc) 28%, rgba(10,14,11,.7)); box-shadow: 0 0 0.9rem color-mix(in srgb, var(--dc) 55%, transparent); }
+.dchip:active { transform: scale(0.95); }
+.dtag { margin-left: 0.4rem; padding: 0.05rem 0.45rem; border-radius: 0.25rem; border: 1px solid var(--dc); color: var(--dc); font-size: 0.75rem; letter-spacing: 0.12em; }
