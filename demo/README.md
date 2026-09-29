@@ -4,7 +4,7 @@ Primera demo del juego: HTML5 + Canvas, empaquetada como APK de Android (WebView
 
 ## Probar
 
-- **Android:** instala `releases/ZNAKEX-tester-0.5.0.apk` (todo desbloqueado: 16 mapas × 3 dificultades, 160 niveles por dificultad, 30 skins, 999.999 monedas) o `releases/ZNAKEX-0.5.0.apk` (progresión normal).
+- **Android:** instala `releases/ZNAKEX-tester-0.5.1.apk` (todo desbloqueado: 16 mapas × 3 dificultades, 160 niveles por dificultad, 30 skins, 999.999 monedas) o `releases/ZNAKEX-0.5.1.apk` (progresión normal).
   Hay que permitir "instalar apps de origen desconocido". Los dos APK pueden convivir en el móvil.
 - **Navegador:** sirve la carpeta `demo/` con cualquier servidor estático (`npx http-server demo`) y abre `index.html`.
   Añade `?tester=1` a la URL para el modo tester.

@@ -1,5 +1,5 @@
 // Image preloader with progress callback.
-import { SKINS } from './data.js';
+import { SKINS, BOTS } from './data.js';
 import { MX } from './mapmanifest.js';
 import { SKIN_MODS } from './skinmods.js';
 import { PW_FILES, KIT_FILES, BANNER_FILES } from './newmanifest.js';
@@ -44,7 +44,8 @@ export const MANIFEST = [
   ...KIT_FILES.map((n) => `ui/v3/${n}.png`),
   ...BANNER_FILES.map((n) => `ui/banners/${n}.png`),
   'ui/season_badge.png', 'maps/season1.jpg',
-  ...SKINS.flatMap((s) => ['head', 'body', 'tail'].map((p) => `skins2/${s.art || s.id}/${p}.png`)),
+  ...[...new Set([...SKINS.map((s) => s.art || s.id), ...Object.values(BOTS).map((b) => b.art || b.id)])]
+    .flatMap((k) => ['head', 'body', 'tail'].map((p) => `skins2/${k}/${p}.png`)),
   ...Object.entries(SKIN_MODS).flatMap(([id, m]) => [
     ...Array.from({ length: m.variants }, (_, i) => `skins2/${id}/variant${i}.png`),
     ...Array.from({ length: m.specials }, (_, i) => `skins2/${id}/special${i}.png`),

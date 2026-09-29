@@ -1,5 +1,6 @@
 // Game data: skins, maps, levels, modes and economy (see ZNAKEX_Game_Brief.md).
 import { mixHex } from './util.js';
+import { CONFIG } from './config.js';
 
 export const COLS = 12;
 export const ROWS = 18;
@@ -51,7 +52,7 @@ const BASIC = [
   ['turquesa', 'Turquesa', '#3FAE9E', 400], ['negro', 'Negra', '#3A3B40', 450], ['blanco', 'Blanca', '#E4E0D4', 500],
 ];
 
-export const SKINS = [
+const ALL_SKINS = [
   sk('basica', 'Serpiente Básica Verde', 'normal', 'dust', ['#86AE5E', '#D8E88A', '#4E6E34'], { basic: true, price: 0, desc: 'La compañera de siempre. Ágil, fiel y lista para crecer.' }),
   ...BASIC.map(([id, nm, base, price]) => sk('basica_' + id, 'Serpiente Básica ' + nm, 'normal', 'dust',
     [base, mixHex(base, '#FFFFFF', 0.5), mixHex(base, '#000000', 0.4)], { basic: true, price, desc: 'La serpiente básica de siempre, ahora en otro color.' })),
@@ -78,7 +79,10 @@ export const SKINS = [
   sk('kitsune', 'Kitsune del Vacío', 'legendario', 'star', ['#1C1428', '#D6A8FF', '#8A2A3A'], { aura: '#B45CFF', eyeGlow: '#E0B0FF', desc: 'Espíritu zorro atrapado en escamas de medianoche.' }),
 ];
 
-export const skinById = (id) => SKINS.find((s) => s.id === id) || SKINS[0];
+// The collection made before the new one is for the tester APK only; the public build keeps the starter snakes.
+ALL_SKINS.forEach((s) => { if (!s.basic) s.testerOnly = true; });
+export const SKINS = ALL_SKINS.filter((s) => CONFIG.tester || !s.testerOnly);
+export const skinById = (id) => ALL_SKINS.find((s) => s.id === id) || SKINS[0];
 export const skinPrice = (s) => s.price ?? RARITY[s.rarity].price;
 
 // Duel rivals: each one wears a skin from the collection.

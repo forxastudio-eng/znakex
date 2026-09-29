@@ -1,6 +1,7 @@
 // Retention layer: run statistics, daily / weekly missions, 7-day streak, season pass and achievements.
 import * as store from './store.js';
 import { CONFIG } from './config.js';
+import { SKINS } from './data.js';
 
 const S = () => store.S();
 const dayKey = (d = new Date()) => d.toISOString().slice(0, 10);
@@ -128,7 +129,11 @@ export function claimTier(track, i) {
   const r = (track === 'prem' ? SEASON.prem : SEASON.free)[i];
   list.push(i);
   if (r.c) store.addCoins(r.c);
-  if (r.skin && !S().owned.includes(r.skin)) S().owned.push(r.skin);
+  if (r.skin) {
+    // a skin that is not in the public collection yet pays out coins instead
+    if (SKINS.some((s) => s.id === r.skin)) { if (!S().owned.includes(r.skin)) S().owned.push(r.skin); }
+    else { store.addCoins(1000); return { c: 1000 }; }
+  }
   store.save();
   return r;
 }
@@ -149,7 +154,12 @@ export function seasonMapAccess(level) {
 
 export function seasonSkinUnlock() {
   const st = S();
-  if (store.seasonCleared() >= 20 && !st.owned.includes('harvest')) { st.owned.push('harvest'); store.save(); return true; }
+  if (store.seasonCleared() < 20) return false;
+  if (SKINS.some((s) => s.id === 'harvest')) {
+    if (!st.owned.includes('harvest')) { st.owned.push('harvest'); store.save(); return true; }
+    return false;
+  }
+  if (!st.season.done) { st.season.done = true; store.addCoins(1500); store.save(); return true; } // public build: coins until the season skins arrive
   return false;
 }
 

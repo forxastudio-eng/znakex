@@ -17,6 +17,8 @@ import { CONTROL_INFO } from './input.js';
 const icon = (n) => url(`ui/icons/${n}.png`);
 const kit = (n) => url(`ui/v3/${n}.png`);
 const pwi = (n) => url(`pw/${n}.png`);
+// rarity frame drawn over a skin cover (assets/ui/rfr/<rarity>.png); without the file the card just keeps its coloured edge
+const frameImg = (rarity) => `<img class="fr" src="${url('ui/rfr/' + rarity + '.png')}" alt="" onload="this.parentNode.classList.add('has-fr')" onerror="this.remove()">`;
 const ptitle = (text, idx = 2, cls = '') => `<div class="ptitle p${idx} ${cls}"><img src="${url('ui/banners/b' + idx + '.png')}" alt=""><span>${text}</span></div>`;
 const fmtT = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 const $ = (root, sel) => root.querySelector(sel);
@@ -396,7 +398,7 @@ export class UI {
         const own = S.owned.includes(s.id);
         const rc = RARITY[s.rarity].color;
         return `<button class="skin-card ${own ? '' : 'locked'} ${s.id === sel ? 'sel' : ''}" data-act="sk" data-id="${s.id}" style="--rc:${rc};--i:${i}">
-          <img class="pt" src="${url('skins/' + s.id + '.jpg')}" alt="">
+          <div class="ptw"><img class="pt" src="${url('skins/' + s.id + '.jpg')}" alt="">${frameImg(s.rarity)}</div>
           ${own ? '' : `<img class="lk" src="${icon('lock')}" alt="">`}
           ${S.equipped === s.id ? `<img class="eq" src="${icon('check')}" alt="">` : ''}
           <span class="rl" style="background:${rc}">${RARITY[s.rarity].label}</span>
@@ -515,7 +517,7 @@ export class UI {
     const o = this.overlay(`<div class="overlay dark">
       <div class="panel strong"><div class="inner">
         <div class="t-label glow-amber">¡SKIN DESBLOQUEADA!</div>
-        <img src="${url('skins/' + s.id + '.jpg')}" style="width:11rem;border-radius:.6rem;box-shadow:0 0 2rem ${RARITY[s.rarity].color};animation:pop .6s var(--ease) both">
+        <div class="ptw big" style="box-shadow:0 0 2rem ${RARITY[s.rarity].color};animation:pop .6s var(--ease) both"><img class="pt" src="${url('skins/' + s.id + '.jpg')}" alt="">${frameImg(s.rarity)}</div>
         <div class="ov-title worn">${s.name.toUpperCase()}</div>
         <span class="rarity" style="background:${RARITY[s.rarity].color}">${RARITY[s.rarity].label}</span>
         <button class="btn-primary" data-act="ok" style="width:100%"><span class="worn">GENIAL</span></button>
@@ -723,7 +725,8 @@ export class UI {
       const reached = i < tier;
       const locked = track === 'prem' && !se.premium;
       const cls = claimed ? 'claimed' : reached && !locked ? 'ready' : 'lock';
-      const inner = r.skin ? `<img class="sk" src="${url('skins/' + r.skin + '.jpg')}" alt="">` : `<img src="${icon('coin')}" alt=""><b>${r.c}</b>`;
+      const realSkin = r.skin && SKINS.some((s) => s.id === r.skin);
+      const inner = realSkin ? `<img class="sk" src="${url('skins/' + r.skin + '.jpg')}" alt="">` : `<img src="${icon('coin')}" alt=""><b>${r.skin ? 1000 : r.c}</b>`;
       return `<button class="slot ${cls}" data-act="tclaim" data-t="${track}" data-i="${i}">${inner}${claimed ? '<i class="ck">✓</i>' : locked || !reached ? `<img class="lk2" src="${kit('slot_locked')}" alt="">` : ''}</button>`;
     };
     const e = el(`<section>
