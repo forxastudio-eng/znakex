@@ -32,13 +32,11 @@ export const ECONOMY = {
 };
 
 export const RARITY = {
-  inicial: { label: 'INICIAL', color: '#B9C4A6', price: 0 },
-  basica: { label: 'BÁSICA', color: '#C9D2B4', price: 300 },
-  comun: { label: 'COMÚN', color: '#9AA090', price: 1500 },
-  rara: { label: 'RARA', color: '#5FA0E0', price: 3000 },
-  epica: { label: 'ÉPICA', color: '#6CC24A', price: 6000 },
-  legendaria: { label: 'LEGENDARIA', color: '#E8B04A', price: 12000 },
-  mitica: { label: 'MÍTICA', color: '#E9DDB5', price: 25000 },
+  normal: { label: 'NORMAL', color: '#C9D2B4', price: 1500 },
+  especial: { label: 'ESPECIAL', color: '#6CC24A', price: 6000 },
+  mitico: { label: 'MÍTICO', color: '#5FA0E0', price: 12000 },
+  legendario: { label: 'LEGENDARIO', color: '#E8B04A', price: 25000 },
+  temporada: { label: 'TEMPORADA', color: '#E87532', price: 0 },
 };
 
 // ------------------------------------------------------------------ skins
@@ -54,29 +52,30 @@ const BASIC = [
 ];
 
 export const SKINS = [
-  sk('basica', 'Serpiente Básica Verde', 'inicial', 'dust', ['#86AE5E', '#D8E88A', '#4E6E34'], { basic: true, desc: 'La compañera de siempre. Ágil, fiel y lista para crecer.' }),
-  ...BASIC.map(([id, nm, base, price]) => sk('basica_' + id, 'Serpiente Básica ' + nm, 'basica', 'dust',
+  sk('basica', 'Serpiente Básica Verde', 'normal', 'dust', ['#86AE5E', '#D8E88A', '#4E6E34'], { basic: true, price: 0, desc: 'La compañera de siempre. Ágil, fiel y lista para crecer.' }),
+  ...BASIC.map(([id, nm, base, price]) => sk('basica_' + id, 'Serpiente Básica ' + nm, 'normal', 'dust',
     [base, mixHex(base, '#FFFFFF', 0.5), mixHex(base, '#000000', 0.4)], { basic: true, price, desc: 'La serpiente básica de siempre, ahora en otro color.' })),
-  sk('forest', 'Guardián del Bosque', 'rara', 'leaf', ['#6A5238', '#9CDA6B', '#6FA548'], { eyeGlow: '#8CFF6A', desc: 'Corteza viva y musgo antiguo. Deja un rastro de hojas.' }),
-  sk('scorpion', 'Escorpión del Desierto', 'rara', 'dust', ['#5A3A1C', '#E8C48A', '#E0652A'], { desc: 'Placas de armadura curtidas por mil tormentas de arena.' }),
-  sk('samurai', 'Serpiente Samurái', 'epica', 'maple', ['#1E1E1E', '#E8C47A', '#B8262A'], { desc: 'Armadura lacada y honor dorado. Caen hojas de arce a su paso.' }),
-  sk('inferno', 'Serpiente Infernal', 'epica', 'ember', ['#2F2A2A', '#FF8A2A', '#524646'], { aura: '#FF6A1A', eyeGlow: '#FF8A2A', tongue: '#FF5A2A', desc: 'Roca volcánica con lava viva bajo cada escama.' }),
-  sk('ghost', 'Serpiente Fantasma', 'epica', 'spirit', ['#2A3A6A', '#CFEFFF', '#9FD8FF'], { aura: '#9FD8FF', desc: 'Medio materia, medio niebla. Susurra al moverse.' }),
-  sk('sakura', 'Espíritu Sakura', 'epica', 'petal', ['#F0DCD8', '#FFB7CB', '#D8B06A'], { tongue: '#D84A6A', desc: 'Nacida bajo los cerezos. Deja pétalos al pasar.' }),
-  sk('toxic', 'Mutante Tóxico', 'epica', 'toxic', ['#2C4A24', '#A8FF4A', '#4C7A3A'], { aura: '#7CFF3A', eyeGlow: '#A8FF4A', tongue: '#8CFF3A', desc: 'Algo salió mal en el pantano. Brilla en la oscuridad.' }),
-  sk('knight', 'Serpiente Caballero', 'epica', 'metal', ['#8A96A6', '#DDE6F0', '#8A1A2A'], { desc: 'Acero pulido y blasón real. Chispas en cada giro.' }),
-  sk('mushroom', 'Bruja Seta', 'epica', 'spores', ['#5A2A4A', '#B88CFF', '#C8423A'], { eyeGlow: '#C77BFF', desc: 'Hechizos, setas y esporas que brillan en la noche.' }),
-  sk('vampire', 'Serpiente Vampira', 'epica', 'blood', ['#1E1418', '#B3243A', '#D4B060'], { eyeGlow: '#FF3A5A', desc: 'Aristocracia nocturna con colmillos de marfil.' }),
-  sk('frost', 'Dragón de Escarcha', 'legendaria', 'frost', ['#9ED4EE', '#CFF2FF', '#4F8DB6'], { aura: '#BDEBFF', tongue: '#5FC8FF', desc: 'Escamas de hielo eterno. El aire se congela a su paso.' }),
-  sk('cyber', 'Cyber Serpiente', 'legendaria', 'digital', ['#3B424C', '#5FF0FF', '#707A86'], { aura: '#1FE6FF', eyeGlow: '#1FE6FF', tongue: '#FF3AD2', desc: 'Aleación negra y núcleo de energía. Tecnología ancestral.' }),
-  sk('crystal', 'Serpiente de Cristal', 'legendaria', 'sparkle', ['#8A6ADA', '#E0D0FF', '#5FC8FF'], { aura: '#B48CFF', desc: 'Gemas talladas por la luz de la luna.' }),
-  sk('abyssal', 'Serpiente Abisal', 'legendaria', 'bubble', ['#1A3A44', '#5FF0F0', '#2A5A6A'], { aura: '#3FE0E0', eyeGlow: '#5FF0F0', desc: 'Del fondo del océano, con luz bioluminiscente.' }),
-  sk('quetzal', 'Quetzal de Obsidiana', 'legendaria', 'feather', ['#2E5A44', '#E8C05A', '#8A3A2A'], { eyeGlow: '#FFE04A', desc: 'La serpiente emplumada de los templos de jade.' }),
-  sk('ember', 'Ídolo de Brasas', 'legendaria', 'ember', ['#B8B8B0', '#FF8A2A', '#4A4A44'], { aura: '#FF6A1A', desc: 'Una estatua antigua con fuego vivo en sus grietas.' }),
-  sk('umbra', 'Serpiente Umbra', 'legendaria', 'shadow', ['#16121E', '#C77BFF', '#3A2A52'], { aura: '#8A2BE2', eyeGlow: '#C77BFF', desc: 'Sombra del bosque embrujado con ojos de amatista.' }),
-  sk('solar', 'Serpiente Solar', 'mitica', 'ember', ['#1E1A16', '#FFD36A', '#E8B04A'], { aura: '#FFC23A', eyeGlow: '#FFE08A', desc: 'Lleva un sol en el corazón. Mítica y radiante.' }),
-  sk('cosmic', 'Vacío Cósmico', 'mitica', 'star', ['#231C52', '#C7B2FF', '#FFFFFF'], { aura: '#8E6CFF', desc: 'Un fragmento del cielo nocturno con forma de serpiente.' }),
-  sk('kitsune', 'Kitsune del Vacío', 'mitica', 'star', ['#1C1428', '#D6A8FF', '#8A2A3A'], { aura: '#B45CFF', eyeGlow: '#E0B0FF', desc: 'Espíritu zorro atrapado en escamas de medianoche.' }),
+  sk('forest', 'Guardián del Bosque', 'normal', 'leaf', ['#6A5238', '#9CDA6B', '#6FA548'], { eyeGlow: '#8CFF6A', desc: 'Corteza viva y musgo antiguo. Deja un rastro de hojas.' }),
+  sk('scorpion', 'Escorpión del Desierto', 'normal', 'dust', ['#5A3A1C', '#E8C48A', '#E0652A'], { desc: 'Placas de armadura curtidas por mil tormentas de arena.' }),
+  sk('samurai', 'Serpiente Samurái', 'especial', 'maple', ['#1E1E1E', '#E8C47A', '#B8262A'], { desc: 'Armadura lacada y honor dorado. Caen hojas de arce a su paso.' }),
+  sk('inferno', 'Serpiente Infernal', 'especial', 'ember', ['#2F2A2A', '#FF8A2A', '#524646'], { aura: '#FF6A1A', eyeGlow: '#FF8A2A', tongue: '#FF5A2A', desc: 'Roca volcánica con lava viva bajo cada escama.' }),
+  sk('ghost', 'Serpiente Fantasma', 'especial', 'spirit', ['#2A3A6A', '#CFEFFF', '#9FD8FF'], { aura: '#9FD8FF', desc: 'Medio materia, medio niebla. Susurra al moverse.' }),
+  sk('sakura', 'Espíritu Sakura', 'especial', 'petal', ['#F0DCD8', '#FFB7CB', '#D8B06A'], { tongue: '#D84A6A', desc: 'Nacida bajo los cerezos. Deja pétalos al pasar.' }),
+  sk('toxic', 'Mutante Tóxico', 'especial', 'toxic', ['#2C4A24', '#A8FF4A', '#4C7A3A'], { aura: '#7CFF3A', eyeGlow: '#A8FF4A', tongue: '#8CFF3A', desc: 'Algo salió mal en el pantano. Brilla en la oscuridad.' }),
+  sk('knight', 'Serpiente Caballero', 'especial', 'metal', ['#8A96A6', '#DDE6F0', '#8A1A2A'], { desc: 'Acero pulido y blasón real. Chispas en cada giro.' }),
+  sk('mushroom', 'Bruja Seta', 'especial', 'spores', ['#5A2A4A', '#B88CFF', '#C8423A'], { eyeGlow: '#C77BFF', desc: 'Hechizos, setas y esporas que brillan en la noche.' }),
+  sk('vampire', 'Serpiente Vampira', 'especial', 'blood', ['#1E1418', '#B3243A', '#D4B060'], { eyeGlow: '#FF3A5A', desc: 'Aristocracia nocturna con colmillos de marfil.' }),
+  sk('frost', 'Dragón de Escarcha', 'legendario', 'frost', ['#9ED4EE', '#CFF2FF', '#4F8DB6'], { aura: '#BDEBFF', tongue: '#5FC8FF', desc: 'Escamas de hielo eterno. El aire se congela a su paso.' }),
+  sk('cyber', 'Cyber Serpiente', 'mitico', 'digital', ['#3B424C', '#5FF0FF', '#707A86'], { aura: '#1FE6FF', eyeGlow: '#1FE6FF', tongue: '#FF3AD2', desc: 'Aleación negra y núcleo de energía. Tecnología ancestral.' }),
+  sk('crystal', 'Serpiente de Cristal', 'mitico', 'sparkle', ['#8A6ADA', '#E0D0FF', '#5FC8FF'], { aura: '#B48CFF', desc: 'Gemas talladas por la luz de la luna.' }),
+  sk('abyssal', 'Serpiente Abisal', 'mitico', 'bubble', ['#1A3A44', '#5FF0F0', '#2A5A6A'], { aura: '#3FE0E0', eyeGlow: '#5FF0F0', desc: 'Del fondo del océano, con luz bioluminiscente.' }),
+  sk('quetzal', 'Quetzal de Obsidiana', 'mitico', 'feather', ['#2E5A44', '#E8C05A', '#8A3A2A'], { eyeGlow: '#FFE04A', desc: 'La serpiente emplumada de los templos de jade.' }),
+  sk('ember', 'Ídolo de Brasas', 'especial', 'ember', ['#B8B8B0', '#FF8A2A', '#4A4A44'], { aura: '#FF6A1A', desc: 'Una estatua antigua con fuego vivo en sus grietas.' }),
+  sk('umbra', 'Serpiente Umbra', 'mitico', 'shadow', ['#16121E', '#C77BFF', '#3A2A52'], { aura: '#8A2BE2', eyeGlow: '#C77BFF', desc: 'Sombra del bosque embrujado con ojos de amatista.' }),
+  sk('solar', 'Serpiente Solar', 'legendario', 'ember', ['#1E1A16', '#FFD36A', '#E8B04A'], { aura: '#FFC23A', eyeGlow: '#FFE08A', desc: 'Lleva un sol en el corazón. Mítica y radiante.' }),
+  sk('cosmic', 'Vacío Cósmico', 'legendario', 'star', ['#231C52', '#C7B2FF', '#FFFFFF'], { aura: '#8E6CFF', desc: 'Un fragmento del cielo nocturno con forma de serpiente.' }),
+  sk('harvest', 'Serpiente de la Luna de Cosecha', 'temporada', 'leaf', ['#B85A32', '#E87532', '#4A2942'], { season: true, aura: '#E87532', eyeGlow: '#FFC24A', desc: 'Exclusiva de la Temporada 1: calabaza, luna y brasas.' }),
+  sk('kitsune', 'Kitsune del Vacío', 'legendario', 'star', ['#1C1428', '#D6A8FF', '#8A2A3A'], { aura: '#B45CFF', eyeGlow: '#E0B0FF', desc: 'Espíritu zorro atrapado en escamas de medianoche.' }),
 ];
 
 export const skinById = (id) => SKINS.find((s) => s.id === id) || SKINS[0];
@@ -84,9 +83,9 @@ export const skinPrice = (s) => s.price ?? RARITY[s.rarity].price;
 
 // Duel rivals: each one wears a skin from the collection.
 export const BOTS = {
-  easy: { ...sk('bot_easy', 'MOSS WORM', 'basica', 'dust', ['#3FAE9E', '#B8F0E0', '#1F5A50']), art: 'basica_turquesa', label: 'FÁCIL', speed: 0.78, mistake: 0.18, aggression: 0, target: 10 },
-  medium: { ...sk('bot_medium', 'RUST VIPER', 'rara', 'dust', ['#5A3A1C', '#E8C48A', '#E0652A']), art: 'scorpion', label: 'MEDIO', speed: 0.95, mistake: 0.05, aggression: 0.25, target: 12 },
-  hard: { ...sk('bot_hard', 'CRIMSON FANG', 'epica', 'blood', ['#1E1418', '#B3243A', '#D4B060']), art: 'vampire', eyeGlow: '#FF3A5A', label: 'DIFÍCIL', speed: 1.02, mistake: 0, aggression: 0.7, target: 15 },
+  easy: { ...sk('bot_easy', 'MOSS WORM', 'normal', 'dust', ['#3FAE9E', '#B8F0E0', '#1F5A50']), art: 'basica_turquesa', label: 'FÁCIL', speed: 0.78, mistake: 0.18, aggression: 0, target: 10 },
+  medium: { ...sk('bot_medium', 'RUST VIPER', 'normal', 'dust', ['#5A3A1C', '#E8C48A', '#E0652A']), art: 'scorpion', label: 'MEDIO', speed: 0.95, mistake: 0.05, aggression: 0.25, target: 12 },
+  hard: { ...sk('bot_hard', 'CRIMSON FANG', 'especial', 'blood', ['#1E1418', '#B3243A', '#D4B060']), art: 'vampire', eyeGlow: '#FF3A5A', label: 'DIFÍCIL', speed: 1.02, mistake: 0, aggression: 0.7, target: 15 },
 };
 
 // ------------------------------------------------------------------ maps

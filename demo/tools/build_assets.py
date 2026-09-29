@@ -473,7 +473,9 @@ if __name__ == "__main__":
 # ---------------------------------------------------------------- skin sprites (faithful to the sheets)
 # Boxes are (x0, y0, x1, y1) in 1264x848 sheet space (BASICA is 2x and gets scaled).
 # head: (box, snout direction) | body: (box, axis 'h'/'v') | tail: (box, tip direction)
+ONLY = set(filter(None, os.environ.get('ONLY', '').split(',')))
 SKIN_SPRITES = {
+    "harvest":  ("harvest_moon.jpg", ((38, 58, 192, 198), "up"), ((652, 272, 797, 394), "h"), ((420, 488, 652, 598), "right"), None),
     "basica":   ("BASICA.png", ((28, 428, 122, 572), "up"), ((687, 440, 763, 495), "v"), ((1005, 398, 1065, 568), "down"), None),
     "inferno":  ("magnific_02-inferno-serpent-rarity_rgRba4yxtc.jpg", ((535, 165, 665, 300), "down"), ((545, 408, 655, 512), "h"), ((890, 410, 1032, 485), "right"), None),
     "frost":    ("magnific_03-frostbite-dragon-rarit_dtKVGvZXSL.jpg", ((45, 372, 172, 532), "down"), ((690, 395, 775, 505), "v"), ((990, 378, 1062, 528), "up"), None),
@@ -551,6 +553,8 @@ def knock_out(im, sides="tblr", tol=46, force=False):
 def skin_sprites():
     os.makedirs(os.path.join(OUT, "skins2"), exist_ok=True)
     for sid, (fname, head, body, tail, icon_box) in SKIN_SPRITES.items():
+        if ONLY and sid not in ONLY:
+            continue
         sh = Image.open(src("SKINS", fname)).convert("RGB")
         k = sh.size[0] / 1264.0  # BASICA is drawn at 2x: crop at full resolution
         sc = lambda b: tuple(int(round(v * k)) for v in b)
@@ -715,6 +719,8 @@ if __name__ == "__main__":
 #   variants: distinct straight modules that alternate along the body
 #   specials: core / emblem segments inserted every few segments
 SKIN_MODULES = {
+    "harvest": dict(variants=[((612, 70, 752, 196), "h"), ((772, 70, 922, 196), "h"), ((217, 272, 362, 394), "h")],
+                    specials=[((40, 487, 190, 613), "h"), ((213, 480, 360, 618), "h")]),
     "cosmic": dict(variants=[((219, 419, 308, 508), "h"), ((329, 419, 418, 508), "h"), ((439, 419, 528, 508), "h")],
                    specials=[((1116, 417, 1206, 509), "h")]),
     "solar": dict(specials=[((1063, 402, 1214, 520), "h")]),
@@ -733,6 +739,8 @@ def skin_modules():
     import json
     manifest = {}
     for sid, spec in SKIN_MODULES.items():
+        if ONLY and sid not in ONLY:
+            continue
         fname = SKIN_SPRITES[sid][0]
         sh = Image.open(src("SKINS", fname)).convert("RGB")
         d = os.path.join(OUT, "skins2", sid)
