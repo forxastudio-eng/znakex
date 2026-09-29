@@ -191,14 +191,15 @@ Un mapa completo da de 585 monedas (mapa 1) a ~1.460 (mapa 16). Repetir un nivel
 
 | Rareza | Cantidad | Precio (monedas) | Equivalente aprox. en dinero |
 | --- | --- | --- | --- |
-| Inicial | 1 | Gratis | — |
+| Inicial (Básica verde) | 1 | Gratis | — |
+| Básica en colores | 9 | 250–500 | — |
 | Común | 5 | 1.500 | $0,99–1,99 |
 | Rara | 6 | 3.000 | $2,99 |
 | Épica | 4 | 6.000 | $4,99 |
 | Legendaria | 3 | 12.000 | $9,99 |
 | Mítica | 1 | 25.000 | $19,99 |
 
-La lista real de skins y sus rarezas está en la sección 8. Hoy hay más míticas (3) de las que prevé esta tabla (1); ver pregunta abierta.
+La skin Básica existe en 10 colores (verde gratis; roja, azul, amarilla, morada, naranja, rosa, turquesa, negra y blanca entre 250 y 500 monedas) para que cualquiera pueda personalizarse pronto. La lista real de skins y sus rarezas está en la sección 8. Hoy hay más míticas (3) de las que prevé esta tabla (1); ver pregunta abierta.
 
 ### Packs de monedas (compra dentro de la app)
 
