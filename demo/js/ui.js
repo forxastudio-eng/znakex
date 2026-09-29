@@ -6,6 +6,7 @@ import { drawSnake, pathPoints } from './snakedraw.js';
 import { fmt, TAU, ease, clamp, rand } from './util.js';
 import { Game } from './game.js';
 import { CONFIG } from './config.js';
+import { CONTROL_INFO } from './input.js';
 
 const icon = (n) => url(`ui/icons/${n}.png`);
 const $ = (root, sel) => root.querySelector(sel);
@@ -33,7 +34,11 @@ export class UI {
 
   S() { return store.S(); }
 
-  setBg(kind) { this.app.dataset.bg = kind; }
+  setBg(kind, art) {
+    this.app.dataset.bg = kind;
+    if (art) this.app.style.setProperty('--art', `url("${new URL(url(art), location.href).href}")`);
+    else this.app.style.removeProperty('--art');
+  }
 
   // ------------------------------------------------------------ navigation
   go(name, params = {}) {
@@ -156,8 +161,8 @@ export class UI {
     const paint = () => {
       const m = MODES[idx];
       $(e, '#mn').textContent = m.name;
-      const cl = store.clearedLevels(1);
-      $(e, '#ms').textContent = m.id === 'story' ? `MAPA I · NIVEL ${Math.min(10, cl + 1)}`
+      const cs = store.currentStory();
+      $(e, '#ms').textContent = m.id === 'story' ? `MAPA ${ROMAN[cs.map - 1]} · NIVEL ${cs.level}`
         : m.id === 'classic' ? `RÉCORD ${fmt(S.best.classic)}`
           : m.id === 'frenzy' ? `RÉCORD ${fmt(S.best.frenzy)}` : 'FÁCIL · MEDIO · DIFÍCIL';
       S.mode = m.id;
@@ -174,8 +179,8 @@ export class UI {
 
   playMode(id) {
     if (id === 'story') {
-      const n = Math.min(10, store.clearedLevels(1) + 1);
-      this.startGame({ mode: 'story', level: storyLevel(1, n) });
+      const cs = store.currentStory();
+      this.startGame({ mode: 'story', level: storyLevel(cs.map, cs.level) });
     } else if (id === 'duel') this.go('duel');
     else this.startGame({ mode: id });
   }
@@ -184,7 +189,7 @@ export class UI {
   scr_modes() {
     this.setBg('deep');
     const S = this.S();
-    const rec = { story: `PROGRESO ${store.clearedLevels(1)}/160`, classic: `RÉCORD ${fmt(S.best.classic)}`, frenzy: `RÉCORD ${fmt(S.best.frenzy)}`, duel: 'RIVALES: 3' };
+    const rec = { story: `PROGRESO ${store.totalCleared()}/160`, classic: `RÉCORD ${fmt(S.best.classic)}`, frenzy: `RÉCORD ${fmt(S.best.frenzy)}`, duel: 'RIVALES: 3' };
     const e = el(`<section>
       ${this.topbar('MODOS')}
       <div class="scroll stagger">
@@ -210,24 +215,27 @@ export class UI {
   // ------------------------------------------------------------ maps
   scr_maps() {
     this.setBg('deep');
-    const cl = store.clearedLevels(1);
     const e = el(`<section>
       ${this.topbar('MAPAS')}
-      <div class="t-label dim" style="text-align:center;font-size:.9rem;margin:.2rem 0 .5rem">MAPAS 1/16 · NIVELES ${cl}/160</div>
+      <div class="t-label dim" style="text-align:center;font-size:.9rem;margin:.2rem 0 .5rem">NIVELES ${store.totalCleared()}/160${CONFIG.tester ? ' · MODO TESTER' : ''}</div>
       <div class="scroll stagger">
-        ${MAPS.map((m, i) => `<button class="map-card ${m.playable ? 'sel' : 'locked'}" data-act="${m.playable ? 'open' : 'locked'}" style="background-image:url(${url(m.key)});--i:${Math.min(i, 6)}">
+        ${MAPS.map((m, i) => {
+          const open = store.mapUnlocked(m.id);
+          const cl = store.clearedLevels(m.id);
+          return `<button class="map-card ${open ? '' : 'locked'} ${open && cl < 10 && store.currentStory().map === m.id ? 'sel' : ''}" data-act="${open ? 'open' : 'locked'}" data-map="${m.id}" style="background-image:url(${url(m.key)});--i:${Math.min(i, 6)}">
           <img class="hz" src="${icon(m.hazard)}" alt="">
-          ${m.playable ? '' : `<div class="lock"><img src="${icon('lock')}" alt=""></div>`}
+          ${open ? '' : `<div class="lock"><img src="${icon('lock')}" alt=""></div>`}
           <div class="info"><div><div class="nm worn">${ROMAN[i]} · ${m.name}</div>
-            ${m.playable ? `<div class="dots">${Array.from({ length: 10 }, (_, k) => `<i class="${k < cl ? 'on' : ''}"></i>`).join('')}</div>` : '<div class="t-label dim" style="font-size:.8rem">PRÓXIMAMENTE EN LA DEMO</div>'}
-          </div>${m.playable ? `<span class="btn small">${cl >= 10 ? 'REPETIR' : 'JUGAR'}</span>` : ''}</div>
-        </button>`).join('')}
+            ${open ? `<div class="dots">${Array.from({ length: 10 }, (_, k) => `<i class="${k < cl ? 'on' : ''}"></i>`).join('')}</div>` : `<div class="t-label dim" style="font-size:.8rem">SUPERA EL MAPA ${ROMAN[i - 1]}</div>`}
+          </div>${open ? `<span class="btn small">${cl >= 10 ? 'REPETIR' : cl ? 'SEGUIR' : 'JUGAR'}</span>` : ''}</div>
+        </button>`;
+        }).join('')}
       </div>
       ${this.nav('maps')}
     </section>`);
     this.wire(e, {
-      open: () => this.go('levels', { map: 1 }),
-      locked: () => this.toast('Supera el mapa anterior · (demo: solo mapa I)'),
+      open: (b) => this.go('levels', { map: Number(b.dataset.map) }),
+      locked: () => this.toast('Completa los 10 niveles del mapa anterior'),
     });
     return { el: e };
   }
@@ -503,7 +511,8 @@ export class UI {
         <div class="demo-note" style="text-align:left">El sonido llega en la siguiente fase.</div>
         <div class="set-row"><span class="l"><img src="${icon('hz_wind')}">VIBRACIÓN</span><button class="toggle ${set.vibration ? 'on' : ''}" data-act="tg" data-k="vibration"></button></div>
         <div class="sec">CONTROLES</div>
-        <div class="set-row"><span>TIPO</span><div class="seg"><button data-act="ctl" data-v="swipe" class="${set.controls === 'swipe' ? 'on' : ''}">DESLIZAR</button><button data-act="ctl" data-v="buttons" class="${set.controls === 'buttons' ? 'on' : ''}">BOTONES</button></div></div>
+        <div class="ctl-grid">${[['swipe', 'DESLIZAR'], ['buttons', 'FLECHAS'], ['joystick', 'PALANCA'], ['tap', 'TOQUES']].map(([v, l]) => `<button class="ctl ${set.controls === v ? 'on' : ''}" data-act="ctl" data-v="${v}"><span class="ctl-ic ctl-${v}"></span>${l}</button>`).join('')}</div>
+        <div class="demo-note" id="ctlinfo" style="text-align:left;margin-top:.3rem">${CONTROL_INFO[set.controls] || ''}</div>
         <div class="sec">DEMO</div>
         <div class="set-row"><span>+5.000 MONEDAS</span><button class="btn small" data-act="coins">AÑADIR</button></div>
         <div class="set-row"><span>RULETA DE HOY</span><button class="btn small" data-act="wheel">REINICIAR</button></div>
@@ -517,7 +526,7 @@ export class UI {
     </section>`);
     this.wire(e, {
       tg: (b) => { set[b.dataset.k] = !set[b.dataset.k]; b.classList.toggle('on', set[b.dataset.k]); store.save(); },
-      ctl: (b) => { set.controls = b.dataset.v; e.querySelectorAll('[data-act=ctl]').forEach((x) => x.classList.toggle('on', x === b)); store.save(); },
+      ctl: (b) => { set.controls = b.dataset.v; e.querySelectorAll('[data-act=ctl]').forEach((x) => x.classList.toggle('on', x === b)); $(e, '#ctlinfo').textContent = CONTROL_INFO[set.controls]; store.save(); },
       coins: () => { store.addCoins(5000); this.toast('+5.000 monedas'); },
       wheel: () => { S.wheelDay = ''; store.save(); this.toast('Ruleta disponible'); },
       reset: () => this.popup({
@@ -720,7 +729,8 @@ export class UI {
   }
 
   scr_game(cfg) {
-    this.setBg('game');
+    const art = cfg.mode === 'story' ? cfg.level.mapInfo.key : { classic: 'maps/key06.jpg', frenzy: 'maps/key12.jpg', duel: 'maps/key09.jpg' }[cfg.mode];
+    this.setBg('game', art);
     const S = this.S();
     const e = el(`<section style="padding:0">
       <div class="hud">
@@ -732,7 +742,7 @@ export class UI {
         <div class="tag-level" id="tl"></div>
         <div class="boost" id="bo"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="rgba(0,0,0,.5)" stroke="rgba(255,255,255,.15)" stroke-width="4"/><circle id="bor" cx="20" cy="20" r="16" fill="none" stroke="#FFC23A" stroke-width="4" stroke-dasharray="100.5" stroke-dashoffset="0" stroke-linecap="round"/></svg>x2</div>
       </div>
-      ${S.settings.controls === 'buttons' ? `<div class="dpad"><button class="u" data-dir="up">▲</button><button class="l" data-dir="left">◀</button><button class="d" data-dir="down">▼</button><button class="r" data-dir="right">▶</button></div>` : ''}
+      ${S.settings.controls === 'buttons' ? `<div class="dpad"><button class="u" data-dir="up"><i></i></button><button class="l" data-dir="left"><i></i></button><button class="d" data-dir="down"><i></i></button><button class="r" data-dir="right"><i></i></button></div>` : ''}
       <div id="fxl"></div>
     </section>`);
     this.hudEl = e;
@@ -740,7 +750,7 @@ export class UI {
     const hc = $(e, '#hc');
     if (mode === 'story') {
       hc.innerHTML = `<div class="hud-obj"><img src="${icon('orb_red')}" alt=""><span id="ho">0 / ${cfg.level.target}</span></div><div class="hud-bar"><i id="hb"></i></div>`;
-      $(e, '#tl').textContent = `${cfg.level.guardian ? 'GUARDIÁN · ' : ''}NIVEL 1-${cfg.level.n} · EMERALD JUNGLE`;
+      $(e, '#tl').textContent = `${cfg.level.guardian ? 'GUARDIÁN · ' : ''}NIVEL ${cfg.level.map}-${cfg.level.n} · ${cfg.level.mapInfo.name}`;
     } else if (mode === 'classic') {
       hc.innerHTML = `<div class="hud-obj"><img src="${icon('mode_classic')}" alt=""><span id="ho">LARGO 3</span></div><div class="t-label dim" style="font-size:.75rem">RÉCORD ${fmt(S.best.classic)}</div>`;
       $(e, '#tl').textContent = 'CLÁSICO';
@@ -770,6 +780,13 @@ export class UI {
 
   countdown(done) {
     const layer = this.fxLayer();
+    const ctl = this.S().settings.controls || 'swipe';
+    if (this.hudEl) {
+      const h = el(`<div class="ctl-hint"><span class="ctl-ic ctl-${ctl}"></span>${CONTROL_INFO[ctl]}</div>`);
+      this.hudEl.appendChild(h);
+      setTimeout(() => h.classList.add('out'), 3200);
+      setTimeout(() => h.remove(), 3800);
+    }
     const steps = ['3', '2', '1', '¡YA!'];
     let i = 0;
     const next = () => {
@@ -860,7 +877,7 @@ export class UI {
     if (!game || game.paused || !['play', 'countdown', 'ready'].includes(game.state)) return;
     game.paused = true;
     const cfg = this.lastCfg;
-    const info = cfg.mode === 'story' ? `NIVEL 1-${cfg.level.n} · ORBES ${game.player.orbs}/${game.target}` : `PUNTOS ${fmt(game.score)}`;
+    const info = cfg.mode === 'story' ? `NIVEL ${cfg.level.map}-${cfg.level.n} · ORBES ${game.player.orbs}/${game.target}` : `PUNTOS ${fmt(game.score)}`;
     const o = this.overlay(`<div class="overlay"><div class="panel"><div class="inner">
       <img src="${icon('pause')}" style="width:3.6rem;border-radius:.4rem">
       <div class="ov-title worn">PAUSA</div>
@@ -878,7 +895,7 @@ export class UI {
   exitGame() {
     const m = this.lastCfg && this.lastCfg.mode;
     this.game = null;
-    if (m === 'story') this.go('levels', { map: 1 });
+    if (m === 'story') this.go('levels', { map: this.lastCfg.level.map });
     else if (m === 'duel') this.go('duel');
     else this.go('home');
   }
@@ -983,15 +1000,16 @@ export class UI {
         coins = first ? L.reward : ECONOMY.replayReward;
         html = `<div class="t-label glow-amber">${L.guardian ? '¡GUARDIÁN DERROTADO!' : '¡OBJETIVO CUMPLIDO!'}</div>
           <div class="ov-title worn">NIVEL SUPERADO</div>
-          <div class="ov-sub">1-${L.n} · EMERALD JUNGLE</div>
+          <div class="ov-sub">${L.map}-${L.n} · ${L.mapInfo.name}</div>
           ${statRow([['ORBES', `${Math.min(res.orbs, L.target)}/${L.target}`], ['PUNTOS', fmt(res.score)], ['TIEMPO', time]])}
           <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>
           ${first ? '' : '<div class="demo-note">Nivel repetido: recompensa reducida</div>'}
-          ${L.n < 10 ? `<button class="btn-primary" data-act="next" style="width:100%"><span class="worn">SIGUIENTE</span><i class="tri"></i></button>` : `<div class="t-label glow-amber">¡MAPA I COMPLETADO!</div>`}
+          ${L.n < 10 ? `<button class="btn-primary" data-act="next" style="width:100%"><span class="worn">SIGUIENTE</span><i class="tri"></i></button>`
+            : `<div class="t-label glow-amber">¡MAPA ${ROMAN[L.map - 1]} COMPLETADO!</div>${L.map < 16 ? `<button class="btn-primary" data-act="nextmap" style="width:100%"><span class="stack"><span class="worn">SIGUIENTE MAPA</span><span class="sub">${MAPS[L.map].name}</span></span></button>` : ''}`}
           <div class="btn-row"><button class="btn" data-act="retry"><img class="ic" src="${icon('retry')}">REPETIR</button><button class="btn" data-act="levels"><img class="ic" src="${icon('levels')}">NIVELES</button></div>`;
       } else {
         html = `<div class="ov-title worn">NIVEL FALLIDO</div>
-          <div class="ov-sub">1-${L.n} · EMERALD JUNGLE</div>
+          <div class="ov-sub">${L.map}-${L.n} · ${L.mapInfo.name}</div>
           ${statRow([['ORBES', `${res.orbs}/${L.target}`], ['PUNTOS', fmt(res.score)], ['TIEMPO', time]])}
           <button class="btn-primary" data-act="retry" style="width:100%"><span class="worn">REINTENTAR</span></button>
           <div class="btn-row"><button class="btn" data-act="levels"><img class="ic" src="${icon('levels')}">NIVELES</button><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">INICIO</button></div>`;
@@ -1046,7 +1064,8 @@ export class UI {
     this.wire(o, {
       next: () => this.startGame({ mode: 'story', level: storyLevel(cfg.level.map, cfg.level.n + 1) }),
       retry: () => this.startGame(cfg),
-      levels: () => { this.game = null; this.go('levels', { map: 1, sel: Math.min(10, cfg.level.n + (res.won ? 1 : 0)) }); },
+      levels: () => { this.game = null; this.go('levels', { map: cfg.level.map, sel: Math.min(10, cfg.level.n + (res.won ? 1 : 0)) }); },
+      nextmap: () => { this.game = null; this.go('levels', { map: cfg.level.map + 1 }); },
       home: () => { this.game = null; this.go('home'); },
       duel: () => { this.game = null; this.go('duel'); },
       lb: () => this.toast('Ranking con Google Play Games en la versión final'),

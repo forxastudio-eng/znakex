@@ -42,134 +42,73 @@ export const RARITY = {
 };
 
 // ------------------------------------------------------------------ skins
-// Procedural palettes that recreate each skin sheet in motion.
-// pattern: stripe | bands | spots | cracks | glowline | crystal | stars | petals | plates
+// Every skin is drawn with the head / body / tail art cut from its sheet
+// (assets/skins2/<art>/). trail = particles left behind, aura = soft glow,
+// eyeGlow = glow around the head, colors = crumble particles on defeat.
+const sk = (id, name, rarity, trail, colors, extra = {}) => ({ id, name, rarity, trail, colors, fx: colors[1], tongue: '#C7354A', ...extra });
+
+const BASIC = [
+  ['rojo', 'Roja', '#C4473E', 250], ['azul', 'Azul', '#4E82C4', 250], ['amarillo', 'Amarilla', '#D9B43A', 300],
+  ['morado', 'Morada', '#8A5EC2', 300], ['naranja', 'Naranja', '#DC7A30', 350], ['rosa', 'Rosa', '#DC7FA8', 350],
+  ['turquesa', 'Turquesa', '#3FAE9E', 400], ['negro', 'Negra', '#3A3B40', 450], ['blanco', 'Blanca', '#E4E0D4', 500],
+];
+
 export const SKINS = [
-  {
-    id: 'basica', name: 'Serpiente Básica Verde', rarity: 'inicial', basic: true,
-    base: '#86AE5E', light: '#B8D68C', dark: '#4E6E34', outline: '#1B2614',
-    pattern: 'stripe', pat: '#D8CC5A', eye: '#F2EFD2', pupil: '#16180F', tongue: '#C7354A',
-    head: '#9CC271', fx: '#D8E88A',
-    desc: 'La compañera de siempre. Ágil, fiel y lista para crecer.',
-  },
-  // the same basic snake in nine more colours, cheap on purpose
-  ...[
-    ['rojo', 'Roja', '#C4473E', 250], ['azul', 'Azul', '#4E82C4', 250], ['amarillo', 'Amarilla', '#D9B43A', 300],
-    ['morado', 'Morada', '#8A5EC2', 300], ['naranja', 'Naranja', '#DC7A30', 350], ['rosa', 'Rosa', '#DC7FA8', 350],
-    ['turquesa', 'Turquesa', '#3FAE9E', 400], ['negro', 'Negra', '#3A3B40', 450], ['blanco', 'Blanca', '#E4E0D4', 500],
-  ].map(([id, nm, base, price]) => ({
-    id: 'basica_' + id, name: 'Serpiente Básica ' + nm, rarity: 'basica', price, basic: true,
-    base, light: mixHex(base, '#FFFFFF', 0.42), dark: mixHex(base, '#000000', 0.42), outline: mixHex(base, '#000000', 0.82),
-    pattern: 'stripe', pat: id === 'amarillo' || id === 'blanco' ? mixHex(base, '#6A5A2A', 0.45) : mixHex(base, '#F6EAA8', 0.62),
-    eye: '#F2EFD2', pupil: '#16180F', tongue: '#C7354A', head: mixHex(base, '#FFFFFF', 0.14), fx: mixHex(base, '#FFFFFF', 0.5),
-    desc: 'La serpiente básica de siempre, ahora en otro color.',
-  })),
-  {
-    id: 'forest', name: 'Guardián del Bosque', rarity: 'rara',
-    base: '#6A5238', light: '#94795A', dark: '#34281B', outline: '#17110B',
-    pattern: 'spots', pat: '#6FA548', eye: '#B8FF7A', pupil: '#0F1A08', tongue: '#B8423A', eyeGlow: '#8CFF6A',
-    head: '#77603F', fx: '#9CDA6B',
-    desc: 'Corteza viva y musgo antiguo. Deja un rastro de hojas.',
-  },
-  {
-    id: 'scorpion', name: 'Escorpión del Desierto', rarity: 'rara',
-    base: '#A8743E', light: '#D6A56A', dark: '#5A3A1C', outline: '#22150A',
-    pattern: 'plates', pat: '#4A2E16', eye: '#FFC15A', pupil: '#1A0E04', tongue: '#B8423A',
-    head: '#9A6A38', fx: '#E8C48A',
-    desc: 'Placas de armadura curtidas por mil tormentas de arena.',
-  },
-  {
-    id: 'inferno', name: 'Serpiente Infernal', rarity: 'epica',
-    base: '#2F2A2A', light: '#524646', dark: '#141111', outline: '#0A0707',
-    pattern: 'cracks', pat: '#FF6A1A', eye: '#FFB030', pupil: '#2A0A00', tongue: '#FF5A2A', eyeGlow: '#FF8A2A', glow: '#FF6A1A',
-    head: '#3A3232', fx: '#FF8A2A',
-    desc: 'Roca volcánica con lava viva bajo cada escama.',
-  },
-  {
-    id: 'sakura', name: 'Espíritu Sakura', rarity: 'epica',
-    base: '#F0DCD8', light: '#FFFFFF', dark: '#C9A3A2', outline: '#4A2A30',
-    pattern: 'petals', pat: '#F39AB4', eye: '#E0487E', pupil: '#3A0A1A', tongue: '#D84A6A', eyeGlow: '#FF7AA8',
-    head: '#F6E6E3', fx: '#FFB7CB',
-    desc: 'Nacida bajo los cerezos. Deja pétalos al pasar.',
-  },
-  {
-    id: 'toxic', name: 'Mutante Tóxico', rarity: 'epica',
-    base: '#2C4A24', light: '#4C7A3A', dark: '#142412', outline: '#0A1408',
-    pattern: 'glowline', pat: '#8CFF3A', eye: '#C8FF4A', pupil: '#0A1A02', tongue: '#8CFF3A', eyeGlow: '#A8FF4A', glow: '#7CFF3A',
-    head: '#355A2C', fx: '#A8FF4A',
-    desc: 'Algo salió mal en el pantano. Brilla en la oscuridad.',
-  },
-  {
-    id: 'frost', name: 'Dragón de Escarcha', rarity: 'legendaria',
-    base: '#9ED4EE', light: '#E8F8FF', dark: '#4F8DB6', outline: '#12324A',
-    pattern: 'crystal', pat: '#FFFFFF', eye: '#3FB2FF', pupil: '#021426', tongue: '#5FC8FF', eyeGlow: '#6FD0FF', glow: '#BDEBFF',
-    head: '#B6E2F4', fx: '#CFF2FF',
-    desc: 'Escamas de hielo eterno. El aire se congela a su paso.',
-  },
-  {
-    id: 'cyber', name: 'Cyber Serpiente', rarity: 'legendaria',
-    base: '#3B424C', light: '#707A86', dark: '#1A1E24', outline: '#07090C',
-    pattern: 'glowline', pat: '#1FE6FF', eye: '#1FE6FF', pupil: '#001418', tongue: '#FF3AD2', eyeGlow: '#1FE6FF', glow: '#1FE6FF',
-    head: '#454D58', fx: '#5FF0FF',
-    desc: 'Aleación negra y núcleo de energía. Tecnología ancestral.',
-  },
-  {
-    id: 'cosmic', name: 'Vacío Cósmico', rarity: 'mitica',
-    base: '#231C52', light: '#4A3C9A', dark: '#0C0A22', outline: '#05040F',
-    pattern: 'stars', pat: '#FFFFFF', eye: '#C8A6FF', pupil: '#0A0520', tongue: '#B07CFF', eyeGlow: '#B48CFF', glow: '#8E6CFF',
-    head: '#2A2260', fx: '#C7B2FF',
-    desc: 'Un fragmento del cielo nocturno con forma de serpiente.',
-  },
-  {
-    id: 'kitsune', name: 'Kitsune del Vacío', rarity: 'mitica',
-    base: '#1C1428', light: '#3A2A52', dark: '#0B0712', outline: '#040208',
-    pattern: 'glowline', pat: '#B45CFF', eye: '#E0B0FF', pupil: '#16041F', tongue: '#B45CFF', eyeGlow: '#C77BFF', glow: '#B45CFF',
-    head: '#241A33', fx: '#D6A8FF',
-    desc: 'Espíritu zorro atrapado en escamas de medianoche.',
-  },
+  sk('basica', 'Serpiente Básica Verde', 'inicial', 'dust', ['#86AE5E', '#D8E88A', '#4E6E34'], { basic: true, desc: 'La compañera de siempre. Ágil, fiel y lista para crecer.' }),
+  ...BASIC.map(([id, nm, base, price]) => sk('basica_' + id, 'Serpiente Básica ' + nm, 'basica', 'dust',
+    [base, mixHex(base, '#FFFFFF', 0.5), mixHex(base, '#000000', 0.4)], { basic: true, price, desc: 'La serpiente básica de siempre, ahora en otro color.' })),
+  sk('forest', 'Guardián del Bosque', 'rara', 'leaf', ['#6A5238', '#9CDA6B', '#6FA548'], { eyeGlow: '#8CFF6A', desc: 'Corteza viva y musgo antiguo. Deja un rastro de hojas.' }),
+  sk('scorpion', 'Escorpión del Desierto', 'rara', 'dust', ['#5A3A1C', '#E8C48A', '#E0652A'], { desc: 'Placas de armadura curtidas por mil tormentas de arena.' }),
+  sk('samurai', 'Serpiente Samurái', 'epica', 'maple', ['#1E1E1E', '#E8C47A', '#B8262A'], { desc: 'Armadura lacada y honor dorado. Caen hojas de arce a su paso.' }),
+  sk('inferno', 'Serpiente Infernal', 'epica', 'ember', ['#2F2A2A', '#FF8A2A', '#524646'], { aura: '#FF6A1A', eyeGlow: '#FF8A2A', tongue: '#FF5A2A', desc: 'Roca volcánica con lava viva bajo cada escama.' }),
+  sk('ghost', 'Serpiente Fantasma', 'epica', 'spirit', ['#2A3A6A', '#CFEFFF', '#9FD8FF'], { aura: '#9FD8FF', desc: 'Medio materia, medio niebla. Susurra al moverse.' }),
+  sk('sakura', 'Espíritu Sakura', 'epica', 'petal', ['#F0DCD8', '#FFB7CB', '#D8B06A'], { tongue: '#D84A6A', desc: 'Nacida bajo los cerezos. Deja pétalos al pasar.' }),
+  sk('toxic', 'Mutante Tóxico', 'epica', 'toxic', ['#2C4A24', '#A8FF4A', '#4C7A3A'], { aura: '#7CFF3A', eyeGlow: '#A8FF4A', tongue: '#8CFF3A', desc: 'Algo salió mal en el pantano. Brilla en la oscuridad.' }),
+  sk('knight', 'Serpiente Caballero', 'epica', 'metal', ['#8A96A6', '#DDE6F0', '#8A1A2A'], { desc: 'Acero pulido y blasón real. Chispas en cada giro.' }),
+  sk('mushroom', 'Bruja Seta', 'epica', 'spores', ['#5A2A4A', '#B88CFF', '#C8423A'], { eyeGlow: '#C77BFF', desc: 'Hechizos, setas y esporas que brillan en la noche.' }),
+  sk('vampire', 'Serpiente Vampira', 'epica', 'blood', ['#1E1418', '#B3243A', '#D4B060'], { eyeGlow: '#FF3A5A', desc: 'Aristocracia nocturna con colmillos de marfil.' }),
+  sk('frost', 'Dragón de Escarcha', 'legendaria', 'frost', ['#9ED4EE', '#CFF2FF', '#4F8DB6'], { aura: '#BDEBFF', tongue: '#5FC8FF', desc: 'Escamas de hielo eterno. El aire se congela a su paso.' }),
+  sk('cyber', 'Cyber Serpiente', 'legendaria', 'digital', ['#3B424C', '#5FF0FF', '#707A86'], { aura: '#1FE6FF', eyeGlow: '#1FE6FF', tongue: '#FF3AD2', desc: 'Aleación negra y núcleo de energía. Tecnología ancestral.' }),
+  sk('crystal', 'Serpiente de Cristal', 'legendaria', 'sparkle', ['#8A6ADA', '#E0D0FF', '#5FC8FF'], { aura: '#B48CFF', desc: 'Gemas talladas por la luz de la luna.' }),
+  sk('abyssal', 'Serpiente Abisal', 'legendaria', 'bubble', ['#1A3A44', '#5FF0F0', '#2A5A6A'], { aura: '#3FE0E0', eyeGlow: '#5FF0F0', desc: 'Del fondo del océano, con luz bioluminiscente.' }),
+  sk('quetzal', 'Quetzal de Obsidiana', 'legendaria', 'feather', ['#2E5A44', '#E8C05A', '#8A3A2A'], { eyeGlow: '#FFE04A', desc: 'La serpiente emplumada de los templos de jade.' }),
+  sk('ember', 'Ídolo de Brasas', 'legendaria', 'ember', ['#B8B8B0', '#FF8A2A', '#4A4A44'], { aura: '#FF6A1A', desc: 'Una estatua antigua con fuego vivo en sus grietas.' }),
+  sk('umbra', 'Serpiente Umbra', 'legendaria', 'shadow', ['#16121E', '#C77BFF', '#3A2A52'], { aura: '#8A2BE2', eyeGlow: '#C77BFF', desc: 'Sombra del bosque embrujado con ojos de amatista.' }),
+  sk('solar', 'Serpiente Solar', 'mitica', 'ember', ['#1E1A16', '#FFD36A', '#E8B04A'], { aura: '#FFC23A', eyeGlow: '#FFE08A', desc: 'Lleva un sol en el corazón. Mítica y radiante.' }),
+  sk('cosmic', 'Vacío Cósmico', 'mitica', 'star', ['#231C52', '#C7B2FF', '#FFFFFF'], { aura: '#8E6CFF', desc: 'Un fragmento del cielo nocturno con forma de serpiente.' }),
+  sk('kitsune', 'Kitsune del Vacío', 'mitica', 'star', ['#1C1428', '#D6A8FF', '#8A2A3A'], { aura: '#B45CFF', eyeGlow: '#E0B0FF', desc: 'Espíritu zorro atrapado en escamas de medianoche.' }),
 ];
 
 export const skinById = (id) => SKINS.find((s) => s.id === id) || SKINS[0];
 export const skinPrice = (s) => s.price ?? RARITY[s.rarity].price;
 
-// Duel rivals (bots) use their own palettes.
+// Duel rivals: each one wears a skin from the collection.
 export const BOTS = {
-  easy: {
-    id: 'bot_easy', name: 'MOSS WORM', label: 'FÁCIL', speed: 0.78, mistake: 0.18, aggression: 0, target: 10,
-    base: '#7E9A4A', light: '#B4CC7A', dark: '#44582A', outline: '#18200E', pattern: 'spots', pat: '#C9D98A',
-    eye: '#F5F0C8', pupil: '#1B1A10', tongue: '#C7354A', head: '#8AA656', fx: '#C9D98A',
-  },
-  medium: {
-    id: 'bot_medium', name: 'RUST VIPER', label: 'MEDIO', speed: 0.95, mistake: 0.05, aggression: 0.25, target: 12,
-    base: '#9A5A2C', light: '#D08A4E', dark: '#4E2A12', outline: '#1E0F06', pattern: 'plates', pat: '#3A1E0C',
-    eye: '#FF9A3A', pupil: '#1A0800', tongue: '#C7354A', head: '#A4622F', fx: '#FFB070',
-  },
-  hard: {
-    id: 'bot_hard', name: 'CRIMSON FANG', label: 'DIFÍCIL', speed: 1.02, mistake: 0, aggression: 0.7, target: 15,
-    base: '#1A1416', light: '#3A2A2E', dark: '#080506', outline: '#020101', pattern: 'bands', pat: '#B3242E',
-    eye: '#FF3A3A', pupil: '#200000', tongue: '#FF3A3A', eyeGlow: '#FF2A2A', glow: '#FF2A3A', head: '#221A1C', fx: '#FF5A5A',
-  },
+  easy: { ...sk('bot_easy', 'MOSS WORM', 'basica', 'dust', ['#3FAE9E', '#B8F0E0', '#1F5A50']), art: 'basica_turquesa', label: 'FÁCIL', speed: 0.78, mistake: 0.18, aggression: 0, target: 10 },
+  medium: { ...sk('bot_medium', 'RUST VIPER', 'rara', 'dust', ['#5A3A1C', '#E8C48A', '#E0652A']), art: 'scorpion', label: 'MEDIO', speed: 0.95, mistake: 0.05, aggression: 0.25, target: 12 },
+  hard: { ...sk('bot_hard', 'CRIMSON FANG', 'epica', 'blood', ['#1E1418', '#B3243A', '#D4B060']), art: 'vampire', eyeGlow: '#FF3A5A', label: 'DIFÍCIL', speed: 1.02, mistake: 0, aggression: 0.7, target: 15 },
 };
 
 // ------------------------------------------------------------------ maps
 export const MAPS = [
-  { id: 1, name: 'EMERALD JUNGLE', es: 'Selva Esmeralda', key: 'maps/key08.jpg', hazard: 'hz_pillar', playable: true },
-  { id: 2, name: 'SAKURA GARDEN', key: 'maps/key00.jpg', hazard: 'hz_bridge' },
-  { id: 3, name: 'LOST GREEK RUINS', key: 'maps/key06.jpg', hazard: 'hz_temple' },
-  { id: 4, name: 'MUSHROOM GROVE', key: 'maps/key03.jpg', hazard: 'hz_spores' },
-  { id: 5, name: 'DESERT TOMBS', key: 'maps/key10.jpg', hazard: 'hz_quicksand' },
-  { id: 6, name: 'TOXIC WASTES', key: 'maps/key05.jpg', hazard: 'hz_mud' },
-  { id: 7, name: 'FROZEN TUNDRA', key: 'maps/key07.jpg', hazard: 'hz_ice' },
-  { id: 8, name: 'CRYSTAL CAVES', key: 'maps/key14.jpg', hazard: 'hz_portal' },
-  { id: 9, name: 'SUNKEN ATLANTIS', key: 'maps/key01.jpg', hazard: 'hz_wind' },
-  { id: 10, name: 'VOLCANO CORE', key: 'maps/key04.jpg', hazard: 'hz_lava' },
-  { id: 11, name: 'PIRATE COVE', key: 'maps/key13.jpg', hazard: 'hz_block' },
-  { id: 12, name: 'MEDIEVAL CASTLE', key: 'maps/key09.jpg', hazard: 'hz_spikes' },
-  { id: 13, name: 'SKY GARDENS', key: 'maps/key12.jpg', hazard: 'hz_void' },
-  { id: 14, name: 'MOON TEMPLE', key: 'maps/key02.jpg', hazard: 'hz_dark' },
-  { id: 15, name: 'HAUNTED GRAVEYARD', key: 'maps/key15.jpg', hazard: 'hz_skull' },
-  { id: 16, name: 'CYBER CITY', key: 'maps/key11.jpg', hazard: 'hz_block' },
-];
+  { id: 1, name: 'EMERALD JUNGLE', sheet: 8, hazard: 'hz_pillar' },
+  { id: 2, name: 'SAKURA GARDEN', sheet: 0, hazard: 'hz_bridge', tint: '#5A2A2A' },
+  { id: 3, name: 'LOST GREEK RUINS', sheet: 6, hazard: 'hz_temple', tint: '#8A7A5A' },
+  { id: 4, name: 'MUSHROOM GROVE', sheet: 3, hazard: 'hz_spores', tint: '#4A2A5A' },
+  { id: 5, name: 'DESERT TOMBS', sheet: 10, hazard: 'hz_quicksand', tint: '#9A6A2A' },
+  { id: 6, name: 'TOXIC WASTES', sheet: 5, hazard: 'hz_mud', tint: '#3A5A1A' },
+  { id: 7, name: 'FROZEN TUNDRA', sheet: 7, hazard: 'hz_ice', tint: '#6A9AC0' },
+  { id: 8, name: 'CRYSTAL CAVES', sheet: 14, hazard: 'hz_portal', tint: '#2A4A7A' },
+  { id: 9, name: 'SUNKEN ATLANTIS', sheet: 1, hazard: 'hz_wind', tint: '#1A5A6A' },
+  { id: 10, name: 'VOLCANO CORE', sheet: 4, hazard: 'hz_lava', tint: '#7A2A10' },
+  { id: 11, name: 'PIRATE COVE', sheet: 13, hazard: 'hz_block', tint: '#6A4A2A' },
+  { id: 12, name: 'MEDIEVAL CASTLE', sheet: 9, hazard: 'hz_spikes', tint: '#3A3A4A' },
+  { id: 13, name: 'SKY GARDENS', sheet: 12, hazard: 'hz_void', tint: '#6A8AA8' },
+  { id: 14, name: 'MOON TEMPLE', sheet: 2, hazard: 'hz_dark', tint: '#3A4A8A' },
+  { id: 15, name: 'HAUNTED GRAVEYARD', sheet: 15, hazard: 'hz_skull', tint: '#2A2A3A' },
+  { id: 16, name: 'CYBER CITY', sheet: 11, hazard: 'hz_block', tint: '#4A1A7A' },
+].map((m) => ({ ...m, key: `maps/key${String(m.sheet).padStart(2, '0')}.jpg` }));
+
 
 // ------------------------------------------------------------------ levels
 // Legend: . floor | P pillar | T totem | C column (2 wide, with c) | W wall block
@@ -191,15 +130,20 @@ const LAYOUTS = [
 const SPAWN_OVERRIDE = { 8: { x: 10, y: 15 } };
 
 export function storyLevel(map, n) {
-  const layout = LAYOUTS[(n - 1) % LAYOUTS.length];
+  // odd maps use the layouts as drawn, even maps mirror them left-right
+  const mirror = map % 2 === 0;
+  let layout = LAYOUTS[(n - 1) % LAYOUTS.length];
+  if (mirror) layout = layout.map((r) => r.split('').reverse().join('').replace(/cC/g, 'Cc'));
+  const sp = { x: 5, y: 15, dir: 'up', len: 3, ...(SPAWN_OVERRIDE[n] || {}) };
+  if (mirror) sp.x = 11 - sp.x;
   return {
-    map, n,
+    map, n, mapInfo: MAPS[map - 1],
     layout,
     target: Math.round(10 + 0.8 * (map - 1) + 1.2 * (n - 1)),
     speed: 4.2 + 0.15 * (map - 1) + 0.12 * (n - 1),
     goldChance: 0.1 + (0.15 * (n - 1)) / 9,
     reward: ECONOMY.levelReward(map, n),
-    spawn: { x: 5, y: 15, dir: 'up', len: 3, ...(SPAWN_OVERRIDE[n] || {}) },
+    spawn: sp,
     guardian: n === 10,
   };
 }

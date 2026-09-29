@@ -1,7 +1,7 @@
 // Game controller: rules for the four modes, grid movement with smooth
 // interpolation, eating, growth, golden boost, combos, death, revive and win.
 import { COLS, ROWS, BOTS, DUEL_LAYOUT, skinById } from './data.js';
-import { Board, randomFreeCell } from './board.js';
+import { Board, randomFreeCell, mapTheme } from './board.js';
 import { drawSnake } from './snakedraw.js';
 import { drawOrb, orbSpawnK } from './orbs.js';
 import { FX, Ambient } from './fx.js';
@@ -72,6 +72,7 @@ export class Game {
     const skin = skinById(this.cfg.skinId);
     let layout = null, theme = 'court', spawn = { x: 5, y: 15, dir: 'up', len: 3 }, opts = {};
     if (mode === 'story') {
+      theme = mapTheme(level.mapInfo);
       layout = level.layout;
       spawn = level.spawn;
       this.target = level.target;
@@ -121,7 +122,8 @@ export class Game {
 
   resize() {
     const { W, H, dpr } = this.view;
-    this.board.layoutIn(W, H, H * 0.118, H * 0.08);
+    const pad = this.cfg.settings && this.cfg.settings.controls === 'buttons';
+    this.board.layoutIn(W, H, H * 0.118, pad ? H * 0.2 : H * 0.08);
     this.board.prerender(dpr);
     this.ambient.resize(this.board.w, this.board.h);
     this.R = this.board.cell * 0.34;
@@ -163,6 +165,15 @@ export class Game {
     const last = s.queue.length ? s.queue[s.queue.length - 1] : s.dir;
     if (dir === last || dir === OPPOSITE[last]) return;
     if (s.queue.length < 2) s.queue.push(dir);
+  }
+
+  // Relative turn (tap controls): left / right of where the snake is heading.
+  turn(side) {
+    const s = this.player;
+    const ref = s.queue.length ? s.queue[s.queue.length - 1] : s.dir;
+    const L = { up: 'left', left: 'down', down: 'right', right: 'up' };
+    const Rt = { up: 'right', right: 'down', down: 'left', left: 'up' };
+    this.input(side === 'left' ? L[ref] : Rt[ref]);
   }
 
   setState(st) {
@@ -280,19 +291,27 @@ export class Game {
   emitTrail(s) {
     const tail = s.cells[s.cells.length - 1];
     const x = this.board.cx(tail.x) + rand(-6, 6), y = this.board.cy(tail.y) + rand(-6, 6);
-    const P = s.skin.pattern;
     if (s.boostT > 0) {
       this.fx.emit({ x, y, vx: rand(-20, 20), vy: rand(-20, 20), type: 'dot', color: '#FFD36A', size: rand(3, 6), life: 0.5 });
       return;
     }
-    const kind = s.skin.id;
-    if (kind === 'sakura') this.fx.emit({ x, y, vx: rand(-10, 10), vy: rand(8, 20), type: 'petal', color: '#F7B6C8', size: 5, life: 1.6, add: false, drag: 0.6 });
-    else if (kind === 'forest') this.fx.emit({ x, y, vx: rand(-10, 10), vy: rand(6, 16), type: 'leaf', color: '#7FAE4E', size: 5, life: 1.6, add: false, drag: 0.6 });
-    else if (kind === 'inferno') this.fx.emit({ x, y, vx: rand(-10, 10), vy: rand(-30, -10), type: 'dot', color: '#FF7A2A', size: 3, life: 1.0 });
-    else if (kind === 'frost') this.fx.emit({ x, y, vx: rand(-8, 8), vy: rand(-8, 8), type: 'star', color: '#BDEBFF', size: 2.5, life: 1.0 });
-    else if (kind === 'cosmic' || kind === 'kitsune') this.fx.emit({ x, y, vx: rand(-8, 8), vy: rand(-8, 8), type: 'star', color: s.skin.glow, size: 2.5, life: 1.1 });
-    else if (kind === 'cyber' || kind === 'toxic') this.fx.emit({ x, y, vx: rand(-10, 10), vy: rand(-10, 10), type: 'dot', color: s.skin.pat, size: 3, life: 0.8 });
-    else if (P === 'stripe' && Math.random() < 0.5) this.fx.emit({ x, y, vx: rand(-6, 6), vy: rand(-6, 6), type: 'dot', color: '#E8F5A0', size: 2.5, life: 0.9 });
+    const c = s.skin.colors || ['#86AE5E', '#D8E88A', '#4E6E34'];
+    const slow = { x, y, vx: rand(-10, 10), vy: rand(6, 18), add: false, drag: 0.6, life: 1.6 };
+    const spark = { x, y, vx: rand(-10, 10), vy: rand(-10, 10), life: 0.9 };
+    switch (s.skin.trail) {
+      case 'leaf': this.fx.emit({ ...slow, type: 'leaf', color: c[2], size: 5 }); break;
+      case 'maple': this.fx.emit({ ...slow, type: 'leaf', color: '#B8262A', size: 5 }); break;
+      case 'feather': this.fx.emit({ ...slow, type: 'leaf', color: '#3F7A52', size: 6 }); break;
+      case 'petal': this.fx.emit({ ...slow, type: 'petal', color: '#F7B6C8', size: 5 }); break;
+      case 'ember': this.fx.emit({ x, y, vx: rand(-10, 10), vy: rand(-34, -12), type: 'dot', color: c[1], size: 3, life: 1.0 }); break;
+      case 'frost': case 'sparkle': case 'star': case 'spirit':
+        this.fx.emit({ ...spark, type: 'star', color: c[1], size: 2.6, life: 1.1 }); break;
+      case 'toxic': case 'digital': case 'spores': case 'bubble': case 'shadow':
+        this.fx.emit({ ...spark, type: 'dot', color: c[1], size: 3.2 }); break;
+      case 'metal': this.fx.emit({ ...spark, type: 'spark', color: '#F2F6FF', size: 3, life: 0.4, vx: rand(-80, 80), vy: rand(-80, 80) }); break;
+      case 'blood': this.fx.emit({ ...slow, type: 'petal', color: c[1], size: 3 }); break;
+      default: if (Math.random() < 0.5) this.fx.emit({ ...spark, type: 'dust', color: c[1], size: 7, add: false });
+    }
   }
 
   step(s) {
@@ -459,7 +478,7 @@ export class Game {
     const n = s.cells.length;
     s.cells.forEach((c, i) => {
       const x = this.board.cx(c.x), y = this.board.cy(c.y);
-      const col = [s.skin.base, s.skin.light, s.skin.dark, s.skin.pat || s.skin.base];
+      const col = s.skin.colors || ['#888888'];
       this.fx.burst(x, y, 4, { type: 'leaf', color: col, speed: 110, size: 7, life: 1.2 + (i / n) * 0.6, add: false, drag: 2.2, grav: 40 });
       this.fx.burst(x, y, 2, { type: 'dust', color: '#9A9A88', speed: 60, size: 16, life: 0.9, add: false });
     });

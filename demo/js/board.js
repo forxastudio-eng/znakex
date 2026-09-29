@@ -34,6 +34,41 @@ const THEMES = {
   },
 };
 
+// Theme for a story map: its own ground tiles, court walls and ruin obstacles
+// tinted with the map colour.
+export function mapTheme(mapInfo) {
+  if (!mapInfo || mapInfo.id === 1) return 'court';
+  const nn = String(mapInfo.sheet).padStart(2, '0');
+  return {
+    ...THEMES.court,
+    floor: [0, 1, 2].map((k) => `tiles/maps/m${nn}_f${k}.jpg`),
+    floorW: [4, 3, 2],
+    tileCells: 1,
+    deco: [],
+    decoRate: 0,
+    tint: 'rgba(0,0,0,0.06)',
+    colorize: mapInfo.tint,
+  };
+}
+
+// Tinted copy of an image (cached), used for walls and obstacles of each map.
+const tintCache = new Map();
+function tinted(img, color, amount = 0.38) {
+  if (!img || !color) return img;
+  const key = img.src + color;
+  if (tintCache.has(key)) return tintCache.get(key);
+  const c = document.createElement('canvas');
+  c.width = img.width; c.height = img.height;
+  const g = c.getContext('2d');
+  g.drawImage(img, 0, 0);
+  g.globalCompositeOperation = 'source-atop';
+  g.globalAlpha = amount;
+  g.fillStyle = color;
+  g.fillRect(0, 0, c.width, c.height);
+  tintCache.set(key, c);
+  return c;
+}
+
 function weighted(list, weights) {
   let total = weights.reduce((a, b) => a + b, 0), r = Math.random() * total;
   for (let i = 0; i < list.length; i++) { r -= weights[i]; if (r <= 0) return list[i]; }
@@ -42,8 +77,8 @@ function weighted(list, weights) {
 
 export class Board {
   constructor(theme, layout, opts = {}) {
-    this.theme = THEMES[theme];
-    this.themeName = theme;
+    this.theme = typeof theme === 'string' ? THEMES[theme] : theme;
+    this.themeName = typeof theme === 'string' ? theme : 'map';
     this.layout = layout; // array of ROWS strings or null
     this.opts = opts;
     this.solid = new Uint8Array(COLS * ROWS);
@@ -112,15 +147,18 @@ export class Board {
     g.fillRect(-f, -f, this.w + f * 2, this.h + f * 2);
     g.restore();
 
-    // floor: each tile covers 2x2 cells, randomly mirrored to hide repetition
-    for (let y = 0; y < ROWS; y += 2) {
-      for (let x = 0; x < COLS; x += 2) {
+    // floor: tiles cover 2x2 cells (hi-res arenas) or 1 cell (map sheets),
+    // randomly mirrored to hide repetition
+    const tc = T.tileCells || 2;
+    for (let y = 0; y < ROWS; y += tc) {
+      for (let x = 0; x < COLS; x += tc) {
         const im = IMG[weighted(T.floor, T.floorW)];
         if (!im) continue;
+        const hs = (s * tc) / 2;
         g.save();
-        g.translate(x * s + s, y * s + s);
+        g.translate(x * s + hs, y * s + hs);
         g.scale(Math.random() < 0.5 ? -1 : 1, Math.random() < 0.5 ? -1 : 1);
-        g.drawImage(im, -s - 0.5, -s - 0.5, s * 2 + 1, s * 2 + 1);
+        g.drawImage(im, -hs - 0.5, -hs - 0.5, hs * 2 + 1, hs * 2 + 1);
         g.restore();
       }
     }
@@ -214,12 +252,12 @@ export class Board {
       im = IMG[pickAlt ? alt[(o.x + o.y) % alt.length] : this.theme.wallH || 'tiles/court/wall_h.png'];
       dw = s * 1.04; dh = s * 1.04; dx = x - s * 0.02; dy = y - s * 0.02;
     }
-    if (im) g.drawImage(im, dx, dy, dw, dh);
+    if (im) g.drawImage(tinted(im, this.theme.colorize), dx, dy, dw, dh);
   }
 
   drawFrame(g, f) {
     const T = this.theme, s = this.cell;
-    const wh = IMG[T.wallH], wv = IMG[T.wallV], wc = IMG[T.corner];
+    const wh = tinted(IMG[T.wallH], T.colorize), wv = tinted(IMG[T.wallV], T.colorize), wc = tinted(IMG[T.corner], T.colorize);
     this.torches = [];
     // top & bottom
     for (let i = 0; i < COLS; i++) {

@@ -468,3 +468,233 @@ def round_sigils():
 
 if __name__ == "__main__":
     round_sigils()
+
+
+# ---------------------------------------------------------------- skin sprites (faithful to the sheets)
+# Boxes are (x0, y0, x1, y1) in 1264x848 sheet space (BASICA is 2x and gets scaled).
+# head: (box, snout direction) | body: (box, axis 'h'/'v') | tail: (box, tip direction)
+SKIN_SPRITES = {
+    "basica":   ("BASICA.png", ((28, 428, 122, 572), "up"), ((680, 415, 757, 550), "v"), ((1005, 398, 1065, 568), "down"), None),
+    "inferno":  ("magnific_02-inferno-serpent-rarity_rgRba4yxtc.jpg", ((535, 165, 665, 300), "down"), ((545, 408, 655, 512), "h"), ((890, 410, 1032, 485), "right"), None),
+    "frost":    ("magnific_03-frostbite-dragon-rarit_dtKVGvZXSL.jpg", ((45, 372, 172, 532), "down"), ((690, 395, 775, 505), "v"), ((990, 378, 1062, 528), "up"), None),
+    "samurai":  ("magnific_04-samurai-serpent-rarity_4Rp7jbb9Aa.jpg", ((458, 82, 602, 258), "up"), ((75, 540, 300, 645), "h"), ((58, 685, 320, 752), "right"), (1055, 528, 1215, 688)),
+    "ghost":    ("magnific_05-ghost-serpent-rarity-e_fHUtehKCDY.jpg", ((92, 468, 182, 602), "up"), ((470, 272, 710, 362), "h"), ((466, 438, 802, 528), "right"), (918, 635, 1062, 782)),
+    "cyber":    ("magnific_06-cyber-snake-rarity-leg_dtKVn0sXSL.jpg", ((70, 138, 148, 278), "down"), ((440, 140, 650, 238), "h"), ((862, 146, 1025, 220), "right"), None),
+    "forest":   ("magnific_07-forest-guardian-rarity_xSZ5QK1jfW.jpg", ((62, 248, 162, 385), "up"), ((470, 385, 600, 500), "h"), ((838, 402, 1018, 475), "right"), None),
+    "crystal":  ("magnific_08-crystal-serpent-rarity_yiMUsXdPW9.jpg", ((310, 183, 428, 342), "up"), ((318, 455, 598, 555), "h"), ((92, 688, 198, 798), "down"), (1043, 438, 1208, 598)),
+    "solar":    ("magnific_10-solar-serpent-rarity-m_rgRbFMgxtc.jpg", ((572, 182, 668, 300), "up"), ((520, 428, 695, 508), "h"), ((866, 436, 1034, 496), "right"), (848, 630, 1003, 785)),
+    "toxic":    ("magnific_11-toxic-mutant-rarity-ep_1l3qFk1r4r.jpg", ((62, 388, 162, 528), "up"), ((62, 682, 205, 782), "h"), ((638, 688, 802, 780), "right"), None),
+    "sakura":   ("magnific_12-sakura-spirit-rarity-e_lJzrry0gv9.jpg", ((743, 152, 812, 252), "up"), ((60, 394, 320, 492), "h"), ((46, 650, 355, 740), "right"), None),
+    "scorpion": ("magnific_13-desert-scorpion-rarity_xSZ5KyDjfW.jpg", ((670, 142, 755, 248), "down"), ((75, 348, 400, 442), "h"), ((1036, 362, 1208, 422), "right"), None),
+    "cosmic":   ("magnific_14-cosmic-void-rarity-myt_u5Jva6MQLD.jpg", ((66, 408, 142, 508), "up"), ((218, 410, 310, 516), "h"), ((874, 408, 928, 518), "down"), None),
+    "abyssal":  ("magnific_15-abyssal-serpent-rarity_lJzrjY0gv9.jpg", ((588, 82, 702, 218), "down"), ((812, 105, 937, 195), "h"), ((1068, 368, 1205, 442), "right"), (788, 668, 918, 802)),
+    "knight":   ("magnific_16-knight-serpent-rarity-_KL6FHHTkqp.jpg", ((962, 62, 1052, 172), "down"), ((95, 428, 180, 558), "h"), ((1060, 438, 1232, 544), "right"), (852, 683, 962, 798)),
+    "mushroom": ("magnific_17-mushroom-witch-rarity-_lJzrLL6gv9.jpg", ((102, 282, 228, 422), "up"), ((75, 522, 295, 605), "h"), ((663, 525, 902, 603), "right"), (783, 700, 888, 805)),
+    "vampire":  ("magnific_18-vampire-serpent-rarity_ovreIUB829.jpg", ((522, 162, 668, 338), "up"), ((100, 436, 430, 524), "h"), ((756, 438, 937, 522), "right"), (838, 640, 972, 775)),
+    "quetzal":  ("magnific_create-a-professional-2d-_9Ze79lLNYZ.jpeg", ((612, 28, 794, 220), "down"), ((603, 476, 820, 552), "h"), ((1066, 478, 1232, 548), "right"), (855, 660, 958, 765)),
+    "ember":    ("magnific_create-a-professional-2d-_LwAkUiDswO.png", ((488, 260, 618, 392), "up"), ((640, 470, 740, 585), "v"), ((962, 462, 1038, 592), "up"), (845, 675, 968, 800)),
+    "umbra":    ("magnific_create-a-professional-2d-_tCLXuQdmZJ.jpeg", ((666, 52, 790, 222), "up"), ((674, 405, 762, 530), "v"), ((1002, 398, 1078, 538), "down"), (900, 678, 1025, 803)),
+    "kitsune":  ("magnific_void-kitsune-rarity-mythi_P3D79Nh42C.jpg", ((608, 78, 732, 232), "down"), ((178, 470, 258, 575), "v"), ((502, 528, 562, 748), "down"), None),
+}
+
+ROT_TO_UP = {"up": None, "down": Image.ROTATE_180, "left": Image.ROTATE_270, "right": Image.ROTATE_90}
+ROT_TO_RIGHT = {"right": None, "left": Image.ROTATE_180, "up": Image.ROTATE_270, "down": Image.ROTATE_90}
+
+
+def sheet_image(fname):
+    im = Image.open(src("SKINS", fname)).convert("RGB")
+    if im.size[0] > 2000:
+        im = im.resize((1264, 848), Image.LANCZOS)
+    return im
+
+
+def knock_out(im, sides="tblr", tol=46):
+    """Flood-fill the flat panel background from the chosen crop borders."""
+    import numpy as np
+    from scipy import ndimage
+    a = np.asarray(im.convert("RGB")).astype(np.int32)
+    h, w, _ = a.shape
+    border = []
+    if "t" in sides: border.append(a[0:3, :, :].reshape(-1, 3))
+    if "b" in sides: border.append(a[h - 3:h, :, :].reshape(-1, 3))
+    if "l" in sides: border.append(a[:, 0:3, :].reshape(-1, 3))
+    if "r" in sides: border.append(a[:, w - 3:w, :].reshape(-1, 3))
+    bgc = np.median(np.concatenate(border), axis=0)
+    diff = np.abs(a - bgc).sum(axis=2)
+    cand = diff < tol
+    seed = np.zeros((h, w), bool)
+    if "t" in sides: seed[0, :] = True
+    if "b" in sides: seed[h - 1, :] = True
+    if "l" in sides: seed[:, 0] = True
+    if "r" in sides: seed[:, w - 1] = True
+    lab, n = ndimage.label(cand)
+    keep = set(np.unique(lab[seed & cand])) - {0}
+    bg = np.isin(lab, list(keep))
+    # soften: partial alpha for pixels close to the background colour next to it
+    alpha = np.where(bg, 0, 255).astype(np.float32)
+    near = (~bg) & (diff < tol * 1.8) & ndimage.binary_dilation(bg, iterations=2)
+    alpha[near] = np.clip((diff[near] - tol) / (tol * 0.8), 0.15, 1) * 255
+    al = Image.fromarray(alpha.astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.6))
+    out_im = im.convert("RGBA")
+    out_im.putalpha(al)
+    return out_im
+
+
+def skin_sprites():
+    os.makedirs(os.path.join(OUT, "skins2"), exist_ok=True)
+    for sid, (fname, head, body, tail, icon_box) in SKIN_SPRITES.items():
+        sh = Image.open(src("SKINS", fname)).convert("RGB")
+        k = sh.size[0] / 1264.0  # BASICA is drawn at 2x: crop at full resolution
+        sc = lambda b: tuple(int(round(v * k)) for v in b)
+        head = (sc(head[0]), head[1])
+        body = (sc(body[0]), body[1])
+        tail = (sc(tail[0]), tail[1])
+        icon_box = sc(icon_box) if icon_box else None
+        d = os.path.join(OUT, "skins2", sid)
+        os.makedirs(d, exist_ok=True)
+        # head: facing up
+        hb, hdir = head
+        hi = knock_out(sh.crop(hb))
+        if ROT_TO_UP[hdir] is not None:
+            hi = hi.transpose(ROT_TO_UP[hdir])
+        hi.save(os.path.join(d, "head.png"), optimize=True)
+        # body: horizontal texture, flood only across the sides of the tube
+        bb, axis = body
+        bi = sh.crop(bb)
+        bi = knock_out(bi, "tb" if axis == "h" else "lr")
+        if axis == "v":
+            bi = bi.transpose(Image.ROTATE_90)
+        bi.save(os.path.join(d, "body.png"), optimize=True)
+        # tail: tip pointing right
+        tb, tdir = tail
+        ti = knock_out(sh.crop(tb))
+        if ROT_TO_RIGHT[tdir] is not None:
+            ti = ti.transpose(ROT_TO_RIGHT[tdir])
+        ti.save(os.path.join(d, "tail.png"), optimize=True)
+        if icon_box:
+            save_jpg(sh.crop(icon_box), f"skins/{sid}.jpg", (256, 256), q=88)
+
+
+if __name__ == "__main__":
+    skin_sprites()
+
+
+def _recolor(im, hue, sk, vk, src_hue=77 / 360.0):
+    import colorsys
+    im = im.convert("RGBA")
+    px = im.load()
+    w, h = im.size
+    for j in range(h):
+        for i in range(w):
+            r, g, b, a = px[i, j]
+            if a == 0:
+                continue
+            hh, s, v = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
+            if s > 0.12:
+                if hue is None:
+                    s = 0.0
+                else:
+                    hh = (hh - src_hue + hue / 360.0) % 1.0
+                    s = min(1.0, s * sk)
+                v = min(1.0, v * vk if v > 0.18 else v)
+            rr, gg, bb = colorsys.hsv_to_rgb(hh, s, v)
+            px[i, j] = (int(rr * 255), int(gg * 255), int(bb * 255), a)
+    return im
+
+
+def basic_sprite_variants():
+    base = os.path.join(OUT, "skins2", "basica")
+    for sid, hue, sk, vk in BASIC_VARIANTS:
+        d = os.path.join(OUT, "skins2", sid)
+        os.makedirs(d, exist_ok=True)
+        for part in ["head", "body", "tail"]:
+            _recolor(Image.open(os.path.join(base, part + ".png")), hue, sk, vk).save(os.path.join(d, part + ".png"), optimize=True)
+
+
+if __name__ == "__main__":
+    basic_sprite_variants()
+
+
+TAIL_FROM_BODY = ["umbra", "ember", "kitsune"]
+
+
+def tails_from_body():
+    """Build a straight tapered tail from the body texture (for sheets whose tail art is curved)."""
+    from PIL import ImageDraw, ImageChops
+    for sid in TAIL_FROM_BODY:
+        d = os.path.join(OUT, "skins2", sid)
+        body = Image.open(os.path.join(d, "body.png")).convert("RGBA")
+        bw, bh = body.size
+        L = int(bh * 2.6)
+        strip = Image.new("RGBA", (L, bh), (0, 0, 0, 0))
+        x = 0
+        while x < L:
+            strip.paste(body, (x, 0))
+            x += bw
+        a = body.getchannel("A")
+        ys = [y for y in range(bh) if a.getpixel((bw // 2, y)) > 120]
+        top, bot = (min(ys), max(ys)) if ys else (0, bh - 1)
+        mid = (top + bot) / 2
+        mask = Image.new("L", (L, bh), 0)
+        ImageDraw.Draw(mask).polygon([(0, top), (L * 0.55, top + (bot - top) * 0.18), (L - 2, mid),
+                                      (L * 0.55, bot - (bot - top) * 0.18), (0, bot)], fill=255)
+        mask = mask.filter(ImageFilter.GaussianBlur(0.8))
+        out_im = strip.copy()
+        out_im.putalpha(ImageChops.multiply(strip.getchannel("A"), mask))
+        # dark ink outline around the taper
+        edge = mask.filter(ImageFilter.MaxFilter(5))
+        ring = ImageChops.subtract(edge, mask)
+        ink = Image.new("RGBA", (L, bh), (10, 8, 14, 255))
+        ink.putalpha(ring)
+        ink.alpha_composite(out_im)
+        ink.save(os.path.join(d, "tail.png"), optimize=True)
+
+
+if __name__ == "__main__":
+    tails_from_body()
+
+
+def map_floors():
+    """Ground tiles of every map sheet (first row of tiles under the key art)."""
+    import numpy as np
+    from scipy import ndimage
+    picks = {}
+    for i, f in enumerate(MAP_SHEETS):
+        im = Image.open(src("MAPAS", f)).convert("RGB")
+        a = np.asarray(im).astype(int)
+        bgc = np.median(a[800:848, :, :].reshape(-1, 3), axis=0)
+        lab, n = ndimage.label(np.abs(a - bgc).sum(axis=2) > 40)
+        y1 = MAP_KEYART[i][3]
+        sq = []
+        for s in ndimage.find_objects(lab):
+            y0, yy = s[0].start, s[0].stop
+            x0, xx = s[1].start, s[1].stop
+            w, h = xx - x0, yy - y0
+            if y0 > y1 - 5 and 28 <= w <= 90 and 28 <= h <= 90 and abs(w - h) <= 8 and w > 55:
+                sq.append((y0, x0, w, h))
+        sq.sort()
+        row = sorted([q for q in sq if abs(q[0] - sq[0][0]) < 10], key=lambda q: q[1])
+        chosen = [row[k] for k in MAP_FLOOR_PICK.get(i, [0, 1, 2]) if k < len(row)]
+        picks[i] = chosen
+        if i in MAP_FLOOR_BOX:
+            chosen = [(b[1], b[0], b[2] - b[0], b[3] - b[1]) for b in MAP_FLOOR_BOX[i]]
+        for k, (y0, x0, w, h) in enumerate(chosen):
+            ins = max(3, w // 14)
+            t = im.crop((x0 + ins, y0 + ins, x0 + w - ins, y0 + h - ins)).resize((96, 96), Image.LANCZOS)
+            t.save(out(f"tiles/maps/m{i:02d}_f{k}.jpg"), quality=88)
+    # Cyber City's sheet only has isometric tiles: use tinted dark stone instead
+    for k in range(3):
+        base_t = Image.open(os.path.join(OUT, "tiles", "ritual", f"floor{[0, 2, 3][k]}.jpg")).convert("RGB").resize((96, 96))
+        tint = Image.new("RGB", (96, 96), (40, 20, 70))
+        Image.blend(base_t, tint, 0.45).save(out(f"tiles/maps/m11_f{k}.jpg"), quality=88)
+    return picks
+
+
+# which tiles of the detected row are plain ground (skip water / special tiles)
+MAP_FLOOR_PICK = {4: [0, 2, 0]}
+# manual boxes when the detected row is not top-down ground (x0, y0, x1, y1)
+MAP_FLOOR_BOX = {12: [(133, 383, 213, 460), (234, 383, 314, 460), (133, 383, 213, 460)]}
+
+
+if __name__ == "__main__":
+    map_floors()

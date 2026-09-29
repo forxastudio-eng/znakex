@@ -64,17 +64,39 @@ export function clearedLevels(map) {
   return (state.story[map] && state.story[map].cleared) || 0;
 }
 
-// Highest level the player may start on this map (1-based).
+// A map opens when the previous one is fully cleared (tester: all open).
+export function mapUnlocked(map) {
+  if (CONFIG.tester || map <= 1) return true;
+  return clearedLevels(map - 1) >= 10;
+}
+
+// Highest level the player may start on this map (1-based, 0 = locked).
 export function unlockedUpTo(map) {
   if (CONFIG.tester) return 10;
+  if (!mapUnlocked(map)) return 0;
   return Math.min(10, clearedLevels(map) + 1);
+}
+
+// Map and level the "PLAY" button continues from.
+export function currentStory() {
+  for (let m = 1; m <= 16; m++) {
+    if (!mapUnlocked(m)) return { map: Math.max(1, m - 1), level: 10 };
+    if (clearedLevels(m) < 10) return { map: m, level: clearedLevels(m) + 1 };
+  }
+  return { map: 16, level: 10 };
+}
+
+export function totalCleared() {
+  let t = 0;
+  for (let m = 1; m <= 16; m++) t += clearedLevels(m);
+  return t;
 }
 
 export function markCleared(map, level) {
   const cur = clearedLevels(map);
   const first = level > cur;
   if (first) {
-    state.story[map] = { cleared: level };
+    state.story = { ...state.story, [map]: { cleared: level } };
     save();
   }
   return first;

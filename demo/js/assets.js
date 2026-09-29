@@ -1,4 +1,5 @@
 // Image preloader with progress callback.
+import { SKINS } from './data.js';
 
 export const IMG = {};
 
@@ -19,6 +20,8 @@ export const MANIFEST = [
   'tiles/ritual/sigil.png', 'tiles/ritual/sigil_glow.png', 'tiles/ritual/wall_h.png', 'tiles/ritual/wall_v.png',
   'tiles/ritual/wall_corner.png', 'tiles/ritual/wall_torch_amber.png', 'tiles/ritual/wall_torch_crimson.png',
   'tiles/ritual/pillar.png', 'tiles/ritual/column.png', 'tiles/ritual/totem.png',
+  ...range(16, (i) => [0, 1, 2].map((k) => `tiles/maps/m${String(i).padStart(2, '0')}_f${k}.jpg`)).flat(),
+  ...SKINS.flatMap((s) => ['head', 'body', 'tail'].map((p) => `skins2/${s.art || s.id}/${p}.png`)),
 ];
 
 function loadOne(src) {

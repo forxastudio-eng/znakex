@@ -4,6 +4,7 @@ import { loadAll } from './assets.js';
 import { UI } from './ui.js';
 import { Ambient } from './fx.js';
 import { TIPS } from './data.js';
+import { setupInput } from './input.js';
 
 const app = document.getElementById('app');
 const gameCanvas = document.getElementById('game');
@@ -80,25 +81,7 @@ window.addEventListener('keydown', (e) => {
   else if (e.key === 'Escape' || e.key === 'p') ui.pause();
 });
 
-// swipe: direction fires as soon as the finger travels far enough,
-// and the origin resets so one continuous gesture can chain turns.
-let sw = null;
-app.addEventListener('pointerdown', (e) => {
-  if (!ui.game || e.target.closest('button')) return;
-  sw = { x: e.clientX, y: e.clientY, id: e.pointerId };
-});
-app.addEventListener('pointermove', (e) => {
-  if (!sw || e.pointerId !== sw.id || !ui.game) return;
-  const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
-  const th = Math.max(18, view.W * 0.045);
-  if (Math.abs(dx) < th && Math.abs(dy) < th) return;
-  const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
-  ui.game.input(dir);
-  sw.x = e.clientX; sw.y = e.clientY;
-});
-const endSwipe = () => { sw = null; };
-app.addEventListener('pointerup', endSwipe);
-app.addEventListener('pointercancel', endSwipe);
+setupInput(app, ui, view);
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) ui.pause();
