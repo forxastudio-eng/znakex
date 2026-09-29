@@ -105,6 +105,20 @@ function measureBase(img) {
   return { top, bot: Math.max(bot, top + 1) };
 }
 
+// The sheet heads end in a rounded, outlined neck that sat on top of the special module and broke the
+// line of the body: the back of the head fades out with a soft gradient so the body shows through.
+function fadeNeck(img) {
+  const { c, g } = canvasOf(img, img.width, img.height);
+  const h = img.height;
+  const gr = g.createLinearGradient(0, h * 0.6, 0, h * 0.9);
+  gr.addColorStop(0, 'rgba(0,0,0,0)');
+  gr.addColorStop(1, 'rgba(0,0,0,1)');
+  g.globalCompositeOperation = 'destination-out';
+  g.fillStyle = gr;
+  g.fillRect(0, h * 0.6, img.width, h * 0.4);
+  return c;
+}
+
 export function skinArt(skin) {
   const key = skin.art || skin.id;
   if (meta.has(key)) return meta.get(key);
@@ -118,7 +132,7 @@ export function skinArt(skin) {
   const core = mm.reduce((a, m) => a + (m.bot - m.top + 1), 0) / 3;
   const tb = measureBase(tail);
   const m = {
-    head, tail, tongue, mods: mm, sp: spm, tailProf: tb, core,
+    head: fadeNeck(head), tail, tongue, mods: mm, sp: spm, tailProf: tb, core,
     ha: head.height / head.width,
     fill: mm[0].fill, dark: mm[0].dark,
   };
@@ -382,7 +396,7 @@ function drawHead(g, x, y, ang, R, art, skin, o, hd) {
   g.scale(1 + sq * 0.1, 1 + sq * 0.14);
   g.save();
   g.globalAlpha *= 0.32;
-  g.drawImage(glowSprite('#000000', 64), -w * 0.55 + R * 0.25, -h * 0.5 + R * 0.4, w * 1.1, h * 1.05);
+  g.drawImage(glowSprite('#000000', 64), -w * 0.55 + R * 0.25, -h * 0.5 + R * 0.4, w * 1.1, h * 0.72); // front of the head only (the neck fades into the body)
   g.restore();
   g.drawImage(img, -w / 2, -h / 2, w, h);
   if (skin.eyeGlow) {
