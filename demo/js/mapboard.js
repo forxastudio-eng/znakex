@@ -60,6 +60,36 @@ export class MapBoard extends Board {
     this.torches = [];
   }
 
+  // average colour of the terrain tile, pushed towards a vivid tone so it can glow
+  glowColor() {
+    if (this._glow) return this._glow;
+    const im = I(this.map, 'feat.jpg');
+    let col = '#3FD8FF';
+    if (im) {
+      const c = document.createElement('canvas');
+      c.width = c.height = 8;
+      const cg = c.getContext('2d');
+      cg.drawImage(im, 0, 0, 8, 8);
+      const d = cg.getImageData(0, 0, 8, 8).data;
+      let r = 0, gg = 0, b = 0;
+      for (let i = 0; i < d.length; i += 4) { r += d[i]; gg += d[i + 1]; b += d[i + 2]; }
+      const n = d.length / 4;
+      r /= n; gg /= n; b /= n;
+      // saturate and brighten
+      const mx = Math.max(r, gg, b), mn = Math.min(r, gg, b);
+      const k = 1.5;
+      const avg = (r + gg + b) / 3;
+      r = clamp01((avg + (r - avg) * k) / Math.max(mx, 1) * 235);
+      gg = clamp01((avg + (gg - avg) * k) / Math.max(mx, 1) * 235);
+      b = clamp01((avg + (b - avg) * k) / Math.max(mx, 1) * 235);
+      void mn;
+      const hx = (v) => Math.round(v).toString(16).padStart(2, '0');
+      col = `#${hx(r)}${hx(gg)}${hx(b)}`;
+    }
+    this._glow = col;
+    return col;
+  }
+
   // force field: an obstacle or spike is destroyed
   breakCell(x, y) {
     const k = k2(x, y);
@@ -340,21 +370,29 @@ export class MapBoard extends Board {
     g.translate(this.x, this.y);
     const def = this.def;
     g.globalCompositeOperation = 'lighter';
-    // glowing terrain (lava, toxic, energy, moon water…)
-    if (def.glow) {
-      const K = def.glowK ?? 0.16;
-      g.fillStyle = def.glow;
-      for (let y = 0; y < ROWS; y++) {
-        for (let x = 0; x < COLS; x++) {
-          const ty = cells[k2(x, y)];
-          if (ty !== T.LETHAL) continue;
-          g.globalAlpha = K * (0.7 + 0.3 * Math.sin(t * 2 + x * 0.9 + y * 1.3));
-          g.fillRect(x * s, y * s, s, s);
+    // glowing terrain: water, lava, acid, energy… shine in their own colour and light up the shore
+    const gcol = def.glow || this.glowColor();
+    const K = def.glowK ?? (def.glow ? 0.16 : 0.13);
+    g.fillStyle = gcol;
+    const halo = glowSprite(gcol, 64);
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        if (cells[k2(x, y)] !== T.LETHAL) continue;
+        const pulse = 0.7 + 0.3 * Math.sin(t * 2 + x * 0.9 + y * 1.3);
+        g.globalAlpha = K * pulse;
+        g.fillRect(x * s, y * s, s, s);
+        if (!this.low) {
+          // light spilling over the edge towards dry cells
+          const edge = [[0, -1], [1, 0], [0, 1], [-1, 0]].some(([dx, dy]) => inb(x + dx, y + dy) && cells[k2(x + dx, y + dy)] !== T.LETHAL);
+          if (edge) {
+            g.globalAlpha = 0.3 * pulse;
+            g.drawImage(halo, x * s - s * 0.55, y * s - s * 0.55, s * 2.1, s * 2.1);
+          }
         }
       }
     }
     // water shimmer: moving highlights
-    if (!def.glow || def.glowK) {
+    {
       g.strokeStyle = def.shore || '#fff';
       g.lineWidth = Math.max(1, s * 0.03);
       g.lineCap = 'round';
@@ -441,4 +479,5 @@ export class MapBoard extends Board {
   }
 }
 
+const clamp01 = (v) => Math.max(0, Math.min(255, v));
 function inb(x, y) { return x >= 0 && y >= 0 && x < COLS && y < ROWS; }

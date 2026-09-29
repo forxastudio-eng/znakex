@@ -7,11 +7,12 @@ import { buildLevel, reshuffleObstacles, MAPDEF, T } from './maps.js';
 import { PW, MAGNET_RANGE, ITEM_LIFE, SHIELD_CHARGES, drawItem, drawAuras, pwImg, tinted, skinColor } from './powerups.js';
 import { track } from './meta.js';
 import { CONFIG } from './config.js';
+import * as audio from './audio.js';
 import { drawSnake } from './snakedraw.js';
 import { drawOrb, orbSpawnK } from './orbs.js';
 import { FX, Ambient, MapAmbient, glowSprite } from './fx.js';
 import { botThink } from './bot.js';
-import { DIRS, OPPOSITE, rand, clamp, lerp, ease, vibrate } from './util.js';
+import { DIRS, OPPOSITE, TAU, rand, clamp, lerp, ease, vibrate } from './util.js';
 
 const COMBO_WINDOW = 3;
 const BOOST_TIME = 4;
@@ -37,7 +38,7 @@ class Snake {
     this.orbs = 0;
     this.a = {
       mouth: 0, mouthTarget: 0, blink: 0, blinkT: rand(1.5, 4), tongue: 0, tongueT: rand(1, 3),
-      squash: 0, bulges: [], death: 0, appear: 0, trailT: 0,
+      squash: 0, bulges: [], waves: [], death: 0, appear: 0, trailT: 0,
     };
   }
 
@@ -197,6 +198,7 @@ export class Game {
     this.warnDur = silent ? 3 : 5;
     if (cells.length) {
       this.warnT = this.warnDur;
+      for (let i = 0; i < (silent ? 3 : 5); i++) audio.play('alert_pulse', { delay: i * 1.0, vol: 0.6 });
       if (!silent && !this.tut && this.ui.warnBanner) this.ui.warnBanner(this.warnDur);
     }
   }
@@ -256,7 +258,18 @@ export class Game {
     const x = this.board.cx(it.x), y = this.board.cy(it.y);
     this.fx.ring(x, y, PW[type].glow, this.R * 4, 0.6, 5);
     this.fx.burst(x, y, 14, { type: 'star', color: PW[type].glow, speed: 150, size: 4, life: 0.7 });
+    audio.play('item_spawn', { vol: 0.8 });
+    this.introFirst(it);
     return it;
+  }
+
+  // the first time each item appears the game stops and the item is explained
+  introFirst(it) {
+    const seen = this.cfg.settings.itemsSeen || (this.cfg.settings.itemsSeen = {});
+    if (seen[it.type] || this.tut) { if (this.tut) seen[it.type] = true; return; }
+    seen[it.type] = true;
+    this.paused = true;
+    this.ui.itemIntro(it.type, this.board.cx(it.x), this.board.cy(it.y), () => { this.paused = false; });
   }
 
   // items appear on a steady rhythm so the player always has something to play with
@@ -279,6 +292,9 @@ export class Game {
 
   pickItem(s, it) {
     const def = PW[it.type];
+    audio.play('item_pick', { rate: { shield: 1, magnet: 0.9, portal: 1.1, star: 1.25 }[it.type] || 1 });
+    if (it.type === 'magnet') audio.loop('magnet_loop', { vol: 0.5 });
+    if (it.type === 'star') { audio.loop('star_loop', { vol: 0.6 }); audio.setMusicRate(1.3); }
     this.items.splice(this.items.indexOf(it), 1);
     const x = this.board.cx(it.x), y = this.board.cy(it.y);
     this.itemsPicked++;
@@ -300,7 +316,7 @@ export class Game {
 
   pwState() {
     return {
-      shield: this.pw.shield, magnet: this.pw.magnet / PW.magnet.dur, portal: this.pw.portal / PW.portal.dur,
+      gold: this.player.boostT > 0 ? this.player.boostT / BOOST_TIME : 0, shield: this.pw.shield, magnet: this.pw.magnet / PW.magnet.dur, portal: this.pw.portal / PW.portal.dur,
       star: this.pw.star / PW.star.dur,
     };
   }
@@ -308,6 +324,15 @@ export class Game {
   updateEffects(dt) {
     const s = this.player;
     let changed = false;
+    // golden orb: wind loop and faster music while the boost lasts
+    const boosting = s.boostT > 0 && s.alive;
+    if (boosting !== this.wasBoosting) {
+      this.wasBoosting = boosting;
+      if (boosting) { audio.loop('boost_loop', { vol: 0.7, rate: 1 }); audio.setMusicRate(1.22); }
+      else { audio.stopLoop('boost_loop'); audio.play('boost_end'); audio.setMusicRate(this.shifted ? 1.06 : 1); }
+    }
+    if (boosting || this.wasBoosting) this.hudFxT = Math.min(this.hudFxT || 0, 0.1);
+    this.ui.pwHud(this.pwState());
     for (const k of ['magnet', 'portal', 'star']) {
       if (this.pw[k] > 0) {
         this.pw[k] = Math.max(0, this.pw[k] - dt);
@@ -329,6 +354,8 @@ export class Game {
 
   effectEnded(k) {
     this.ui.pwHud(this.pwState());
+    if (k === 'magnet') audio.stopLoop('magnet_loop');
+    if (k === 'star') { audio.stopLoop('star_loop'); audio.setMusicRate(this.wasBoosting ? 1.22 : 1); }
     const s = this.player;
     if (k === 'star') {
       // never leave the snake inside a rock: if it is on a blocked cell, give it a moment then rescue it
@@ -367,6 +394,7 @@ export class Game {
     if (this.pw.shield > 0 && (reason === 'obstacle' || (reason === 'hazard' && t === T.SPIKE))) {
       if (this.board.breakCell && this.board.breakCell(nx, ny)) {
         this.pw.shield--;
+        audio.play('shield_break', { rate: this.pw.shield ? 1.15 : 1 });
         this.breakFx(nx, ny);
         this.board.prerender(this.view.dpr);
         this.ui.pwHud(this.pwState());
@@ -419,6 +447,7 @@ export class Game {
       this.fx.burst(x, y, 30, { type: 'spark', color: ['#38E8FF', '#E8B04A', '#FFFFFF'], speed: 340, size: 5, life: 0.7 });
     }
     vibrate([30, 30, 30], this.cfg.settings.vibration);
+    audio.play('portal_whoosh');
     if (!quiet) this.ui.plaque('¡A SALVO!', 3, 1.6);
     track('rescue');
     this.setState('ready');
@@ -455,6 +484,8 @@ export class Game {
     this.goldLife = 5;
     this.redLife = 16;
     for (const o of this.orbs) if (o.type === 'red') { o.life = this.redLife; o.born = this.t; }
+    audio.play('map_change');
+    if (!this.wasBoosting) audio.setMusicRate(1.06);
     this.ui.plaque('¡EL MAPA CAMBIA!', 1, 2.6);
     this.ui.shiftFlash();
     vibrate([20, 30, 20, 30, 40], this.cfg.settings.vibration);
@@ -608,6 +639,7 @@ export class Game {
     a.tongueT -= dt;
     if (a.tongueT < 0 && a.mouth < 0.05) { a.tongue = 1; a.tongueT = rand(1.8, 4); }
     a.tongue = Math.max(0, a.tongue - dt * 3.2);
+    for (let i = a.waves.length - 1; i >= 0; i--) { a.waves[i].t += dt / 0.95; if (a.waves[i].t >= 1) a.waves.splice(i, 1); }
     const lenPx = s.cells.length * this.board.cell;
     for (let i = a.bulges.length - 1; i >= 0; i--) {
       const b = a.bulges[i];
@@ -655,7 +687,7 @@ export class Game {
       s.dir = botThink(s, this.player, this.board, this.orbs, { mistake: this.botCfg.mistake, aggression: this.botCfg.aggression, useGold: this.cfg.difficulty === 'hard' });
     } else if (s.queue.length && !(this.board.isIce && this.board.isIce(s.cells[0].x, s.cells[0].y))) {
       const d = s.queue.shift();
-      if (d !== OPPOSITE[s.dir]) s.dir = d;
+      if (d !== OPPOSITE[s.dir]) { s.dir = d; if (s === this.player) audio.play('turn', { vol: 0.5 }); }
     }
     const d = DIRS[s.dir];
     const h = s.cells[0];
@@ -757,29 +789,36 @@ export class Game {
       }
     }
 
+    if (s === this.player) audio.play(gold ? 'eat_gold' : 'eat_red', { rate: gold ? 1 : 1 + 0.055 * (this.combo - 1), vol: 0.9 });
+    const waveCol = gold ? '#FFD36A' : '#FF4A5A';
+    s.a.waves.push({ t: 0, color: waveCol });
+    if (s.a.waves.length > 3) s.a.waves.shift();
     if (gold) {
       s.grow += 3;
       s.boostT = BOOST_TIME;
       if (s === this.player) this.goldEaten++;
-      for (let i = 0; i < 3; i++) s.a.bulges.push({ d: 0, amp: 0.62, delay: i * 0.16 });
-      this.fx.flash(x, y, '#FFD36A', R * 7, 0.45);
-      this.fx.ring(x, y, '#FFE08A', R * 5, 0.55, 8);
-      this.fx.ring(x, y, '#FFB020', R * 8, 0.8, 4);
-      this.fx.burst(x, y, 34, { type: 'spark', color: ['#FFE08A', '#FFC23A', '#FFFFFF'], speed: 520, speedMin: 160, size: 6, life: 0.6, drag: 3.5 });
-      this.fx.burst(x, y, 12, { type: 'star', color: '#FFD36A', speed: 220, size: 5, life: 0.9, drag: 2.5 });
+      this.fx.flash(x, y, '#FFD36A', R * 6, 0.45);
+      this.fx.ring(x, y, '#FFF0B0', R * 4.5, 0.5, 7);
+      this.fx.ring(x, y, '#FFB020', R * 8, 0.85, 4);
+      this.fx.ring(x, y, '#FFE08A', R * 11, 1.1, 2);
+      this.fx.sprite(x, y, pwImg('burst_gold'), R * 8.5, 0.6, rand(TAU));
+      this.fx.sprite(x, y, pwImg('star_pop'), R * 4.5, 0.5, 0, 0.6);
+      this.fx.burst(x, y, 30, { type: 'spark', color: ['#FFE08A', '#FFC23A', '#FFFFFF'], speed: 560, speedMin: 160, size: 6, life: 0.65, drag: 3.2 });
+      this.fx.burst(x, y, 12, { type: 'star', color: '#FFD36A', speed: 240, size: 5, life: 0.95, drag: 2.4 });
       if (s === this.player) {
-        this.fx.shake(7, 0.35);
+        this.fx.shake(6, 0.3);
         if (this.mode !== 'frenzy') this.ui.banner('¡VELOCIDAD x2!', 'gold');
         this.ui.goldFlash();
       }
     } else {
       s.grow += 1;
-      s.a.bulges.push({ d: 0, amp: 0.46, delay: 0 });
-      this.fx.flash(x, y, '#FF4A5A', R * 4.2, 0.3);
-      this.fx.ring(x, y, '#FF6A6A', R * 3.6, 0.45, 6);
-      this.fx.burst(x, y, 20, { type: 'spark', color: ['#FF6A6A', '#FF2A3A', '#FFC0C0'], speed: 360, speedMin: 120, size: 5, life: 0.45, drag: 3.5 });
+      this.fx.flash(x, y, '#FF4A5A', R * 4, 0.3);
+      this.fx.ring(x, y, '#FF8A8A', R * 3.4, 0.4, 6);
+      this.fx.ring(x, y, '#FF3A4A', R * 5.6, 0.65, 3);
+      this.fx.sprite(x, y, tinted('burst_gold', '#FF3040'), R * 8, 0.55, rand(TAU));
+      this.fx.burst(x, y, 18, { type: 'spark', color: ['#FF6A6A', '#FF2A3A', '#FFC0C0'], speed: 380, speedMin: 120, size: 5, life: 0.45, drag: 3.5 });
       this.fx.burst(x, y, 6, { type: 'dot', color: '#FF8A8A', speed: 120, size: 6, life: 0.5 });
-      if (s === this.player) this.fx.shake(2.5, 0.2);
+      if (s === this.player) this.fx.shake(2, 0.16);
     }
 
     // respawn rules
@@ -834,6 +873,9 @@ export class Game {
     track('death');
     this.deathReason = reason;
     this.deathCell = { x: nx, y: ny };
+    audio.stopLoop('boost_loop'); audio.stopLoop('magnet_loop'); audio.stopLoop('star_loop'); audio.setMusicRate(1);
+    const liquid = reason === 'hazard' && this.board.level && this.board.level.cells[ny * COLS + nx] === T.LETHAL;
+    audio.play(liquid ? 'die_liquid' : 'die_hit');
     this.fx.shake(14, 0.5);
     this.timeScale = 0.3;
     vibrate([40, 30, 60], this.cfg.settings.vibration);
@@ -843,6 +885,7 @@ export class Game {
   }
 
   crumble(s) {
+    audio.play('crumble');
     const n = s.cells.length;
     s.cells.forEach((c, i) => {
       const x = this.board.cx(c.x), y = this.board.cy(c.y);
@@ -863,6 +906,7 @@ export class Game {
 
   revive() {
     const s = this.player;
+    audio.play('revive');
     this.revives++;
     const snap = s.history.length >= 2 ? s.history[s.history.length - 2] : s.history[s.history.length - 1];
     if (snap) {
@@ -906,11 +950,14 @@ export class Game {
     this.fx.burst(x, y, 60, { type: 'star', color: ['#FFE08A', '#FFFFFF', '#E8B04A'], speed: 520, size: 6, life: 1.4, drag: 1.6 });
     this.fx.burst(x, y, 30, { type: 'leaf', color: ['#9CDA6B', '#E8B04A', '#F7B6C8'], speed: 380, size: 8, life: 2, add: false, drag: 1.4, grav: 50 });
     this.player.boostT = 0.0001;
+    audio.stopLoop('boost_loop'); audio.stopLoop('magnet_loop'); audio.stopLoop('star_loop'); audio.setMusicRate(1);
+    audio.play('level_win');
     vibrate([20, 40, 20], this.cfg.settings.vibration);
     this.setState('won');
   }
 
   lose(why) {
+    audio.play('level_fail');
     this.player.alive = false;
     this.player.a.death = 1;
     this.crumble(this.player);
@@ -936,7 +983,7 @@ export class Game {
   }
 
   // The snake shines in one colour (gold star / white map-change immunity), without dark outlines.
-  drawTinted(g, pts, skin, o, color) {
+  drawTinted(g, pts, skin, o, color, mix = 1) {
     const b = this.board, dpr = this.view.dpr, pad = b.cell * 2;
     const x0 = b.x - pad, y0 = b.y - pad, w = b.w + pad * 2, h = b.h + pad * 2;
     if (!this.tc || this.tc.width !== Math.ceil(w * dpr) || this.tc.height !== Math.ceil(h * dpr)) {
@@ -950,19 +997,20 @@ export class Game {
     drawSnake(c, pts, skin, { ...o, shadow: false, glow: 0, ghost: false, clip: null });
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.globalCompositeOperation = 'source-atop';
-    c.globalAlpha = color === '#FFFFFF' ? 0.8 : 0.66;
+    c.globalAlpha = color === '#FFFFFF' ? 0.85 : 0.72;
     c.fillStyle = color;
     c.fillRect(0, 0, this.tc.width, this.tc.height);
     g.save();
     g.globalCompositeOperation = 'lighter';
     const sp = glowSprite(color, 64);
-    g.globalAlpha = 0.34 + 0.08 * Math.sin(this.t * 10);
+    g.globalAlpha = (0.34 + 0.08 * Math.sin(this.t * 10)) * mix;
     for (let i = 0; i < pts.length; i += 2) g.drawImage(sp, pts[i].x - this.R * 2.6, pts[i].y - this.R * 2.6, this.R * 5.2, this.R * 5.2);
     g.restore();
-    g.drawImage(this.tc, x0, y0, w, h);
     g.save();
+    g.globalAlpha = mix;
+    g.drawImage(this.tc, x0, y0, w, h);
     g.globalCompositeOperation = 'lighter';
-    g.globalAlpha = 0.3;
+    g.globalAlpha = 0.3 * mix;
     g.drawImage(this.tc, x0, y0, w, h);
     g.restore();
   }
@@ -1043,17 +1091,22 @@ export class Game {
       const ti = moving ? clamp(s.acc / (s.interval || 1), 0, 1) : (this.state === 'intro' || this.state === 'countdown' || this.state === 'ready' ? 0 : 1);
       const { pts, breaks } = this.snakePoints(s, ti);
       const len = s.cells.length;
-      const fat = 1 + Math.min(0.22, (len - 3) * 0.0055);
+      const fat = 1;
       g.save();
       if (s.a.appear < 1) g.globalAlpha = s.a.appear;
       if (s === this.player) this.headPx = pts[0];
       const opts = {
         R: this.R, mouth: s.a.mouth, blink: s.a.blink, tongue: s.a.tongue, squash: s.a.squash,
-        bulges: s.a.bulges.filter((q) => q.delay <= 0), glow: s.boostT > 0 ? clamp(s.boostT / 0.6, 0, 1) : 0,
+        bulges: [], waves: s.a.waves, glow: s.boostT > 0 ? clamp(s.boostT / 0.6, 0, 1) : 0,
         ghost: s.ghostT > 0 && this.state === 'play', death: s.a.death, t: this.t, breaks, fat, clip,
       };
-      if (s === this.player && s.alive && (this.pw.star > 0 || this.whiteT > 0)) this.drawTinted(g, pts, s.skin, opts, this.pw.star > 0 ? '#FFD36A' : '#FFFFFF');
-      else drawSnake(g, pts, s.skin, opts);
+      if (s === this.player && s.alive && this.pw.star > 0) this.drawTinted(g, pts, s.skin, opts, '#FFD36A', 1);
+      else if (s === this.player && s.alive && this.whiteT > 0) { drawSnake(g, pts, s.skin, opts); this.drawTinted(g, pts, s.skin, opts, '#FFFFFF', 0.6); }
+      else {
+        drawSnake(g, pts, s.skin, opts);
+        // golden speed: a translucent gold sheen over the snake (never hides it)
+        if (s.boostT > 0 && s.alive) this.drawTinted(g, pts, s.skin, opts, '#FFD36A', 0.4 * clamp(s.boostT / 0.8, 0, 1) * (0.85 + 0.15 * Math.sin(this.t * 12)));
+      }
       g.restore();
     }
 

@@ -5,6 +5,7 @@ import { UI } from './ui.js';
 import { Ambient } from './fx.js';
 import { TIPS } from './data.js';
 import { setupInput } from './input.js';
+import * as audio from './audio.js';
 
 const app = document.getElementById('app');
 const gameCanvas = document.getElementById('game');
@@ -108,4 +109,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // Expose for quick debugging in the console.
+document.addEventListener('pointerdown', () => audio.unlock(), { capture: true });
 window.ZNAKEX = { ui, store, back: () => ui.back() };

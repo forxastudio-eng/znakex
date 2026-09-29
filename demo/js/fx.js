@@ -65,6 +65,11 @@ export class FX {
     }
   }
 
+  // an image (RGBA) that grows and fades: used for the pickup bursts
+  sprite(x, y, img, size, dur = 0.5, rot = 0, grow = 1.4) {
+    if (img) this.parts.push({ x, y, vx: 0, vy: 0, life: 0, max: dur, size, color: '#fff', type: 'sprite', img, drag: 0, grav: 0, rot, vr: 0.6, add: true, fade: 1, grow });
+  }
+
   ring(x, y, color, maxR, dur = 0.5, width = 6) {
     this.rings.push({ x, y, color, maxR, dur, t: 0, width });
   }
@@ -127,7 +132,7 @@ export class FX {
     for (const f of this.flashes) {
       const k = 1 - f.t;
       const r = f.r * (0.6 + 0.6 * ease.outCubic(f.t));
-      g.globalAlpha = k * k;
+      g.globalAlpha = k * k * 0.42;
       const s = glowSprite(f.color, 128);
       g.drawImage(s, f.x - r, f.y - r, r * 2, r * 2);
     }
@@ -166,6 +171,17 @@ function drawPart(g, p) {
   const a = clamp((1 - k) * p.fade, 0, 1);
   const s = p.size * (1 + p.grow * k);
   switch (p.type) {
+    case 'sprite': {
+      const e = 1 - Math.pow(1 - Math.min(1, k * 2.2), 3);
+      const sz = p.size * (0.35 + 0.65 * e) * (1 + 0.25 * k);
+      g.globalAlpha = a;
+      g.save();
+      g.translate(p.x, p.y);
+      g.rotate(p.rot);
+      g.drawImage(p.img, -sz / 2, -sz / 2, sz, sz);
+      g.restore();
+      break;
+    }
     case 'spark': {
       g.globalAlpha = a;
       g.strokeStyle = p.color;

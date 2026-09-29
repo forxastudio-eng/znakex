@@ -214,20 +214,21 @@ export function drawSnake(g, pts, skin, o) {
   const tailStart = total - tailLen;
   const tailBlend = R * 2.2;
 
-  // --- module plan: variants cycle, a special segment appears every few cells
+  // --- module plan: variants cycle; the special module is always the 2nd block
   const trimFrac = BLOCKY.has(skin.art || skin.id) ? 0 : 0.03;
   const gapPx = SPECIAL_GAP * R * CELL_PER_R;
-  const cycle = art.variants.length ? art.variants : [art.main];
   const plan = [];
   {
-    let d = neck, k = 0, sinceSpecial = 0, sp = 0;
+    let d = neck, k = 0, sinceSpecial = 0;
+    void gapPx; void sinceSpecial;
     while (d < tailStart + R && plan.length < 90) {
       let m;
-      if (art.specials.length && sinceSpecial >= gapPx) {
-        m = art.specials[sp++ % art.specials.length];
-        sinceSpecial = 0;
+      if (art.specials.length && plan.length === 1) {
+        m = art.specials[0]; // the special module is always block 2 (after the head, before the tail)
       } else {
-        m = cycle[k++ % cycle.length];
+        // the first blocks use the sheet's own varied modules in order, the rest repeat the plain module
+        m = k < art.variants.length ? art.variants[k] : art.main;
+        k++;
       }
       const cut = trimFrac * m.img.width;
       const len = (m.img.width - cut * 2) * unit;
@@ -349,6 +350,28 @@ export function drawSnake(g, pts, skin, o) {
     }
   }
   g.setTransform(base);
+
+  // eating glow: a soft light in the colour of the orb runs from the head to the tail, fading as it goes
+  if (o.waves && o.waves.length) {
+    g.save();
+    g.globalCompositeOperation = 'lighter';
+    for (const w of o.waves) {
+      const sp = glowSprite(w.color, 64);
+      const front = w.t * (total + R * 4);
+      const life = 1 - w.t;
+      for (const smp of S) {
+        for (let i = 0; i < smp.length; i += 2) {
+          const q = smp[i];
+          const x = (q.d - front) / (R * 4.5);
+          const a = (0.5 * Math.exp(-x * x) + 0.16 * (1 - q.d / total)) * life * life;
+          if (a < 0.02) continue;
+          g.globalAlpha = Math.min(0.6, a);
+          g.drawImage(sp, q.x - R * 1.8, q.y - R * 1.8, R * 3.6, R * 3.6);
+        }
+      }
+    }
+    g.restore();
+  }
 
   // head: the sheet's top-down head, rotated to the direction of travel
   const s0 = S[0][0];

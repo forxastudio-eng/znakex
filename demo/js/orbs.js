@@ -71,6 +71,31 @@ export function drawOrb(g, x, y, cell, type, t, o = {}) {
   g.globalAlpha = alpha * (0.55 + 0.25 * pulse);
   g.drawImage(halo, x - hr, cy - hr, hr * 2, hr * 2);
 
+  if (type === 'red') {
+    // heartbeat ring + a slow glint
+    const hb = (t * 1.3 + x * 0.01) % 1;
+    g.save();
+    g.globalAlpha = alpha * (1 - hb) * 0.5;
+    g.strokeStyle = '#FF6A7A';
+    g.lineWidth = r * 0.14;
+    g.beginPath();
+    g.arc(x, cy, r * (1.1 + hb * 1.4), 0, TAU);
+    g.stroke();
+    g.translate(x, cy);
+    g.rotate(t * 0.5);
+    g.globalAlpha = alpha * 0.28;
+    g.fillStyle = '#FFB0B0';
+    for (let i = 0; i < 4; i++) {
+      g.rotate(TAU / 4);
+      g.beginPath();
+      g.moveTo(r * 0.7, -r * 0.06);
+      g.lineTo(r * 1.9, 0);
+      g.lineTo(r * 0.7, r * 0.06);
+      g.closePath();
+      g.fill();
+    }
+    g.restore();
+  }
   if (type === 'gold') {
     // rotating rays
     g.save();
@@ -109,7 +134,7 @@ export function drawOrb(g, x, y, cell, type, t, o = {}) {
   // orbiting sparkles
   g.globalCompositeOperation = 'lighter';
   const sg = glowSprite(type === 'gold' ? '#FFF0B0' : '#FFB0B0', 32);
-  for (let i = 0; i < (type === 'gold' ? 3 : 2); i++) {
+  for (let i = 0; i < (type === 'gold' ? 5 : 3); i++) {
     const a = t * (2.2 + i * 0.6) + i * 2.1;
     const px = x + Math.cos(a) * r * 1.5, py = cy + Math.sin(a) * r * 0.9;
     const s = r * 0.5 * (0.6 + 0.4 * Math.sin(t * 6 + i));

@@ -481,7 +481,7 @@ SKIN_SPRITES = {
     "frost":    ("magnific_03-frostbite-dragon-rarit_dtKVGvZXSL.jpg", ((45, 372, 172, 532), "down"), ((690, 395, 775, 505), "v"), ((990, 378, 1062, 528), "up"), None),
     "samurai":  ("magnific_04-samurai-serpent-rarity_4Rp7jbb9Aa.jpg", ((458, 82, 602, 258), "up"), ((75, 540, 300, 645), "h"), ((58, 685, 320, 752), "right"), (1055, 528, 1215, 688)),
     "ghost":    ("magnific_05-ghost-serpent-rarity-e_fHUtehKCDY.jpg", ((92, 468, 182, 602), "up"), ((474, 273, 548, 361), "h"), ((551, 438, 802, 528), "right"), (918, 635, 1062, 782)),
-    "cyber":    ("magnific_06-cyber-snake-rarity-leg_dtKVn0sXSL.jpg", ((70, 138, 148, 278), "down"), ((440, 140, 650, 238), "h"), ((862, 146, 1025, 220), "right"), None),
+    "cyber":    ("magnific_06-cyber-snake-rarity-leg_dtKVn0sXSL.jpg", ((68, 136, 182, 282), "down"), ((440, 140, 650, 238), "h"), ((862, 146, 1025, 220), "right"), None),
     "forest":   ("magnific_07-forest-guardian-rarity_xSZ5QK1jfW.jpg", ((62, 248, 162, 385), "up"), ((470, 385, 600, 500), "h"), ((838, 402, 1018, 475), "right"), None),
     "crystal":  ("magnific_08-crystal-serpent-rarity_yiMUsXdPW9.jpg", ((310, 183, 428, 342), "up"), ((318, 455, 598, 555), "h"), ((92, 688, 198, 798), "down"), (1043, 438, 1208, 598)),
     "solar":    ("magnific_10-solar-serpent-rarity-m_rgRbFMgxtc.jpg", ((572, 182, 668, 300), "up"), ((520, 428, 695, 508), "h"), ((866, 436, 1034, 496), "right"), (848, 630, 1003, 785)),
@@ -718,9 +718,10 @@ if __name__ == "__main__":
 # Extra body modules per skin, in 1264x848 sheet space: (box, axis)
 #   variants: distinct straight modules that alternate along the body
 #   specials: core / emblem segments inserted every few segments
+SEASON_SKINS = {"harvest"}
 SKIN_MODULES = {
-    "harvest": dict(variants=[((612, 70, 752, 196), "h"), ((772, 70, 922, 196), "h"), ((217, 272, 362, 394), "h")],
-                    specials=[((40, 487, 190, 613), "h"), ((213, 480, 360, 618), "h")]),
+    "harvest": dict(variants=[((612, 68, 750, 198), "h"), ((770, 68, 926, 198), "h"), ((217, 272, 362, 394), "h")],
+                    specials=[((38, 485, 192, 617), "h"), ((208, 480, 362, 620), "h")]),
     "cosmic": dict(variants=[((219, 419, 308, 508), "h"), ((329, 419, 418, 508), "h"), ((439, 419, 528, 508), "h")],
                    specials=[((1116, 417, 1206, 509), "h")]),
     "solar": dict(specials=[((1063, 402, 1214, 520), "h")]),
@@ -746,9 +747,11 @@ def skin_modules():
         d = os.path.join(OUT, "skins2", sid)
         os.makedirs(d, exist_ok=True)
         manifest[sid] = {"variants": 0, "specials": 0}
+        k = sh.size[0] / 1264.0  # boxes are given in 1264 px wide sheet space
         for kind in ("variants", "specials"):
             for i, (box, axis) in enumerate(spec.get(kind, [])):
-                im = knock_out(sh.crop(box), "tb" if axis == "h" else "lr")
+                box = tuple(int(round(v * k)) for v in box)
+                im = knock_out(sh.crop(box), "tblr", 60) if sid in SEASON_SKINS else knock_out(sh.crop(box), "tb" if axis == "h" else "lr")
                 if axis == "v":
                     im = im.transpose(Image.ROTATE_90)
                 im.save(os.path.join(d, f"{kind[:-1]}{i}.png"), optimize=True)

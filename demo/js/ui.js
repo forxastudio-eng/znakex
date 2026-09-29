@@ -5,6 +5,7 @@ import { PW } from './powerups.js';
 import { drawOrb } from './orbs.js';
 import { IMG } from './assets.js';
 import * as cloud from './cloud.js';
+import * as audio from './audio.js';
 import * as store from './store.js';
 import { url } from './assets.js';
 import { drawSnake, pathPoints } from './snakedraw.js';
@@ -16,6 +17,7 @@ import { CONTROL_INFO } from './input.js';
 const icon = (n) => url(`ui/icons/${n}.png`);
 const kit = (n) => url(`ui/v3/${n}.png`);
 const pwi = (n) => url(`pw/${n}.png`);
+const ptitle = (text, idx = 2, cls = '') => `<div class="ptitle p${idx} ${cls}"><img src="${url('ui/banners/b' + idx + '.png')}" alt=""><span>${text}</span></div>`;
 const fmtT = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 const $ = (root, sel) => root.querySelector(sel);
 
@@ -62,6 +64,7 @@ export class UI {
       prev.destroy && prev.destroy();
       setTimeout(() => prev.el.remove(), 420);
     }
+    if (name !== 'game' && name !== 'splash') audio.playMusic(name === 'season' ? 'mus_season' : 'mus_menu');
     const scr = fn.call(this, params) || {};
     scr.name = name;
     scr.el.classList.add('screen');
@@ -105,6 +108,7 @@ export class UI {
       const b = e.target.closest('[data-act]');
       if (!b || !root.contains(b)) return;
       const act = b.dataset.act;
+      audio.play(b.disabled ? 'ui_locked' : act === 'back' ? 'ui_back' : 'ui_tap');
       if (handlers[act]) return handlers[act](b, e);
       if (act === 'nav' || act === 'back') this.go(b.dataset.to || 'home');
       else if (act === 'shop') this.go('shop', { back: this.cur ? this.cur.name : 'home' });
@@ -112,6 +116,7 @@ export class UI {
   }
 
   toast(msg) {
+    if (/moneda|Cofre|Skin|Pase/i.test(msg) && !/insuf/i.test(msg)) audio.play('reward_chime', { vol: 0.8 });
     const t = el(`<div class="toast">${msg}</div>`);
     this.app.appendChild(t);
     setTimeout(() => t.remove(), 1900);
@@ -581,7 +586,7 @@ export class UI {
         ${done ? `<img class="stamp" src="${kit('collected')}" alt="">` : ''}${today ? '<em>HOY</em>' : ''}</div>`;
     }).join('');
     const o = this.overlay(`<div class="overlay dark"><div class="panel strong"><div class="inner">
-      <div class="ov-title worn">RACHA DIARIA</div>
+      ${ptitle('RACHA DIARIA', 4)}
       <div class="ov-sub">Vuelve cada día para ganar más</div>
       <div class="t-label glow-amber"><img src="${kit('flame')}" style="height:1.3rem;vertical-align:-.25rem"> RACHA: ${info.count} ${info.count === 1 ? 'DÍA' : 'DÍAS'}</div>
       <div class="days">${tiles}</div>
@@ -865,6 +870,7 @@ export class UI {
 
   // ------------------------------------------------------------ overlays infra
   overlay(html) {
+    audio.play('ui_open', { vol: 0.7 });
     const o = el(html);
     this.overEl.appendChild(o);
     requestAnimationFrame(() => o.classList.add('show'));
@@ -1035,6 +1041,8 @@ export class UI {
   scr_game(cfg) {
     const art = cfg.mode === 'story' ? (cfg.level.mapInfo.key) : { classic: 'maps/key06.jpg', frenzy: 'maps/key12.jpg', duel: 'maps/key09.jpg' }[cfg.mode];
     this.setBg('game', art);
+    audio.playMusic(cfg.mode === 'story' ? (cfg.level.season ? 'mus_season' : 'mus_story') : { classic: 'mus_classic', frenzy: 'mus_frenzy', duel: 'mus_duel' }[cfg.mode]);
+    audio.setMusicRate(1);
     const S = this.S();
     const e = el(`<section style="padding:0">
       <div class="hud">
@@ -1109,7 +1117,7 @@ export class UI {
   warnBanner(sec) {
     const layer = this.hudEl; // not #fxl: the countdown rewrites that layer
     if (!layer) return;
-    const w = el(`<div class="warn-banner" style="top:${Math.round(this.warnTop || 0)}px;animation-duration:${sec}s"><i></i>EVITA LOS OBSTÁCULOS</div>`);
+    const w = el(`<div class="plaque strip p0" style="top:${Math.round(this.warnTop || 0)}px;animation-duration:${sec}s"><img src="${url('ui/banners/b0.png')}" alt=""><span>EVITA LOS OBSTÁCULOS</span></div>`);
     layer.appendChild(w);
     setTimeout(() => w.remove(), sec * 1000 + 100);
   }
@@ -1130,6 +1138,7 @@ export class UI {
     const next = () => {
       if (!layer || !layer.isConnected) return;
       layer.innerHTML = `<div class="center-fx"><div class="count ${i === 3 ? 'go' : ''}">${steps[i]}</div></div>`;
+      audio.play(i === 3 ? 'countdown_go' : 'countdown_tick');
       if (i === 3) { done(); setTimeout(() => { if (layer.isConnected) layer.innerHTML = ''; }, 700); return; }
       i++;
       setTimeout(next, 620);
@@ -1181,11 +1190,7 @@ export class UI {
   }
 
   banner(text, kind) {
-    const layer = this.fxLayer();
-    if (!layer) return;
-    const b = el(`<div class="center-fx" style="top:30%"><div class="banner ${kind}">${text}</div></div>`);
-    layer.appendChild(b);
-    setTimeout(() => b.remove(), 1500);
+    this.plaque(text, kind === 'gold' ? 2 : 1, 1.6);
   }
 
   flash(kind) {
@@ -1218,20 +1223,21 @@ export class UI {
     setTimeout(() => p.remove(), sec * 1000 + 80);
   }
 
-  // effect chips (magnet, portal, force field, star) with their countdown rings
+  // time bars: an orb icon and how much of the effect is left (force field: two segments = two hits)
   pwHud(st) {
     const row = this.hudEl && $(this.hudEl, '#pwr');
     if (!row) return;
-    const items = [['shield', st.shield > 0 ? st.shield / 2 : 0, st.shield], ['magnet', st.magnet, 0], ['portal', st.portal, 0], ['star', st.star, 0]];
-    for (const [k, v, n] of items) {
+    const items = [['gold', st.gold || 0, 'orb_gold'], ['shield', st.shield > 0 ? st.shield / 2 : 0, 'shield', st.shield], ['magnet', st.magnet, 'hud_magnet'], ['portal', st.portal, 'hud_portal'], ['star', st.star, 'hud_star']];
+    for (const [k, v, img, n] of items) {
       let c = $(row, `[data-k=${k}]`);
       if (v <= 0) { if (c) c.remove(); continue; }
       if (!c) {
-        c = el(`<div class="pw-chip" data-k="${k}"><img src="${k === 'shield' ? pwi('shield') : pwi(PW[k].hud)}" alt=""><b></b></div>`);
+        const src = k === 'gold' ? icon('orb_gold') : pwi(img);
+        c = el(`<div class="pw-bar ${k}" data-k="${k}"><img src="${src}" alt=""><div class="bar"><i></i>${k === 'shield' ? '<u></u>' : ''}</div></div>`);
         row.appendChild(c);
       }
-      c.style.setProperty('--k', String(clamp(k === 'shield' ? 1 : v, 0, 1)));
-      $(c, 'b').textContent = k === 'shield' ? `x${n}` : '';
+      $(c, 'i').style.width = `${Math.round(clamp(v, 0, 1) * 100)}%`;
+      c.classList.toggle('low', k !== 'shield' && v < 0.25);
     }
   }
 
@@ -1261,20 +1267,92 @@ export class UI {
     const game = this.game;
     if (!game || game.paused || !['play', 'countdown', 'ready'].includes(game.state)) return;
     game.paused = true;
+    audio.duck(true);
     const cfg = this.lastCfg;
     const info = cfg.mode === 'story' ? `NIVEL ${cfg.level.map}-${cfg.level.n} · ORBES ${game.player.orbs}/${game.target}` : `PUNTOS ${fmt(game.score)}`;
     const o = this.overlay(`<div class="overlay"><div class="panel"><div class="inner">
       <img src="${icon('pause')}" style="width:3.6rem;border-radius:.4rem">
-      <div class="ov-title worn">PAUSA</div>
+      ${ptitle('PAUSA', 3)}
       <div class="ov-sub">${info}</div>
       <button class="btn-primary" data-act="resume" style="width:100%"><span class="worn">CONTINUAR</span><i class="tri"></i></button>
+      <button class="btn" data-act="pset" style="width:100%"><img class="ic" src="${icon('settings')}">AJUSTES</button>
       <div class="btn-row"><button class="btn" data-act="restart"><img class="ic" src="${icon('retry')}">REINICIAR</button><button class="btn" data-act="quit"><img class="ic" src="${icon('quit')}">SALIR</button></div>
     </div></div></div>`);
     this.wire(o, {
-      resume: () => { this.closeOverlay(o); game.paused = false; },
-      restart: () => this.startGame(this.lastCfg),
-      quit: () => this.exitGame(),
+      pset: () => this.pauseSettings(),
+      resume: () => { this.closeOverlay(o); game.paused = false; audio.duck(false); },
+      restart: () => { audio.duck(false); this.startGame(this.lastCfg); },
+      quit: () => { audio.duck(false); this.exitGame(); },
     });
+  }
+
+  // settings without leaving the game (audio, vibration, accessibility, controls)
+  pauseSettings() {
+    const set = this.S().settings;
+    const row = (k, ic, label) => `<div class="set-row"><span class="l"><img src="${ic}">${label}</span><button class="toggle ${set[k] ? 'on' : ''}" data-act="tg" data-k="${k}"></button></div>`;
+    const o = this.overlay(`<div class="overlay dark"><div class="panel strong"><div class="inner pad" style="width:100%">
+      ${ptitle('AJUSTES', 3)}
+      ${row('music', icon('mode_frenzy'), 'MÚSICA')}
+      ${row('sfx', icon('play'), 'EFECTOS DE SONIDO')}
+      ${row('vibration', icon('hz_wind'), 'VIBRACIÓN')}
+      ${row('colorblind', icon('hz_dark'), 'MODO DALTÓNICO')}
+      ${row('lowfx', icon('hz_wind'), 'GRÁFICOS BAJOS')}
+      <div class="sec">CONTROLES</div>
+      <div class="ctl-grid">${[['swipe', 'DESLIZAR'], ['buttons', 'FLECHAS'], ['joystick', 'PALANCA'], ['tap', 'TOQUES']].map(([v, l]) => `<button class="ctl ${set.controls === v ? 'on' : ''}" data-act="ctl" data-v="${v}"><span class="ctl-ic ctl-${v}"></span>${l}</button>`).join('')}</div>
+      <button class="btn-primary" data-act="back" style="width:100%;margin-top:.5rem"><span class="worn">VOLVER</span></button>
+    </div></div></div>`);
+    this.wire(o, {
+      tg: (b) => {
+        set[b.dataset.k] = !set[b.dataset.k];
+        b.classList.toggle('on', set[b.dataset.k]);
+        if (b.dataset.k === 'lowfx') { document.body.classList.toggle('lowfx', set.lowfx); if (this.game) this.game.low = set.lowfx; }
+        audio.applySettings();
+        store.save();
+      },
+      ctl: (b) => {
+        set.controls = b.dataset.v;
+        o.querySelectorAll('[data-act=ctl]').forEach((x) => x.classList.toggle('on', x === b));
+        this.syncDpad();
+        store.save();
+      },
+      back: () => this.closeOverlay(o),
+    });
+  }
+
+  // arrows appear / disappear when the control scheme changes in the middle of a game
+  syncDpad() {
+    const e = this.hudEl;
+    if (!e) return;
+    const want = this.S().settings.controls === 'buttons';
+    const has = e.querySelector('.dpad');
+    if (want && !has) {
+      const d = el('<div class="dpad"><button class="u" data-dir="up"><i></i></button><button class="l" data-dir="left"><i></i></button><button class="d" data-dir="down"><i></i></button><button class="r" data-dir="right"><i></i></button></div>');
+      e.appendChild(d);
+      d.querySelectorAll('button').forEach((b) => b.addEventListener('pointerdown', (ev) => { ev.preventDefault(); this.game && this.game.input(b.dataset.dir); }));
+    } else if (!want && has) has.remove();
+    const tag = e.querySelector('.hud-bottom');
+    if (tag && !want) { tag.style.top = ''; tag.style.bottom = ''; }
+    if (this.game) this.game.resize();
+  }
+
+  // first time an item shows up: the game stops, the item is highlighted and explained with icons
+  itemIntro(type, px, py, onClose) {
+    const D = {
+      shield: ['CAMPO DE FUERZA', pwi('shield'), [[kit('check_box'), 'Rompe 2 obstáculos o pinchos'], [kit('star_glow'), 'Toma el color de tu skin'], [kit('bulb'), 'No protege del agua ni de la lava']]],
+      magnet: ['IMÁN DE ORBES', pwi('hud_magnet'), [[icon('orb_red'), 'Atrae los orbes cercanos'], [kit('refresh'), 'Dura 8 segundos'], [kit('bulb'), 'Se ve su alcance alrededor de ti']]],
+      portal: ['PORTAL DE REGRESO', pwi('portal'), [[kit('check_box'), 'Si chocas, no pierdes: vuelves al inicio'], [kit('refresh'), 'Dura 8 segundos'], [kit('bulb'), 'Conservas todo tu largo']]],
+      star: ['ESTRELLA DORADA', pwi('star'), [[icon('x2'), 'Velocidad x2'], [kit('star_gold'), 'Invencible: nada te afecta'], [kit('refresh'), 'Dura 6 segundos · el mapa da la vuelta']]],
+    }[type];
+    const R = 3.2 * 16;
+    const o = this.overlay(`<div class="overlay item-intro" style="background:radial-gradient(circle at ${px}px ${py}px, transparent 0, transparent ${R}px, rgba(4,6,4,.84) ${R + 60}px)">
+      <div class="spot" style="left:${px}px;top:${py}px"></div>
+      <div class="panel strong" style="margin-top:auto"><div class="inner">
+        <div class="t-label glow-amber">¡NUEVO OBJETO!</div>
+        <div class="ii-head"><img src="${D[1]}" alt=""><div class="t-display worn" style="font-size:2rem">${D[0]}</div></div>
+        <div class="ii-lines">${D[2].map(([ic, tx]) => `<div><img src="${ic}" alt=""><span>${tx}</span></div>`).join('')}</div>
+        <button class="btn-primary" data-act="ok" style="width:100%"><span class="worn">¡ENTENDIDO!</span></button>
+      </div></div></div>`);
+    this.wire(o, { ok: () => { this.closeOverlay(o); onClose && onClose(); } });
   }
 
   exitGame() {
@@ -1302,7 +1380,7 @@ export class UI {
     const tipHtml = `<div class="tip-chip"><img src="${kit('bulb')}" alt=""><span>${tip}</span></div>`;
     const adCoin = `<button class="chip-ad" data-act="adcoin"><img src="${kit('plus1')}" alt=""><span>+1 MONEDA · VER ANUNCIO</span></button>`;
     const o = this.overlay(`<div class="overlay" style="justify-content:flex-end;padding-bottom:12%"><div class="panel"><div class="inner">
-      <div class="ov-title worn">${info.target && info.left / info.target > 0.4 ? '¡AY!' : '¡CASI!'}</div>
+      ${ptitle(info.target && info.left / info.target > 0.4 ? '¡AY!' : '¡CASI!', 0)}
       <div class="ov-sub">${sub}</div>
       ${prog}
       ${tipHtml}
@@ -1405,7 +1483,7 @@ export class UI {
       coins = res.won ? 100 : 0;
       if (res.won) { S.tutorialSeen = true; store.save(); }
       html = `<div class="t-label glow-amber">TUTORIAL</div>
-        <div class="ov-title worn">¡LISTO PARA JUGAR!</div>
+        ${ptitle('¡LISTO PARA JUGAR!', 3)}
         <div class="ov-sub">Ya conoces los orbes, los obstáculos y el campo de fuerza</div>
         <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>
         <button class="btn-primary" data-act="first" style="width:100%"><span class="worn">JUGAR NIVEL 1-1</span><i class="tri"></i></button>
@@ -1424,13 +1502,14 @@ export class UI {
         if (res.stars === 3) meta.track('star3');
         meta.addSeasonXp((L.season ? 25 : first ? 15 : 5) + (res.stars === 3 ? 10 : 0));
         const skinNow = L.season && L.n === 20 && meta.seasonSkinUnlock();
+        for (let k = 0; k < res.stars; k++) audio.play('star_pop', { rate: 1 + 0.12 * k, delay: 0.5 + k * 0.3 });
         html = `<div class="t-label glow-amber">${L.guardian ? '¡GUARDIÁN DERROTADO!' : '¡OBJETIVO CUMPLIDO!'}</div>
-          <div class="ov-title worn">¡NIVEL SUPERADO!</div>
+          ${ptitle('¡NIVEL SUPERADO!', 2)}
           <div class="ov-sub">${L.season ? 'TEMPORADA' : L.map + '-'}${L.season ? ' · NIVEL ' + L.n : L.n} · ${L.mapInfo.name}</div>
           <div class="star-row">${[
             ['Objetivo', true], [res.deaths ? 'Sin morir' : 'Sin morir', res.deaths === 0], [`Rápido · ${fmtT(res.par)}`, res.stars === 3],
           ].map(([cap, on], i) => `<div class="star ${on ? 'on' : ''}" style="--d:${0.35 + i * 0.3}s"><img src="${kit(on ? 'star_gold' : 'star_empty')}" alt=""><span>${cap}</span></div>`).join('')}</div>
-          ${res.stars === 3 ? '<div class="newrec">¡PERFECTO!</div>' : ''}
+          ${res.stars === 3 ? ptitle('¡PERFECTO!', 2, 'small') : ''}
           ${statRow([['ORBES', `${Math.min(res.orbs, L.target)}/${L.target}`], ['PUNTOS', fmt(res.score)], ['TIEMPO', time]])}
           <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>
           ${first ? '' : '<div class="demo-note">Nivel repetido: recompensa reducida</div>'}
@@ -1441,7 +1520,7 @@ export class UI {
               : `<div class="t-label glow-amber">¡MAPA ${ROMAN[L.map - 1]} COMPLETADO!</div>${L.map < 16 ? `<button class="btn-primary" data-act="nextmap" style="width:100%"><span class="stack"><span class="worn">SIGUIENTE MAPA</span><span class="sub">${MAPS[L.map].name}</span></span></button>` : ''}`}
           <div class="btn-row"><button class="btn" data-act="retry"><img class="ic" src="${icon('retry')}">REPETIR</button><button class="btn" data-act="levels"><img class="ic" src="${icon('levels')}">NIVELES</button></div>`;
       } else {
-        html = `<div class="ov-title worn">NIVEL FALLIDO</div>
+        html = `${ptitle('NIVEL FALLIDO', 0)}
           <div class="ov-sub">${L.season ? 'TEMPORADA · NIVEL ' + L.n : L.map + '-' + L.n} · ${L.mapInfo.name}</div>
           ${statRow([['ORBES', `${res.orbs}/${L.target}`], ['PUNTOS', fmt(res.score)], ['TIEMPO', time]])}
           <button class="btn-primary" data-act="retry" style="width:100%"><span class="worn">REINTENTAR</span></button>
@@ -1454,8 +1533,8 @@ export class UI {
       const rec = res.score > prevBest;
       if (rec) { S.best[key] = res.score; store.save(); }
       coins = Math.floor(res.orbs / (key === 'classic' ? ECONOMY.classicCoinsPerOrbs : ECONOMY.frenzyCoinsPerOrbs));
-      html = `${rec ? '<div class="newrec">¡NUEVO RÉCORD!</div>' : ''}
-        <div class="ov-title worn">${key === 'frenzy' ? (res.won ? '¡TIEMPO!' : 'FIN DEL FRENESÍ') : 'FIN DE LA PARTIDA'}</div>
+      html = `${rec ? ptitle('¡NUEVO RÉCORD!', 2, 'small') : ''}
+        ${ptitle(key === 'frenzy' ? (res.won ? '¡TIEMPO!' : 'FIN DEL FRENESÍ') : 'FIN DE LA PARTIDA', 2)}
         <div class="big-num">${fmt(res.score)}</div>
         <div class="ov-sub">RÉCORD ${fmt(Math.max(prevBest, res.score))}</div>
         ${statRow(key === 'classic' ? [['ORBES', res.orbs], ['LARGO', res.length], ['TIEMPO', time]] : [['DORADOS', res.gold], ['LARGO', res.length], ['TIEMPO', time]])}
@@ -1472,7 +1551,7 @@ export class UI {
         store.save();
         meta.track('duelwin');
       }
-      html = `<div class="ov-title worn" style="color:${res.won ? 'var(--honey)' : '#FF8A7A'}">${res.won ? 'VICTORIA' : 'DERROTA'}</div>
+      html = `${ptitle(res.won ? 'VICTORIA' : 'DERROTA', res.won ? 2 : 0)}
         <div class="ov-sub">${res.won ? `${b.name} DERROTADO` : res.loseReason === 'bot' ? `${b.name} LLEGÓ PRIMERO` : `${b.name} TE HA VENCIDO`}</div>
         ${statRow([['TÚ', res.duel.p], ['RIVAL', res.duel.b], ['TIEMPO', time]])}
         ${res.won ? `<div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>${coins ? '' : '<div class="demo-note">Límite diario de victorias pagadas alcanzado</div>'}` : ''}
