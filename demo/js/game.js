@@ -557,9 +557,12 @@ export class Game {
       return;
     }
     if (this.state === 'dying') {
-      this.player.a.death = clamp(this.stateT / 0.55, 0, 1);
-      if (this.tut && this.stateT > 0.9) { this.revive(); return; }
-      if (this.stateT > 0.95 && !this.reviveShown) {
+      // sinking: the splash plays in full colour first, then the board greys out
+      const d0 = this.sink ? 0.75 : 0;
+      this.player.a.death = clamp((this.stateT - d0) / 0.55, 0, 1);
+      if (this.sink) this.updateSink();
+      if (this.tut && this.stateT > 0.9 + d0) { this.revive(); return; }
+      if (this.stateT > 0.95 + d0 && !this.reviveShown) {
         this.reviveShown = true;
         this.ui.showRevive(this.reviveInfo());
       }
@@ -857,10 +860,21 @@ export class Game {
     const h = s.cells[0];
     const x = this.board.cx(h.x) + (nx - h.x) * this.board.cell * 0.45;
     const y = this.board.cy(h.y) + (ny - h.y) * this.board.cell * 0.45;
-    this.fx.flash(x, y, '#FFFFFF', this.R * 5, 0.3);
-    this.fx.burst(x, y, 26, { type: 'dust', color: '#D8C8A0', speed: 200, size: 18, life: 0.9, add: false, drag: 3 });
-    this.fx.burst(x, y, 16, { type: 'leaf', color: '#7FAE4E', speed: 240, size: 7, life: 1.3, add: false, drag: 2, grav: 60 });
-    this.fx.burst(x, y, 14, { type: 'spark', color: '#FFFFFF', speed: 420, size: 4, life: 0.35 });
+    const wet = !s.isBot && reason === 'hazard' && this.board.level && this.board.level.cells[ny * COLS + nx] === T.LETHAL;
+    if (wet) {
+      // falling into water / lava / acid: the head sinks with a splash instead of crashing
+      const hz = this.cfg.level && this.cfg.level.mapInfo && this.cfg.level.mapInfo.hazard;
+      this.sink = {
+        x: this.board.cx(nx), y: this.board.cy(ny), hx: this.board.cx(h.x), hy: this.board.cy(h.y),
+        kind: hz === 'hz_lava' ? 'lava' : hz === 'hz_mud' ? 'acid' : 'water',
+        col: this.board.glowColor ? this.board.glowColor() : '#3FD8FF', splashed: false, p: 0,
+      };
+    } else {
+      this.fx.flash(x, y, '#FFFFFF', this.R * 5, 0.3);
+      this.fx.burst(x, y, 26, { type: 'dust', color: '#D8C8A0', speed: 200, size: 18, life: 0.9, add: false, drag: 3 });
+      this.fx.burst(x, y, 16, { type: 'leaf', color: '#7FAE4E', speed: 240, size: 7, life: 1.3, add: false, drag: 2, grav: 60 });
+      this.fx.burst(x, y, 14, { type: 'spark', color: '#FFFFFF', speed: 420, size: 4, life: 0.35 });
+    }
     s.a.mouthTarget = 0;
     if (s.isBot) {
       s.alive = false;
@@ -876,8 +890,8 @@ export class Game {
     audio.stopLoop('boost_loop'); audio.stopLoop('magnet_loop'); audio.stopLoop('star_loop'); audio.setMusicRate(1);
     const liquid = reason === 'hazard' && this.board.level && this.board.level.cells[ny * COLS + nx] === T.LETHAL;
     audio.play(liquid ? 'die_liquid' : 'die_hit');
-    this.fx.shake(14, 0.5);
-    this.timeScale = 0.3;
+    this.fx.shake(wet ? 6 : 14, wet ? 0.3 : 0.5);
+    this.timeScale = wet ? 0.6 : 0.3;
     vibrate([40, 30, 60], this.cfg.settings.vibration);
     this.ui.hitFlash();
     this.reviveShown = false;
@@ -922,6 +936,7 @@ export class Game {
     s.boostT = 0;
     s.a.death = 0;
     s.acc = 0;
+    this.sink = null;
     // clear orbs sitting on the snake
     const occ = new Set(s.cells.map((c) => c.y * COLS + c.x));
     this.orbs = this.orbs.filter((o) => !occ.has(o.y * COLS + o.x));
@@ -982,6 +997,84 @@ export class Game {
     });
   }
 
+  // ------------------------------------------------------------ sinking death (water, lava, acid)
+  updateSink() {
+    const k = this.sink;
+    k.p = clamp(this.stateT / 0.6, 0, 1);
+    if (!k.splashed && k.p > 0.28) {
+      k.splashed = true;
+      const { x, y, col } = k, C = this.board.cell;
+      const light = k.kind === 'lava' ? '#FFD36A' : k.kind === 'acid' ? '#D8FF9A' : '#E8FBFF';
+      // droplets thrown up and falling back, two ripples, a soft flash of the liquid's own colour
+      this.fx.burst(x, y, 34, { type: 'dot', color: [col, light, '#FFFFFF'], speed: 380, speedMin: 140, size: 6, life: 0.85, add: false, drag: 1.1, grav: 760 });
+      this.fx.burst(x, y, 10, { type: 'dot', color: [col, light], speed: 150, size: 8, life: 0.5, add: false, drag: 2, grav: 400 });
+      this.fx.ring(x, y, light, C * 1.1, 0.55, 4);
+      this.fx.ring(x, y, col, C * 1.8, 0.9, 3);
+      this.fx.ring(x, y, light, C * 2.4, 1.3, 2);
+      this.fx.flash(x, y, col, C * 1.6, 0.35);
+      if (k.kind === 'lava') {
+        this.fx.burst(x, y, 16, { type: 'spark', color: ['#FFB030', '#FF5A1A', '#FFE08A'], speed: 360, size: 4, life: 0.8, grav: -60 });
+        this.fx.burst(x, y, 6, { type: 'dust', color: '#3A3430', speed: 50, size: 22, life: 1.4, add: false, grav: -40 });
+      }
+    }
+  }
+
+  drawSink(g) {
+    const k = this.sink, C = this.board.cell;
+    const t = this.stateT;
+    g.save();
+    // the surface closes over the head: a disc of the liquid's colour that fades in, then settles
+    const cover = clamp((k.p - 0.25) / 0.5, 0, 1) * (1 - clamp((t - 1.2) / 0.8, 0, 1));
+    if (cover > 0) {
+      const gr = g.createRadialGradient(k.x, k.y, 0, k.x, k.y, C * 0.62);
+      gr.addColorStop(0, k.col);
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.globalAlpha = 0.75 * cover;
+      g.fillStyle = gr;
+      g.beginPath(); g.arc(k.x, k.y, C * 0.62, 0, Math.PI * 2); g.fill();
+    }
+    // bubbles rising and popping after the head goes under
+    if (k.splashed) {
+      g.globalCompositeOperation = k.kind === 'lava' ? 'lighter' : 'source-over';
+      for (let i = 0; i < 7; i++) {
+        const life = (t - 0.35 - i * 0.14);
+        if (life < 0 || life > 0.7) continue;
+        const u = life / 0.7;
+        const a = i * 2.4;
+        const bx = k.x + Math.cos(a) * C * (0.12 + 0.05 * i), by = k.y + Math.sin(a) * C * 0.14 - u * C * 0.12;
+        const r = C * (0.05 + 0.06 * u) * (i % 3 === 0 ? 1.4 : 1);
+        g.globalAlpha = 0.9 * (1 - u * u);
+        g.strokeStyle = k.kind === 'lava' ? '#FFD36A' : '#FFFFFF';
+        g.lineWidth = Math.max(1, C * 0.025);
+        g.fillStyle = k.kind === 'lava' ? 'rgba(255,120,30,0.55)' : k.kind === 'acid' ? 'rgba(170,255,90,0.35)' : 'rgba(220,245,255,0.25)';
+        g.beginPath(); g.arc(bx, by, r, 0, Math.PI * 2); g.fill(); g.stroke();
+      }
+    }
+    g.restore();
+  }
+
+  // twinkling star sparkles running along the body while the golden star is active
+  starSparkles(g, pts) {
+    const R = this.R;
+    g.save();
+    g.globalCompositeOperation = 'lighter';
+    const sp = glowSprite('#FFF0B0', 32);
+    for (let i = 0; i < pts.length; i++) {
+      const k = 0.5 + 0.5 * Math.sin(this.t * 7 - i * 1.3);
+      if (k < 0.55) continue;
+      const a = this.t * 2.2 + i * 2.1;
+      const x = pts[i].x + Math.cos(a) * R * 0.7, y = pts[i].y + Math.sin(a) * R * 0.7;
+      const s = R * (0.7 + 1.1 * (k - 0.55));
+      g.globalAlpha = (k - 0.4) * 0.9;
+      g.drawImage(sp, x - s * 2, y - s * 2, s * 4, s * 4);
+      g.fillStyle = '#FFFFFF';
+      g.beginPath();
+      for (let j = 0; j < 8; j++) { const r = j % 2 ? s * 0.22 : s; const q = (j / 8) * Math.PI * 2 + a; g.lineTo(x + Math.cos(q) * r, y + Math.sin(q) * r); }
+      g.fill();
+    }
+    g.restore();
+  }
+
   // The snake shines in one colour (gold star / white map-change immunity), without dark outlines.
   drawTinted(g, pts, skin, o, color, mix = 1) {
     const b = this.board, dpr = this.view.dpr, pad = b.cell * 2;
@@ -991,6 +1084,10 @@ export class Game {
       this.tc.width = Math.ceil(w * dpr); this.tc.height = Math.ceil(h * dpr);
     }
     const c = this.tc.getContext('2d');
+    // the tint pass below leaves 'source-atop' on this canvas: reset it, or the next snake is drawn onto
+    // an empty canvas with source-atop and nothing shows (the snake vanished with the golden star)
+    c.globalCompositeOperation = 'source-over';
+    c.globalAlpha = 1;
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.clearRect(0, 0, this.tc.width, this.tc.height);
     c.setTransform(dpr, 0, 0, dpr, -x0 * dpr, -y0 * dpr);
@@ -1090,6 +1187,11 @@ export class Game {
       const moving = this.state === 'play' && s.alive;
       const ti = moving ? clamp(s.acc / (s.interval || 1), 0, 1) : (this.state === 'intro' || this.state === 'countdown' || this.state === 'ready' ? 0 : 1);
       const { pts, breaks } = this.snakePoints(s, ti);
+      const sinkK = s === this.player && this.sink ? this.sink.p : 0;
+      if (sinkK > 0) {
+        const e = ease.outCubic(clamp(sinkK * 1.4, 0, 1)) * 0.8;
+        pts[0] = { x: this.sink.hx + (this.sink.x - this.sink.hx) * e, y: this.sink.hy + (this.sink.y - this.sink.hy) * e };
+      }
       const len = s.cells.length;
       const fat = 1;
       g.save();
@@ -1098,9 +1200,14 @@ export class Game {
       const opts = {
         R: this.R, mouth: s.a.mouth, blink: s.a.blink, tongue: s.a.tongue, squash: s.a.squash,
         bulges: [], waves: s.a.waves, glow: s.boostT > 0 ? clamp(s.boostT / 0.6, 0, 1) : 0,
-        ghost: s.ghostT > 0 && this.state === 'play', death: s.a.death, t: this.t, breaks, fat, clip,
+        ghost: s.ghostT > 0 && this.state === 'play', death: s.a.death, t: this.t, breaks, fat, clip, sink: sinkK,
       };
-      if (s === this.player && s.alive && this.pw.star > 0) this.drawTinted(g, pts, s.skin, opts, '#FFD36A', 1);
+      if (s === this.player && s.alive && this.pw.star > 0) {
+        // golden star: the snake stays visible, with a pulsing golden sheen and sparkles over it
+        drawSnake(g, pts, s.skin, opts);
+        this.drawTinted(g, pts, s.skin, opts, '#FFD36A', 0.28 + 0.1 * Math.sin(this.t * 9));
+        this.starSparkles(g, pts);
+      }
       else if (s === this.player && s.alive && this.whiteT > 0) { drawSnake(g, pts, s.skin, opts); this.drawTinted(g, pts, s.skin, opts, '#FFFFFF', 0.6); }
       else {
         drawSnake(g, pts, s.skin, opts);
@@ -1111,6 +1218,7 @@ export class Game {
     }
 
     drawAuras(g, this, this.t);
+    if (this.sink) this.drawSink(g);
 
     // death: the whole board drains of colour (one blend op instead of a filter per sprite)
     if (this.player.a.death > 0.01) {

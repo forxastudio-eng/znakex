@@ -4,7 +4,7 @@ Primera demo del juego: HTML5 + Canvas, empaquetada como APK de Android (WebView
 
 ## Probar
 
-- **Android:** instala `releases/ZNAKEX-tester-0.7.0.apk` (todo desbloqueado: 16 mapas × 3 dificultades, 160 niveles por dificultad, 64 skins, 999.999 monedas) o `releases/ZNAKEX-0.7.0.apk` (progresión normal).
+- **Android:** instala `releases/ZNAKEX-tester-0.8.0.apk` (todo desbloqueado: 16 mapas × 3 dificultades, 160 niveles por dificultad, 64 skins, 999.999 monedas) o `releases/ZNAKEX-0.8.0.apk` (progresión normal).
   Hay que permitir "instalar apps de origen desconocido". Los dos APK pueden convivir en el móvil.
 - **Navegador:** sirve la carpeta `demo/` con cualquier servidor estático (`npx http-server demo`) y abre `index.html`.
   Añade `?tester=1` a la URL para el modo tester.
@@ -20,12 +20,13 @@ Controles (Ajustes): deslizar, flechas en pantalla, palanca flotante (aparece do
 - **Nuevo en 0.5:** brillo del terreno (agua, lava, ácido) según su color; brillo del color del orbe que recorre la serpiente de la cabeza a la cola (sin engordar); capa dorada translúcida con la velocidad x2; ajustes dentro de la pausa; primera aparición de cada objeto con pausa y explicación; barras de tiempo con icono; textos en las placas del kit de banners; el módulo especial es siempre el bloque 2; motor de audio (30 efectos y una música por modo, que se acelera con el orbe dorado) listo para los archivos de `assets/audio/`.
 - **Nuevo en 0.6:** colección nueva de 64 skins (las 49 de `skins finales/`, las 5 de temporada y la básica en 10 colores); las skins antiguas se han eliminado. Estructura por casillas en todas: al empezar cabeza (1) + módulo especial (2) + cola (1); al crecer se añaden los módulos A, B y C en ciclo entre el especial y la cola. Cada pieza conserva sus proporciones reales (los módulos A/B/C se escalan al grosor real del cuerpo y las curvas se generan doblando el propio módulo de cada skin). Portadas 1:1 (512 px), marco por calidad (Normal, Especial, Mítico, Legendario, Temporada) y pestañas de categoría en la galería. Pase de temporada: Maíz y Farol en la vía gratuita; Espantapájaros, Bruja y Calabaza en la de pago.
 - **Nuevo en 0.7:** el juego en 5 idiomas (español, inglés, portugués de Brasil, indonesio y ruso), elegidos por los mercados más grandes de Google Play. Detecta el idioma del móvil y se puede cambiar en Ajustes → Idioma. El español es el texto base (`js/i18n.js`) y cada idioma tiene su diccionario en `js/lang/`. El ruso usa Oswald y Roboto Condensed solo para los caracteres cirílicos, con el mismo estilo. En la galería cada tarjeta muestra el nombre corto de la skin en inglés (igual en todos los idiomas) y el candado si está bloqueada.
+- **Nuevo en 0.8:** sonido completo: 30 efectos (Magnific, ElevenLabs Sound Effects) y 6 temas de música, uno por modo, en `assets/audio/` (OGG; se regeneran con `tools/build_audio.py`, que recorta silencios, iguala volúmenes y hace los bucles continuos). La estrella dorada ya no hace desaparecer la serpiente: brillo dorado suave con chispas. Morir en agua, lava o ácido tiene su animación: la cabeza se hunde, salpica, salen ondas y burbujas (chispas y humo en la lava).
 - Muerte con revivir (anuncio simulado o 100 / 200 monedas), pausa, victoria, resultados y récords.
 - 64 skins dibujadas con las piezas reales de cada ficha (cabeza, lengua, módulos A/B/C, módulo especial y cola; se regeneran con `tools/build_v6.py` y los marcos con `tools/frames_v6.py`). Ruleta diaria, tienda de monedas (compras simuladas), ajustes.
 - Cada mapa tiene mecánicas propias: agua, lava, arenas movedizas, hielo, portales, según su ficha.
 - Progresión: cada nivel se desbloquea al superar el anterior y cada mapa al completar el anterior (el modo tester lo abre todo).
 
-Aún no: sonido y música, anuncios reales (AdMob), compras reales (Play Billing), guardado en la nube.
+Aún no: anuncios reales (AdMob), compras reales (Play Billing), guardado en la nube.
 
 ## Estructura
 

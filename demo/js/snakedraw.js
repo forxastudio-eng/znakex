@@ -354,7 +354,12 @@ export function drawSnake(g, pts, skin, o) {
   while (k1 < S[0].length - 1 && S[0][k1].d < R * 1.2) k1++;
   const s1 = S[0][k1];
   const ang = Math.atan2(s0.y - s1.y, s0.x - s1.x);
-  drawHead(g, s0.x, s0.y, ang, R, art, skin, o, { hw, hh, fwd });
+  // sinking into water / lava / acid: the head shrinks and fades under the surface
+  const sk = clamp(o.sink || 0, 0, 1);
+  if (sk < 0.98) {
+    const k = 1 - 0.45 * sk;
+    drawHead(g, s0.x, s0.y, ang, R, art, skin, sk ? { ...o, tongue: 0, mouth: 0, fade: Math.pow(1 - sk, 1.4) } : o, { hw: hw * k, hh: hh * k, fwd: fwd * k });
+  }
   g.restore();
 }
 
@@ -364,6 +369,7 @@ function drawHead(g, x, y, ang, R, art, skin, o, hd) {
   const sq = clamp(o.squash || 0, 0, 1);
   const tg = clamp(Math.max(o.tongue || 0, (o.mouth || 0) > 0.4 ? o.mouth : 0), 0, 1);
   g.save();
+  if (o.fade !== undefined) g.globalAlpha *= o.fade;
   g.translate(x, y);
   g.rotate(ang + Math.PI / 2); // the sprite faces up (-y)
   g.translate(0, -fwd);
