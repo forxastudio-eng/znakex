@@ -169,30 +169,36 @@ Nombres: `Pantallas/v2/modo_clasico.png`, `modo_frenetico.png`, `modo_duelo.png`
 
 ## 5 · Kit de interfaz (magenta, sin texto)
 
+Cada bloque ya está completo (plantilla + piezas + STYLE LOCK): cópialo y pégalo tal cual.
+
 ### 5.1 Paneles → `Pantallas/v2/kit_paneles.png`
 
 El panel grande se estira al tamaño de cada ventana, así que sus bordes tienen que ser **uniformes** (los adornos solo en las esquinas) y el centro liso.
 
 ```text
-[SHEET TEMPLATE] with N=6, LIST:
+Game UI asset sheet, 2048x2048, 6 separate items arranged in a clean grid, each isolated with at least 80 px of flat pure magenta #FF00FF around it (uniform background, no gradient, no shadow on the background, no magenta or pink inside the items). Same outline weight, same lighting (top-left) and same scale family for every item.
+ITEMS, left to right, top to bottom:
 1) large window panel 900x600: dark charcoal stone slab (#1E2426, slightly translucent feel), thick dark outline (#14181A), thin warm ivory inner rim (#C9C3B2), small carved snake-rune ornaments ONLY in the four corners with one tiny lime glowing dot each, straight uniform edges, completely plain center;
 2) item card 640x460: same style, smaller corner ornaments;
 3) square slot 360x360: recessed dark charcoal socket with an ivory-grey inner rim;
 4) title plate 880x270: horizontal weathered stone plate (#3A3E3A) with pointed ends and an ivory rim, plain center for a title;
 5) divider 420x80: thin horizontal ivory-grey ornament with a small snake-Z sigil in the middle glowing lime;
 6) avatar ring 360x360: round weathered stone frame with an ivory rim and a plain hollow center.
+STYLE LOCK: bold modern esports-mascot art direction matching the attached ZNAKEX logo (style reference only, do not draw the logo): thick clean dark outlines (#14181A), cel-shaded forms, glossy highlights. Color balance 60/30/10: mostly neutral dark charcoal and warm stone greys (#14181A, #1E2426, #3A3E3A) with ivory highlights (#F2EFE6); natural world colors for the environment (weathered temple stone #6B6A5E, muted moss #4E5E3A, cool blue shadows #1C2A33, warm sunlight #F5D48A); the brand green and electric lime (#00A04A, #B8FF1A) used ONLY as small accents (the mascot snake, a few rune glows, one highlight) - the image must NOT look mostly green. Gold (#E8B04A) only for coins and rewards. Jungle-temple world, stylized and energetic, high contrast, crisp, readable on a phone. NO text, NO letters, NO numbers, NO logo, NO watermark.
 ```
 
 ### 5.2 Botones → `Pantallas/v2/kit_botones.png`
 
 ```text
-[SHEET TEMPLATE] with N=6, LIST:
+Game UI asset sheet, 2048x2048, 6 separate items arranged in a clean grid, each isolated with at least 80 px of flat pure magenta #FF00FF around it (uniform background, no gradient, no shadow on the background, no magenta or pink inside the items). Same outline weight, same lighting (top-left) and same scale family for every item.
+ITEMS, left to right, top to bottom:
 1) PRIMARY button 700x300: chunky rounded rectangle, lime gradient (#B8FF1A top to #00A04A bottom), thick dark charcoal outline (#14181A), glossy top highlight, small darker bevel at the bottom, plain center;
 2) PRIMARY PRESSED: same button 6 px lower, slightly darker, no bottom bevel;
 3) SECONDARY button 700x300: dark charcoal stone (#1E2426) with an ivory-grey rim (#C9C3B2), plain center;
 4) REWARD button 700x300: gold (#E8B04A to #B87A1A) with a dark outline and a warm glossy highlight, plain center;
 5) ROUND icon button 300x300: dark charcoal stone disc with an ivory-grey rim and a glossy top, empty center;
 6) SMALL pill button 520x170: dark charcoal stone with an ivory-grey rim, plain center.
+STYLE LOCK: bold modern esports-mascot art direction matching the attached ZNAKEX logo (style reference only, do not draw the logo): thick clean dark outlines (#14181A), cel-shaded forms, glossy highlights. Color balance 60/30/10: mostly neutral dark charcoal and warm stone greys (#14181A, #1E2426, #3A3E3A) with ivory highlights (#F2EFE6); natural world colors for the environment (weathered temple stone #6B6A5E, muted moss #4E5E3A, cool blue shadows #1C2A33, warm sunlight #F5D48A); the brand green and electric lime (#00A04A, #B8FF1A) used ONLY as small accents (the mascot snake, a few rune glows, one highlight) - the image must NOT look mostly green. Gold (#E8B04A) only for coins and rewards. Jungle-temple world, stylized and energetic, high contrast, crisp, readable on a phone. NO text, NO letters, NO numbers, NO logo, NO watermark.
 ```
 
 ### 5.3 Placas de aviso (900 × 110) → `Pantallas/v2/kit_placas.png`
@@ -200,18 +206,22 @@ El panel grande se estira al tamaño de cada ventana, así que sus bordes tienen
 Los carteles que salen durante la partida ("¡VELOCIDAD x2!", "EVITA LOS OBSTÁCULOS"…). Los extremos pueden llevar adornos, pero el centro tiene que quedar liso y ancho para el texto.
 
 ```text
-[SHEET TEMPLATE] with N=5, LIST (each a long horizontal banner 1800x220 with pointed or scrolled ends, ornaments only at the ends, wide plain center):
+Game UI asset sheet, 2048x2048, 5 separate items arranged in a clean grid, each isolated with at least 80 px of flat pure magenta #FF00FF around it (uniform background, no gradient, no shadow on the background, no magenta or pink inside the items). Same outline weight, same lighting (top-left) and same scale family for every item.
+ITEMS, left to right, top to bottom (each a long horizontal banner 1800x220 with pointed or scrolled ends, ornaments only at the ends, wide plain center):
 1) DANGER: dark red stone with an orange-red rim;
 2) BRAND: dark charcoal stone with a lime rim (the only green one);
 3) REWARD: gold with warm highlights;
 4) INFO: deep teal (#1F6A5A) with a light aqua rim;
 5) SPECIAL: deep purple (#3A2352) with a lilac rim.
+STYLE LOCK: bold modern esports-mascot art direction matching the attached ZNAKEX logo (style reference only, do not draw the logo): thick clean dark outlines (#14181A), cel-shaded forms, glossy highlights. Color balance 60/30/10: mostly neutral dark charcoal and warm stone greys (#14181A, #1E2426, #3A3E3A) with ivory highlights (#F2EFE6); natural world colors for the environment (weathered temple stone #6B6A5E, muted moss #4E5E3A, cool blue shadows #1C2A33, warm sunlight #F5D48A); the brand green and electric lime (#00A04A, #B8FF1A) used ONLY as small accents (the mascot snake, a few rune glows, one highlight) - the image must NOT look mostly green. Gold (#E8B04A) only for coins and rewards. Jungle-temple world, stylized and energetic, high contrast, crisp, readable on a phone. NO text, NO letters, NO numbers, NO logo, NO watermark.
 ```
 
 ### 5.4 ☆ Esquinas decorativas → `Pantallas/v2/kit_esquinas.png`
 
 ```text
-[SHEET TEMPLATE] with N=4, LIST: four matching corner ornaments 300x300 (top-left, top-right, bottom-left, bottom-right orientation), carved weathered grey stone with a curling vine and a small lime-glowing rune, each filling one corner of its square and fading to transparent-looking magenta toward the opposite corner.
+Game UI asset sheet, 2048x2048, 4 separate items arranged in a clean grid, each isolated with at least 80 px of flat pure magenta #FF00FF around it (uniform background, no gradient, no shadow on the background, no magenta or pink inside the items). Same outline weight, same lighting (top-left) and same scale family for every item.
+ITEMS, left to right, top to bottom: four matching corner ornaments 300x300 (top-left, top-right, bottom-left, bottom-right orientation), carved weathered grey stone with a curling vine and a small lime-glowing rune, each filling one corner of its square and fading to transparent-looking magenta toward the opposite corner.
+STYLE LOCK: bold modern esports-mascot art direction matching the attached ZNAKEX logo (style reference only, do not draw the logo): thick clean dark outlines (#14181A), cel-shaded forms, glossy highlights. Color balance 60/30/10: mostly neutral dark charcoal and warm stone greys (#14181A, #1E2426, #3A3E3A) with ivory highlights (#F2EFE6); natural world colors for the environment (weathered temple stone #6B6A5E, muted moss #4E5E3A, cool blue shadows #1C2A33, warm sunlight #F5D48A); the brand green and electric lime (#00A04A, #B8FF1A) used ONLY as small accents (the mascot snake, a few rune glows, one highlight) - the image must NOT look mostly green. Gold (#E8B04A) only for coins and rewards. Jungle-temple world, stylized and energetic, high contrast, crisp, readable on a phone. NO text, NO letters, NO numbers, NO logo, NO watermark.
 ```
 
 ---
@@ -240,10 +250,13 @@ Sustituye `[LIST]` por cada hoja. Entre paréntesis va el nombre de archivo del 
 
 Ahora son dorados y azules. Si quieres que sigan la marca, genera estas dos hojas. Si no, se quedan como están.
 
+Cada bloque ya está completo (plantilla + piezas + STYLE LOCK): cópialo y pégalo tal cual.
+
 ### 7.1 Objetos e iconos del marcador → `Pantallas/v2/objetos.png`
 
 ```text
-[SHEET TEMPLATE] with N=7, LIST (each 400x400, glossy, readable at 40 px, NO badge behind them):
+Game UI asset sheet, 2048x2048, 7 separate items arranged in a clean grid, each isolated with at least 80 px of flat pure magenta #FF00FF around it (uniform background, no gradient, no shadow on the background, no magenta or pink inside the items). Same outline weight, same lighting (top-left) and same scale family for every item.
+ITEMS, left to right, top to bottom (each 400x400, glossy, readable at 40 px, NO badge behind them):
 1) force-field item: a glowing hexagonal shield crystal, lime and white (shield);
 2) magnet item: a horseshoe magnet with lime-tipped poles (magnet);
 3) return-portal item: a swirling teal-lime ring portal (portal);
@@ -251,12 +264,15 @@ Ahora son dorados y azules. Si quieres que sigan la marca, genera estas dos hoja
 5) small flat HUD icon of the magnet (hud_magnet);
 6) small flat HUD icon of the portal (hud_portal);
 7) small flat HUD icon of the star (hud_star).
+STYLE LOCK: bold modern esports-mascot art direction matching the attached ZNAKEX logo (style reference only, do not draw the logo): thick clean dark outlines (#14181A), cel-shaded forms, glossy highlights. Color balance 60/30/10: mostly neutral dark charcoal and warm stone greys (#14181A, #1E2426, #3A3E3A) with ivory highlights (#F2EFE6); natural world colors for the environment (weathered temple stone #6B6A5E, muted moss #4E5E3A, cool blue shadows #1C2A33, warm sunlight #F5D48A); the brand green and electric lime (#00A04A, #B8FF1A) used ONLY as small accents (the mascot snake, a few rune glows, one highlight) - the image must NOT look mostly green. Gold (#E8B04A) only for coins and rewards. Jungle-temple world, stylized and energetic, high contrast, crisp, readable on a phone. NO text, NO letters, NO numbers, NO logo, NO watermark.
 ```
 
 ### 7.2 Efectos de los objetos → `Pantallas/v2/objetos_fx.png`
 
 ```text
-[SHEET TEMPLATE] with N=12, LIST (each 400x400, as solid shapes with soft glowy edges, no background glow spilling beyond each cell): shield bubble (round translucent lime-white sphere), shield crack stage 1, shield crack stage 2, shield shards flying out, magnet pull ring (dotted lime ring), portal glow disc, portal vortex spiral, burst of gold particles, burst of lime particles, burst of white particles, star pop flash, star speed streak.
+Game UI asset sheet, 2048x2048, 12 separate items arranged in a clean grid, each isolated with at least 80 px of flat pure magenta #FF00FF around it (uniform background, no gradient, no shadow on the background, no magenta or pink inside the items). Same outline weight, same lighting (top-left) and same scale family for every item.
+ITEMS, left to right, top to bottom (each 400x400, as solid shapes with soft glowy edges, no background glow spilling beyond each cell): shield bubble (round translucent lime-white sphere), shield crack stage 1, shield crack stage 2, shield shards flying out, magnet pull ring (dotted lime ring), portal glow disc, portal vortex spiral, burst of gold particles, burst of lime particles, burst of white particles, star pop flash, star speed streak.
+STYLE LOCK: bold modern esports-mascot art direction matching the attached ZNAKEX logo (style reference only, do not draw the logo): thick clean dark outlines (#14181A), cel-shaded forms, glossy highlights. Color balance 60/30/10: mostly neutral dark charcoal and warm stone greys (#14181A, #1E2426, #3A3E3A) with ivory highlights (#F2EFE6); natural world colors for the environment (weathered temple stone #6B6A5E, muted moss #4E5E3A, cool blue shadows #1C2A33, warm sunlight #F5D48A); the brand green and electric lime (#00A04A, #B8FF1A) used ONLY as small accents (the mascot snake, a few rune glows, one highlight) - the image must NOT look mostly green. Gold (#E8B04A) only for coins and rewards. Jungle-temple world, stylized and energetic, high contrast, crisp, readable on a phone. NO text, NO letters, NO numbers, NO logo, NO watermark.
 ```
 
 ---
