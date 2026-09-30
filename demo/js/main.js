@@ -40,6 +40,7 @@ resize();
 
 // ------------------------------------------------------------------ boot
 ui.go('splash');
+ui.studioIntro();
 let tip = 0;
 const tipTimer = setInterval(() => {
   const n = document.getElementById('ldtip');

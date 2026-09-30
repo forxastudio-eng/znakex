@@ -491,4 +491,11 @@ export const ID = {
   "Si chocas, vuelves al inicio": "Jika menabrak, kamu kembali ke awal",
   "ESTRELLA": "BINTANG",
   "Velocidad x2 e invencible": "Kecepatan x2 dan kebal",
+  "PRESENTA": "MEMPERSEMBAHKAN",
+  "CRÉDITOS": "KREDIT",
+  "Un juego de": "Game oleh",
+  "Diseño y dirección de arte": "Desain dan pengarahan seni",
+  "Desarrollo": "Pengembangan",
+  "Música y efectos": "Musik dan efek suara",
+  "Fuentes": "Font",
 };

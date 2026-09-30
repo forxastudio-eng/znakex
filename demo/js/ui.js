@@ -68,7 +68,12 @@ export class UI {
       setTimeout(() => prev.el.remove(), 420);
     }
     if (name !== 'game' && name !== 'splash') audio.playMusic(name === 'season' ? 'mus_season' : 'mus_menu');
-    const scr = fn.call(this, params) || {};
+    let scr;
+    try { scr = fn.call(this, params) || {}; } catch (err) {
+      console.error('screen failed', name, err);
+      if (name !== 'home') { this.go('home'); return; }
+      throw err;
+    }
     scr.name = name;
     scr.el.classList.add('screen');
     this.screensEl.appendChild(scr.el);
@@ -123,6 +128,37 @@ export class UI {
     const t = el(`<div class="toast">${msg}</div>`);
     this.app.appendChild(t);
     setTimeout(() => t.remove(), 1900);
+  }
+
+  credits() {
+    const line = (k, v) => `<div class="cr-line"><span>${t(k)}</span><b>${v}</b></div>`;
+    const o = this.overlay(`<div class="overlay dark"><div class="panel strong"><div class="inner pad" style="width:100%">
+      ${ptitle(t('CRÉDITOS'), 3)}
+      <div class="cr-studio"><img src="${url('ui/studio_logo.png')}" alt="GPUnlock" onerror="this.remove()"><div><span>${t('Un juego de')}</span><b>GPUnlock</b></div></div>
+      ${line('Diseño y dirección de arte', 'GPUnlock')}
+      ${line('Desarrollo', 'GPUnlock')}
+      ${line('Música y efectos', 'GPUnlock')}
+      ${line('Fuentes', 'Bebas Neue · Barlow · Oswald · Roboto (SIL OFL 1.1)')}
+      <div class="demo-note" style="margin-top:.6rem">ZNAKEX ${CONFIG.version} · © 2026 GPUnlock</div>
+      <button class="btn-primary" data-act="close" style="width:100%;margin-top:.6rem"><span class="worn">${t('VOLVER')}</span></button>
+    </div></div></div>`);
+    this.wire(o, { close: () => this.closeOverlay(o) });
+  }
+
+  // ------------------------------------------------------------ studio intro (GPUnlock)
+  // Plays over the loading screen (the game keeps loading underneath); a tap skips it.
+  studioIntro() {
+    const o = el(`<div class="studio-intro">
+      <div class="st-logo"><img alt="GPUnlock" src="${url('ui/studio_logo.png')}" onerror="this.remove()"><span class="st-word">GPUnlock</span></div>
+      <div class="st-sub">${t('PRESENTA')}</div>
+    </div>`);
+    const img = $(o, 'img');
+    if (img) img.addEventListener('load', () => o.classList.add('has-img'));
+    this.app.appendChild(o);
+    let gone = false;
+    const end = () => { if (gone) return; gone = true; o.classList.add('out'); setTimeout(() => o.remove(), 500); };
+    o.addEventListener('pointerup', end);
+    setTimeout(end, 2600);
   }
 
   // ------------------------------------------------------------ splash
@@ -817,8 +853,8 @@ export class UI {
         <div class="sec">${t('IDIOMA')}</div>
         <div class="lang-grid">${LANGS.map((L) => `<button class="lang ${getLang() === L.id ? 'on' : ''}" data-act="lang" data-l="${L.id}">${L.name}</button>`).join('')}</div>
         <div class="sec">${t('AUDIO')}</div>
-        <div class="set-row"><span class="l"><img src="${icon('mode_frenzy')}">${t('MÚSICA')}</span><button class="toggle ${set.music ? 'on' : ''}" data-act="tg" data-k="music"></button></div>
-        <div class="set-row"><span class="l"><img src="${icon('play')}">${t('EFECTOS DE SONIDO')}</span><button class="toggle ${set.sfx ? 'on' : ''}" data-act="tg" data-k="sfx"></button></div>
+        ${this.volRow('music', icon('mode_frenzy'), 'MÚSICA')}
+        ${this.volRow('sfx', icon('play'), 'EFECTOS DE SONIDO')}
         <div class="set-row"><span class="l"><img src="${icon('hz_wind')}">${t('VIBRACIÓN')}</span><button class="toggle ${set.vibration ? 'on' : ''}" data-act="tg" data-k="vibration"></button></div>
         <div class="set-row"><span class="l"><img src="${icon('hz_dark')}">${t('MODO DALTÓNICO')}</span><button class="toggle ${set.colorblind ? 'on' : ''}" data-act="tg" data-k="colorblind"></button></div>
         <div class="set-row"><span class="l"><img src="${icon('hz_wind')}">${t('GRÁFICOS BAJOS')}</span><button class="toggle ${set.lowfx ? 'on' : ''}" data-act="tg" data-k="lowfx"></button></div>
@@ -837,6 +873,7 @@ export class UI {
         <div class="sec">${t('CUENTA')}</div>
         <button class="btn" style="width:100%;margin-top:.4rem" data-act="soon">${t('CONECTAR GOOGLE PLAY GAMES')}</button>
         <div class="btn-row" style="margin-top:.5rem"><button class="btn small" data-act="soon">${t('PRIVACIDAD')}</button><button class="btn small" data-act="soon">${t('SOPORTE')}</button></div>
+        <button class="btn" style="width:100%;margin-top:.5rem" data-act="credits">${t('CRÉDITOS')}</button>
         <div style="display:flex;flex-direction:column;align-items:center;margin-top:1rem;gap:.3rem"><img src="${url('ui/logo.png')}" style="width:5rem;opacity:.8"><span class="demo-note">${t('VERSIÓN')} ${CONFIG.version}${CONFIG.tester ? ' · TESTER' : ''}</span></div>
       </div></div></div>
       ${this.nav('settings')}
@@ -846,7 +883,7 @@ export class UI {
       loadcode: () => { const c = window.prompt(t('Pega tu código de guardado:')); if (c) { if (cloud.importCode(c)) { this.toast(t('Partida restaurada')); this.go('home'); } else this.toast(t('Código no válido')); } },
       lang: (b) => { setLang(b.dataset.l); set.lang = b.dataset.l; store.save(); this.go('settings'); },
       tutorial: () => this.startGame({ mode: 'story', level: tutorialLevel() }),
-      tg: (b) => { set[b.dataset.k] = !set[b.dataset.k]; b.classList.toggle('on', set[b.dataset.k]); if (b.dataset.k === 'lowfx') { document.body.classList.toggle('lowfx', set.lowfx); window.dispatchEvent(new Event('resize')); } store.save(); },
+      tg: (b) => { set[b.dataset.k] = !set[b.dataset.k]; b.classList.toggle('on', set[b.dataset.k]); const vr = e.querySelector(`[data-vk=${b.dataset.k}]`); if (vr) vr.classList.toggle('off', !set[b.dataset.k]); audio.applySettings(); if (b.dataset.k === 'lowfx') { document.body.classList.toggle('lowfx', set.lowfx); window.dispatchEvent(new Event('resize')); } store.save(); },
       ctl: (b) => { set.controls = b.dataset.v; e.querySelectorAll('[data-act=ctl]').forEach((x) => x.classList.toggle('on', x === b)); $(e, '#ctlinfo').textContent = t(CONTROL_INFO[set.controls]); store.save(); },
       coins: () => { store.addCoins(5000); this.toast(t('+{n} monedas', { n: fmt(5000) }), true); },
       wheel: () => { S.wheelDay = ''; store.save(); this.toast(t('Ruleta disponible')); },
@@ -855,7 +892,9 @@ export class UI {
         buttons: [['BORRAR', () => { store.reset(); this.go('home'); this.toast(t('Progreso borrado')); }, true], ['CANCELAR', null]],
       }),
       soon: () => this.toast(t('Disponible en la versión final')),
+      credits: () => this.credits(),
     });
+    this.wireVolume(e);
     return { el: e };
   }
 
@@ -1301,14 +1340,38 @@ export class UI {
     });
   }
 
+  // sound row: on/off switch plus a volume slider (music / effects)
+  volRow(k, ic, label) {
+    const set = this.S().settings;
+    const v = Math.round((set[k + 'Vol'] ?? (k === 'music' ? 0.8 : 0.9)) * 100);
+    return `<div class="set-row vol"><span class="l"><img src="${ic}">${t(label)}</span><button class="toggle ${set[k] ? 'on' : ''}" data-act="tg" data-k="${k}"></button></div>
+      <div class="vol-row ${set[k] ? '' : 'off'}" data-vk="${k}"><input type="range" min="0" max="100" step="5" value="${v}" data-vol="${k}" style="--v:${v}%" aria-label="${t(label)}"><b>${v}</b></div>`;
+  }
+
+  // live volume changes from the sliders of a settings panel
+  wireVolume(root) {
+    const set = this.S().settings;
+    root.querySelectorAll('input[data-vol]').forEach((inp) => {
+      const k = inp.dataset.vol;
+      inp.addEventListener('input', () => {
+        set[k + 'Vol'] = Number(inp.value) / 100;
+        inp.style.setProperty('--v', inp.value + '%');
+        inp.nextElementSibling.textContent = inp.value;
+        if (!set[k]) { set[k] = true; const tg = root.querySelector(`[data-act=tg][data-k=${k}]`); if (tg) tg.classList.add('on'); inp.parentElement.classList.remove('off'); }
+        audio.applySettings();
+      });
+      inp.addEventListener('change', () => { store.save(); if (k === 'sfx') audio.play('coin'); });
+    });
+  }
+
   // settings without leaving the game (audio, vibration, accessibility, controls)
   pauseSettings() {
     const set = this.S().settings;
     const row = (k, ic, label) => `<div class="set-row"><span class="l"><img src="${ic}">${t(label)}</span><button class="toggle ${set[k] ? 'on' : ''}" data-act="tg" data-k="${k}"></button></div>`;
     const o = this.overlay(`<div class="overlay dark"><div class="panel strong"><div class="inner pad" style="width:100%">
       ${ptitle(t('AJUSTES'), 3)}
-      ${row('music', icon('mode_frenzy'), 'MÚSICA')}
-      ${row('sfx', icon('play'), 'EFECTOS DE SONIDO')}
+      ${this.volRow('music', icon('mode_frenzy'), 'MÚSICA')}
+      ${this.volRow('sfx', icon('play'), 'EFECTOS DE SONIDO')}
       ${row('vibration', icon('hz_wind'), 'VIBRACIÓN')}
       ${row('colorblind', icon('hz_dark'), 'MODO DALTÓNICO')}
       ${row('lowfx', icon('hz_wind'), 'GRÁFICOS BAJOS')}
@@ -1321,6 +1384,7 @@ export class UI {
         set[b.dataset.k] = !set[b.dataset.k];
         b.classList.toggle('on', set[b.dataset.k]);
         if (b.dataset.k === 'lowfx') { document.body.classList.toggle('lowfx', set.lowfx); if (this.game) this.game.low = set.lowfx; }
+        const vr = o.querySelector(`[data-vk=${b.dataset.k}]`); if (vr) vr.classList.toggle('off', !set[b.dataset.k]);
         audio.applySettings();
         store.save();
       },
@@ -1332,6 +1396,7 @@ export class UI {
       },
       back: () => this.closeOverlay(o),
     });
+    this.wireVolume(o);
   }
 
   // arrows appear / disappear when the control scheme changes in the middle of a game
@@ -1373,7 +1438,10 @@ export class UI {
   exitGame() {
     const m = this.lastCfg && this.lastCfg.mode;
     this.game = null;
-    if (m === 'story') this.go('levels', { map: this.lastCfg.level.map });
+    // season levels live on their own map screen (map 17 is not in the story list)
+    if (m === 'story' && this.lastCfg.level.season) this.go('season');
+    else if (m === 'story' && this.lastCfg.level.tutorial) this.go('home');
+    else if (m === 'story') this.go('levels', { map: this.lastCfg.level.map });
     else if (m === 'duel') this.go('duel');
     else this.go('home');
   }

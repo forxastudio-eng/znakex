@@ -491,4 +491,11 @@ export const RU = {
   "Si chocas, vuelves al inicio": "Врежешься — вернешься на старт",
   "ESTRELLA": "ЗВЕЗДА",
   "Velocidad x2 e invencible": "Скорость x2 и неуязвимость",
+  "PRESENTA": "ПРЕДСТАВЛЯЕТ",
+  "CRÉDITOS": "АВТОРЫ",
+  "Un juego de": "Игра от",
+  "Diseño y dirección de arte": "Дизайн и арт-дирекшн",
+  "Desarrollo": "Разработка",
+  "Música y efectos": "Музыка и звуки",
+  "Fuentes": "Шрифты",
 };

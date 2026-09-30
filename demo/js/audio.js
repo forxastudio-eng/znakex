@@ -42,8 +42,9 @@ export function unlock() {
 export function applySettings() {
   if (!ctx) return;
   const s = settings();
-  sfxBus.gain.value = s.sfx === false ? 0 : 0.9;
-  musBus.gain.value = s.music === false ? 0 : (ducked ? 0.28 : 0.55);
+  const sv = s.sfxVol ?? 0.9, mv = s.musicVol ?? 0.8; // player volume sliders, 0..1
+  sfxBus.gain.value = s.sfx === false ? 0 : sv;
+  musBus.gain.value = s.music === false ? 0 : mv * (ducked ? 0.35 : 0.7);
 }
 
 async function load(name) {

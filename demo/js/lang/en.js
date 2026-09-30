@@ -491,4 +491,11 @@ export const EN = {
   "Si chocas, vuelves al inicio": "If you crash, you go back to the start",
   "ESTRELLA": "STAR",
   "Velocidad x2 e invencible": "Speed x2 and invincible",
+  "PRESENTA": "PRESENTS",
+  "CRÉDITOS": "CREDITS",
+  "Un juego de": "A game by",
+  "Diseño y dirección de arte": "Design and art direction",
+  "Desarrollo": "Development",
+  "Música y efectos": "Music and sound effects",
+  "Fuentes": "Fonts",
 };

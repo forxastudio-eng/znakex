@@ -491,4 +491,11 @@ export const PT = {
   "Si chocas, vuelves al inicio": "Se bater, você volta ao início",
   "ESTRELLA": "ESTRELA",
   "Velocidad x2 e invencible": "Velocidade x2 e invencível",
+  "PRESENTA": "APRESENTA",
+  "CRÉDITOS": "CRÉDITOS",
+  "Un juego de": "Um jogo de",
+  "Diseño y dirección de arte": "Design e direção de arte",
+  "Desarrollo": "Desenvolvimento",
+  "Música y efectos": "Música e efeitos",
+  "Fuentes": "Fontes",
 };
