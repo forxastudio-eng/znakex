@@ -11,8 +11,8 @@ OUT="$HERE/out"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-VERSION_NAME="1.0.1"
-VERSION_CODE="15"
+VERSION_NAME="1.0.2"
+VERSION_CODE="16"
 if [ "$MODE" = "tester" ]; then
   PACKAGE="com.forxastudio.znakex.tester"; LABEL="ZNAKEX Tester"; TESTER=true; APK="znakex-tester.apk"
 else
@@ -32,7 +32,8 @@ aapt package -f -m -J "$WORK/gen" -M "$WORK/AndroidManifest.xml" -S "$HERE/res" 
 javac -nowarn -Xlint:-options -source 8 -target 8 -bootclasspath "$ANDROID_JAR" -classpath "$ANDROID_JAR" \
   -d "$WORK/obj" $(find "$HERE/src" "$WORK/gen" -name '*.java')
 dalvik-exchange --dex --output="$WORK/classes.dex" "$WORK/obj"
-aapt package -f -M "$WORK/AndroidManifest.xml" -S "$HERE/res" -A "$WORK/assets" -I "$ANDROID_JAR" -F "$WORK/app.unaligned.apk"
+# videos stored uncompressed so the WebView can read byte ranges straight from the APK
+aapt package -f -0 mp4 -M "$WORK/AndroidManifest.xml" -S "$HERE/res" -A "$WORK/assets" -I "$ANDROID_JAR" -F "$WORK/app.unaligned.apk"
 (cd "$WORK" && aapt add -f app.unaligned.apk classes.dex > /dev/null)
 zipalign -f 4 "$WORK/app.unaligned.apk" "$WORK/app.aligned.apk"
 

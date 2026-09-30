@@ -42,6 +42,11 @@ const ptitle = (text, idx = 2, cls = '') => `<div class="ptitle p${idx} ${cls}">
 const fmtT = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 const $ = (root, sel) => root.querySelector(sel);
 
+// play() returns a promise that rejects when autoplay is blocked; the still stays in that case
+function playSafe(v) {
+  try { const p = v.play(); if (p && p.catch) p.catch(() => {}); } catch { /* not playable */ }
+}
+
 function el(html) {
   const t = document.createElement('template');
   t.innerHTML = html.trim();
@@ -74,17 +79,23 @@ export class UI {
     this.bgVideo({ menu: 'menu', title: 'inicio' }[kind]);
   }
 
-  // The title and menu art are animated loops (animated WebP over the still; off in low graphics mode).
+  // The title and menu screens play the original looping videos over their still (first frame),
+  // so nothing jumps while a video starts; if a video can't play, the still simply stays.
   bgVideo(name) {
     const bg = $(this.app, '#bg');
-    const old = $(bg, '.anim');
-    if (old && old.dataset.name === name) return;
-    if (old) { old.classList.remove('on'); setTimeout(() => old.remove(), 800); }
-    if (!name || this.S().settings.lowfx) return;
-    const a = el(`<img class="anim" alt="" data-name="${name}">`);
-    a.addEventListener('load', () => a.classList.add('on'), { once: true });
-    a.src = url(`brand/anim/${name}.webp`);
-    $(bg, '.bg-dim').before(a);
+    const old = $(bg, 'video');
+    if (old && old.dataset.name === name) { if (old.paused) playSafe(old); return; }
+    if (old) { old.classList.remove('on'); setTimeout(() => { old.pause(); old.remove(); }, 700); }
+    if (!name) return;
+    const v = document.createElement('video');
+    v.dataset.name = name;
+    v.muted = true; v.defaultMuted = true; v.loop = true; v.playsInline = true; v.autoplay = true;
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+    v.preload = 'auto';
+    v.addEventListener('playing', () => v.classList.add('on'));
+    v.src = url(`brand/video/${name}.mp4`);
+    $(bg, '.bg-dim').before(v);
+    playSafe(v);
   }
 
   // ------------------------------------------------------------ navigation
@@ -181,24 +192,23 @@ export class UI {
   // ------------------------------------------------------------ studio intro (GPUnlock)
   // Plays over the loading screen (the game keeps loading underneath); a tap skips it.
   studioIntro() {
-    const o = el(`<div class="studio-intro">
-      <img class="anim" alt="">
-      <div class="st-logo"><img alt="GPUnlock" src="${url('brand/logo/gpunlock_color.webp')}"><span class="st-word">GPUnlock</span></div>
-      <div class="st-sub">${t('PRESENTA')}</div>
-    </div>`);
-    const img = $(o, 'img');
-    if (img) img.addEventListener('load', () => o.classList.add('has-img'));
+    // GPUnlock's own reveal video, played once exactly as delivered (4 s); a tap skips it.
+    const o = el(`<div class="studio-intro"></div>`);
+    const v = document.createElement('video');
+    v.muted = true; v.defaultMuted = true; v.playsInline = true; v.autoplay = true; v.preload = 'auto';
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+    o.appendChild(v);
     this.app.appendChild(o);
     let gone = false;
-    const end = () => { if (gone) return; gone = true; o.classList.add('out'); setTimeout(() => o.remove(), 500); };
+    const end = () => { if (gone) return; gone = true; clearTimeout(timer); o.classList.add('out'); setTimeout(() => { v.pause(); o.remove(); }, 500); };
     o.addEventListener('pointerup', end);
-    // the brand reveal (4 s, animated WebP that plays once); in low graphics the logo animation shows instead
-    const a = $(o, '.anim');
-    let timer = setTimeout(end, 2600);
-    if (!this.S().settings.lowfx) {
-      a.addEventListener('load', () => { o.classList.add('has-video'); clearTimeout(timer); timer = setTimeout(end, 4300); }, { once: true });
-      a.src = url('brand/anim/gpunlock.webp');
-    }
+    // if the video never starts (no codec), don't hold the game; once it plays, it ends by itself
+    let timer = setTimeout(end, 2500);
+    v.addEventListener('playing', () => { v.classList.add('on'); clearTimeout(timer); timer = setTimeout(end, (v.duration || 4) * 1000 + 1500); }, { once: true });
+    v.addEventListener('ended', () => setTimeout(end, 150));
+    v.addEventListener('error', end);
+    v.src = url('brand/video/gpunlock.mp4');
+    playSafe(v);
   }
 
   // ------------------------------------------------------------ splash

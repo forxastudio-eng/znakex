@@ -131,34 +131,12 @@ def backgrounds():
 
 
 def videos():
-    """5 s loops: the last 0.6 s cross-fade into the start so the loop has no jump. 720p, no audio."""
-    d, T = 0.6, 5.0
+    """The title / menu loops and the GPUnlock intro are the original videos, copied untouched."""
+    import glob, shutil
+    os.makedirs(os.path.join(OUT, "video"), exist_ok=True)
     for n in ("menu", "inicio"):
-        ff("-i", os.path.join(SRC, n + ".mp4"), "-filter_complex",
-           f"[0:v]scale=720:1280,fps=24,split[a][b];[a]trim={d}:{T},setpts=PTS-STARTPTS,fps=24[x];"
-           f"[b]trim=0:{d},setpts=PTS-STARTPTS,fps=24[y];[x][y]xfade=transition=fade:duration={d}:offset={T - 2 * d:.2f},format=yuv420p[v]",
-           "-map", "[v]", "-an", "-c:v", "libx264", "-profile:v", "main", "-crf", "30", "-preset", "slow",
-           "-movflags", "+faststart", os.path.join(OUT, "video", n + ".mp4"))
-
-
-def drop_videos():
-    """the mp4s are only an intermediate step now: the game ships the animated WebPs"""
-    import shutil
-    shutil.rmtree(os.path.join(OUT, "video"), ignore_errors=True)
-
-
-def anims():
-    """The videos as animated WebP (15 fps, 720x1280): plain images that loop by themselves in any
-    WebView, with no video player, and can be checked frame by frame. The GPUnlock intro plays once."""
-    import glob, shutil, tempfile
-    for n, loop in (("menu", 0), ("inicio", 0), ("gpunlock", 1)):
-        tmp = tempfile.mkdtemp()
-        ff("-i", os.path.join(OUT, "video", n + ".mp4"), "-vf", "fps=15,scale=720:1280:flags=lanczos", os.path.join(tmp, "f%03d.png"))
-        ims = [Image.open(f).convert("RGB") for f in sorted(glob.glob(os.path.join(tmp, "*.png")))]
-        os.makedirs(os.path.join(OUT, "anim"), exist_ok=True)
-        ims[0].save(os.path.join(OUT, "anim", n + ".webp"), "WEBP", save_all=True, append_images=ims[1:],
-                    duration=67, loop=loop, quality=62, method=4)
-        shutil.rmtree(tmp)
+        shutil.copyfile(os.path.join(SRC, n + ".mp4"), os.path.join(OUT, "video", n + ".mp4"))
+    shutil.copyfile(glob.glob(os.path.join(ROOT, "gpunlock", "*.mp4"))[0], os.path.join(OUT, "video", "gpunlock.mp4"))
 
 
 def logos():
@@ -189,11 +167,8 @@ def launcher():
 
 
 def studio():
-    """GPUnlock intro video (720p, no audio) and logos for the intro fallback and the credits."""
+    """GPUnlock logos for the credits (the intro video is copied by videos())."""
     src = os.path.join(ROOT, "gpunlock")
-    vid = [f for f in os.listdir(src) if f.endswith(".mp4")][0]
-    ff("-i", os.path.join(src, vid), "-vf", "scale=720:1280,format=yuv420p", "-an", "-c:v", "libx264", "-profile:v", "main",
-       "-crf", "26", "-preset", "slow", "-movflags", "+faststart", os.path.join(OUT, "video", "gpunlock.mp4"))
     for out, f in (("gpunlock_color", "logo blanco.png"), ("gpunlock_wide", "Recurso 10.png")):
         save(trim(Image.open(os.path.join(src, f)).convert("RGBA")), f"logo/{out}.webp", maxdim=700, q=92)
 
@@ -211,6 +186,5 @@ if __name__ == "__main__":
             fh.write(f"export const PW_FILES = {json.dumps(['pw/' + n for n in names('pw')] + ['fx/' + n for n in names('fx')])};\n")
             fh.write(f"export const PLAQUES = {json.dumps(names('plaques'))};\n")
     if not sys.argv[1:]:
-        backgrounds(); videos(); logos(); launcher(); studio(); anims()
-        drop_videos()
+        backgrounds(); videos(); logos(); launcher(); studio()
         print("backgrounds, videos, logos, launcher icon: ok")

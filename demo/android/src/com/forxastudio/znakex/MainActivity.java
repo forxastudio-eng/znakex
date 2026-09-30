@@ -119,6 +119,8 @@ public class MainActivity extends Activity {
             if (path == null) return null;
             if (path.startsWith("/")) path = path.substring(1);
             try {
+                // video needs byte ranges: the media player buffers, loops and seeks with Range requests
+                if (path.endsWith(".mp4")) return media(path, request);
                 InputStream in = assets.open(path);
                 WebResourceResponse r = new WebResourceResponse(mime(path), mime(path).startsWith("text/") || path.endsWith(".js") ? "utf-8" : null, in);
                 java.util.Map<String, String> h = new java.util.HashMap<>();
@@ -129,6 +131,91 @@ public class MainActivity extends Activity {
             } catch (IOException e) {
                 return new WebResourceResponse("text/plain", "utf-8", 404, "Not Found", null, null);
             }
+        }
+
+        /** 200 with the whole file, or 206 with the requested byte range (videos are stored uncompressed). */
+        private WebResourceResponse media(String path, WebResourceRequest request) throws IOException {
+            long total;
+            try {
+                android.content.res.AssetFileDescriptor fd = assets.openFd(path);
+                total = fd.getLength();
+                fd.close();
+            } catch (IOException e) {
+                total = -1;
+            }
+            if (total < 0) {
+                InputStream c = assets.open(path);
+                long n = 0;
+                byte[] buf = new byte[65536];
+                int k;
+                while ((k = c.read(buf)) > 0) n += k;
+                c.close();
+                total = n;
+            }
+            long start = 0, end = total - 1;
+            boolean partial = false;
+            java.util.Map<String, String> req = request.getRequestHeaders();
+            String range = null;
+            if (req != null) for (java.util.Map.Entry<String, String> e : req.entrySet()) {
+                if ("range".equalsIgnoreCase(e.getKey())) range = e.getValue();
+            }
+            if (range != null && range.startsWith("bytes=")) {
+                String[] se = range.substring(6).split(",")[0].trim().split("-", -1);
+                try {
+                    if (se[0].isEmpty()) {
+                        start = Math.max(0, total - Long.parseLong(se[1].trim()));
+                    } else {
+                        start = Long.parseLong(se[0].trim());
+                        if (se.length > 1 && !se[1].trim().isEmpty()) end = Math.min(total - 1, Long.parseLong(se[1].trim()));
+                    }
+                    partial = true; // any Range request is answered with 206, as the media player expects
+                } catch (NumberFormatException ignored) {
+                    start = 0;
+                    end = total - 1;
+                }
+            }
+            if (start > end || start >= total) {
+                java.util.Map<String, String> h = new java.util.HashMap<>();
+                h.put("Content-Range", "bytes */" + total);
+                return new WebResourceResponse("video/mp4", null, 416, "Range Not Satisfiable", h, new java.io.ByteArrayInputStream(new byte[0]));
+            }
+            InputStream in = assets.open(path);
+            long skip = start;
+            while (skip > 0) {
+                long s2 = in.skip(skip);
+                if (s2 <= 0) break;
+                skip -= s2;
+            }
+            final long len = end - start + 1;
+            InputStream body = new java.io.FilterInputStream(in) {
+                long left = len;
+
+                @Override
+                public int read() throws IOException {
+                    if (left <= 0) return -1;
+                    int b = super.read();
+                    if (b >= 0) left--;
+                    return b;
+                }
+
+                @Override
+                public int read(byte[] b, int off, int n) throws IOException {
+                    if (left <= 0) return -1;
+                    int r = super.read(b, off, (int) Math.min(n, left));
+                    if (r > 0) left -= r;
+                    return r;
+                }
+            };
+            java.util.Map<String, String> h = new java.util.HashMap<>();
+            h.put("Access-Control-Allow-Origin", "*");
+            h.put("Accept-Ranges", "bytes");
+            h.put("Content-Length", String.valueOf(len));
+            h.put("Cache-Control", "no-cache");
+            if (partial) {
+                h.put("Content-Range", "bytes " + start + "-" + end + "/" + total);
+                return new WebResourceResponse("video/mp4", null, 206, "Partial Content", h, body);
+            }
+            return new WebResourceResponse("video/mp4", null, 200, "OK", h, body);
         }
 
         @Override
@@ -143,6 +230,9 @@ public class MainActivity extends Activity {
             if (p.endsWith(".css")) return "text/css";
             if (p.endsWith(".png")) return "image/png";
             if (p.endsWith(".jpg") || p.endsWith(".jpeg")) return "image/jpeg";
+            if (p.endsWith(".webp")) return "image/webp";
+            if (p.endsWith(".mp4")) return "video/mp4";
+            if (p.endsWith(".wav")) return "audio/wav";
             if (p.endsWith(".woff2")) return "font/woff2";
             if (p.endsWith(".json")) return "application/json";
             if (p.endsWith(".svg")) return "image/svg+xml";

@@ -110,6 +110,8 @@ setupInput(app, ui, view);
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) ui.pause();
+  // Android pauses the background videos when the app goes to the background: resume them on return
+  else document.querySelectorAll('#bg video, .studio-intro video').forEach((v) => { if (v.paused) { const p = v.play(); if (p && p.catch) p.catch(() => {}); } });
 });
 
 // Expose for quick debugging in the console.
