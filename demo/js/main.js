@@ -4,6 +4,7 @@ import { loadAll } from './assets.js';
 import { UI } from './ui.js';
 import { Ambient } from './fx.js';
 import { TIPS } from './data.js';
+import { t, setLang, detectLang } from './i18n.js';
 import { setupInput } from './input.js';
 import * as audio from './audio.js';
 
@@ -30,6 +31,8 @@ function resize() {
 }
 
 store.load();
+// language: ?lang= (testing), the one chosen in the settings, or the phone's own
+setLang(new URLSearchParams(location.search).get('lang') || store.S().settings.lang || detectLang());
 document.body.classList.toggle('lowfx', !!store.S().settings.lowfx);
 const ui = new UI(app, view);
 window.addEventListener('resize', resize);
@@ -40,7 +43,7 @@ ui.go('splash');
 let tip = 0;
 const tipTimer = setInterval(() => {
   const n = document.getElementById('ldtip');
-  if (n) n.textContent = TIPS[++tip % TIPS.length];
+  if (n) n.textContent = t(TIPS[++tip % TIPS.length]);
 }, 2600);
 
 const t0 = performance.now();

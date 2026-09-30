@@ -13,6 +13,7 @@ import { fmt, TAU, ease, clamp, rand } from './util.js';
 import { Game } from './game.js';
 import { CONFIG } from './config.js';
 import { CONTROL_INFO } from './input.js';
+import { t, tn, LANGS, getLang, setLang } from './i18n.js';
 
 const icon = (n) => url(`ui/icons/${n}.png`);
 const kit = (n) => url(`ui/v3/${n}.png`);
@@ -42,8 +43,8 @@ export class UI {
     this.game = null;
     this.timers = [];
     document.addEventListener('coins', () => this.refreshCoins(true));
-    document.addEventListener('achievement', (e) => e.detail.forEach((a, i) => setTimeout(() => this.toast(`<img src="${kit('medal_gold')}" style="height:1.6rem;vertical-align:-.4rem;margin-right:.4rem">LOGRO · ${a.name.toUpperCase()}`), i * 2000)));
-    document.addEventListener('mission', (e) => this.toast(`<img src="${kit('check_box')}" style="height:1.5rem;vertical-align:-.35rem;margin-right:.4rem">MISIÓN LISTA · ${e.detail.text}`));
+    document.addEventListener('achievement', (e) => e.detail.forEach((a, i) => setTimeout(() => this.toast(`<img src="${kit('medal_gold')}" style="height:1.6rem;vertical-align:-.4rem;margin-right:.4rem">${t('LOGRO')} · ${t(a.name).toUpperCase()}`, true), i * 2000)));
+    document.addEventListener('mission', (e) => this.toast(`<img src="${kit('check_box')}" style="height:1.5rem;vertical-align:-.35rem;margin-right:.4rem">${t('MISIÓN LISTA')} · ${meta.missionText(e.detail)}`, true));
   }
 
   S() { return store.S(); }
@@ -93,14 +94,14 @@ export class UI {
 
   topbar(title, back = 'home') {
     return `<div class="topbar">
-      <button class="icon-btn" data-act="back" data-to="${back}"><img src="${icon('back')}" alt="Atrás"></button>
+      <button class="icon-btn" data-act="back" data-to="${back}"><img src="${icon('back')}" alt=""></button>
       <div class="title t-display worn">${title}</div>
       ${this.coinPill()}
     </div>`;
   }
 
   nav(active) {
-    const items = [['modes', 'modes', 'MODOS'], ['maps', 'maps', 'MAPAS'], ['home', 'home', 'INICIO'], ['skins', 'skins', 'SKINS'], ['settings', 'settings', 'AJUSTES']];
+    const items = [['modes', 'modes', t('MODOS')], ['maps', 'maps', t('MAPAS')], ['home', 'home', t('INICIO')], ['skins', 'skins', t('SKINS')], ['settings', 'settings', t('AJUSTES')]];
     return `<nav class="nav">${items.map(([k, ic, l]) => `<button data-act="nav" data-to="${k}" class="${k === active ? 'on' : ''}"><img src="${icon(ic)}" alt="">${l}</button>`).join('')}</nav>`;
   }
 
@@ -117,8 +118,8 @@ export class UI {
     });
   }
 
-  toast(msg) {
-    if (/moneda|Cofre|Skin|Pase/i.test(msg) && !/insuf/i.test(msg)) audio.play('reward_chime', { vol: 0.8 });
+  toast(msg, reward = false) {
+    if (reward) audio.play('reward_chime', { vol: 0.8 });
     const t = el(`<div class="toast">${msg}</div>`);
     this.app.appendChild(t);
     setTimeout(() => t.remove(), 1900);
@@ -130,9 +131,9 @@ export class UI {
     const e = el(`<section>
       <div class="splash-bottom">
         <div class="panel" style="width:100%"><div class="inner pad" style="display:flex;flex-direction:column;align-items:center;gap:.6rem">
-          <div class="t-label" id="ldt">CARGANDO...</div>
+          <div class="t-label" id="ldt">${t('CARGANDO...')}</div>
           <div class="loadbar"><i id="ldb"></i></div>
-          <div class="demo-note" id="ldtip">${TIPS[0]}</div>
+          <div class="demo-note" id="ldtip">${t(TIPS[0])}</div>
         </div></div>
       </div>
     </section>`);
@@ -140,7 +141,7 @@ export class UI {
       el: e,
       progress: (p) => { $(e, '#ldb').style.width = Math.round(p * 100) + '%'; },
       ready: (onTap) => {
-        $(e, '#ldt').outerHTML = '<div class="tap">TOCA PARA JUGAR</div>';
+        $(e, '#ldt').outerHTML = `<div class="tap">${t('TOCA PARA JUGAR')}</div>`;
         $(e, '#ldb').parentElement.style.display = 'none';
         e.addEventListener('pointerup', onTap, { once: true });
       },
@@ -156,15 +157,15 @@ export class UI {
     const e = el(`<section>
       <div class="topbar">
         <button class="avatar" data-act="nav" data-to="skins"><img src="${url('skins/' + S.equipped + '.jpg')}" alt=""></button>
-        ${CONFIG.tester ? '<span class="rarity" style="background:var(--amber)">MODO TESTER</span>' : ''}
+        ${CONFIG.tester ? `<span class="rarity" style="background:var(--amber)">${t('MODO TESTER')}</span>` : ''}
         ${this.coinPill()}
       </div>
       <div class="home-mid stagger">
         <div class="home-tools" ${stag(0)}>
-          <button class="tool" data-act="missions"><img src="${kit('scroll_daily')}" alt=""><span>MISIONES</span>${meta.claimableMissions() ? '<i class="dot"></i>' : ''}</button>
-          <button class="tool" data-act="streak"><img src="${kit('flame')}" alt=""><span>RACHA</span>${meta.streakState().claimedToday ? '' : '<i class="dot"></i>'}</button>
-          <button class="tool" data-act="season"><img src="${kit('rosette')}" alt=""><span>TEMPORADA</span>${meta.seasonActive() ? '<i class="dot"></i>' : ''}</button>
-          <button class="tool" data-act="ach"><img src="${kit('medal_gold')}" alt=""><span>LOGROS</span></button>
+          <button class="tool" data-act="missions"><img src="${kit('scroll_daily')}" alt=""><span>${t('MISIONES')}</span>${meta.claimableMissions() ? '<i class="dot"></i>' : ''}</button>
+          <button class="tool" data-act="streak"><img src="${kit('flame')}" alt=""><span>${t('RACHA')}</span>${meta.streakState().claimedToday ? '' : '<i class="dot"></i>'}</button>
+          <button class="tool" data-act="season"><img src="${kit('rosette')}" alt=""><span>${t('TEMPORADA')}</span>${meta.seasonActive() ? '<i class="dot"></i>' : ''}</button>
+          <button class="tool" data-act="ach"><img src="${kit('medal_gold')}" alt=""><span>${t('LOGROS')}</span></button>
         </div>
         <div class="mode-sel" ${stag(0)}>
           <button class="arrow" data-act="mode" data-d="-1">‹</button>
@@ -172,9 +173,9 @@ export class UI {
           <button class="arrow" data-act="mode" data-d="1">›</button>
         </div>
         <div class="home-row" ${stag(1)}>
-          <button class="icon-btn" data-act="wheel"><img src="${icon('mode_spin')}" alt=""><span class="lbl">RULETA</span>${wheelReady ? '<i class="dot"></i>' : ''}</button>
-          <button class="btn-primary" data-act="play"><span class="worn">JUGAR</span><i class="tri"></i></button>
-          <button class="icon-btn" data-act="shop"><img src="${icon('shop')}" alt=""><span class="lbl">TIENDA</span></button>
+          <button class="icon-btn" data-act="wheel"><img src="${icon('mode_spin')}" alt=""><span class="lbl">${t('RULETA')}</span>${wheelReady ? '<i class="dot"></i>' : ''}</button>
+          <button class="btn-primary" data-act="play"><span class="worn">${t('JUGAR')}</span><i class="tri"></i></button>
+          <button class="icon-btn" data-act="shop"><img src="${icon('shop')}" alt=""><span class="lbl">${t('TIENDA')}</span></button>
         </div>
         <div style="height:.6rem"></div>
       </div>
@@ -183,11 +184,11 @@ export class UI {
     let idx = modeIdx;
     const paint = () => {
       const m = MODES[idx];
-      $(e, '#mn').textContent = m.name;
+      $(e, '#mn').textContent = t(m.name);
       const cs = store.currentStory();
-      $(e, '#ms').textContent = m.id === 'story' ? `MAPA ${ROMAN[cs.map - 1]} · NIVEL ${cs.level} · ${DIFFS[S.diff].label}`
-        : m.id === 'classic' ? `RÉCORD ${fmt(S.best.classic)}`
-          : m.id === 'frenzy' ? `RÉCORD ${fmt(S.best.frenzy)}` : 'FÁCIL · MEDIO · DIFÍCIL';
+      $(e, '#ms').textContent = m.id === 'story' ? `${t('MAPA')} ${ROMAN[cs.map - 1]} · ${t('NIVEL')} ${cs.level} · ${t(DIFFS[S.diff].label)}`
+        : m.id === 'classic' ? `${t('RÉCORD')} ${fmt(S.best.classic)}`
+          : m.id === 'frenzy' ? `${t('RÉCORD')} ${fmt(S.best.frenzy)}` : `${t('FÁCIL')} · ${t('MEDIO')} · ${t('DIFÍCIL')}`;
       S.mode = m.id;
       store.save();
     };
@@ -221,16 +222,15 @@ export class UI {
   scr_modes() {
     this.setBg('deep');
     const S = this.S();
-    const rec = { story: `PROGRESO ${store.totalCleared()}/160`, classic: `RÉCORD ${fmt(S.best.classic)}`, frenzy: `RÉCORD ${fmt(S.best.frenzy)}`, duel: 'RIVALES: 3' };
+    const rec = { story: `${t('PROGRESO')} ${store.totalCleared()}/160`, classic: `${t('RÉCORD')} ${fmt(S.best.classic)}`, frenzy: `${t('RÉCORD')} ${fmt(S.best.frenzy)}`, duel: t('RIVALES: 3') };
     const e = el(`<section>
-      ${this.topbar('MODOS')}
+      ${this.topbar(t('MODOS'))}
       <div class="scroll stagger">
         ${MODES.map((m, i) => `<button class="mode-card btn ${S.mode === m.id ? 'sel' : ''}" data-act="pick" data-id="${m.id}" ${stag(i)}>
           <div class="thumb" style="background-image:url(${url(m.img)})"></div>
-          <div><div class="nm worn"><img src="${icon(m.icon)}" alt="">${m.name}</div>
-          <div class="ds">${m.desc}</div><div class="sb">${m.sub}</div><div class="rec glow-amber">${rec[m.id]}</div></div>
+          <div><div class="nm worn"><img src="${icon(m.icon)}" alt="">${t(m.name)}</div>
+          <div class="ds">${t(m.desc)}</div><div class="sb">${t(m.sub)}</div><div class="rec glow-amber">${rec[m.id]}</div></div>
         </button>`).join('')}
-        <div class="demo-note">DEMO: todos los modos están desbloqueados para probarlos.</div>
       </div>
       ${this.nav('modes')}
     </section>`);
@@ -248,9 +248,9 @@ export class UI {
   scr_maps() {
     this.setBg('deep');
     const e = el(`<section>
-      ${this.topbar('MAPAS')}
+      ${this.topbar(t('MAPAS'))}
       ${this.diffBar(this.S().diff)}
-      <div class="t-label dim" style="text-align:center;font-size:.9rem;margin:.2rem 0 .5rem">NIVELES ${store.totalCleared()}/160${CONFIG.tester ? ' · MODO TESTER' : ''}</div>
+      <div class="t-label dim" style="text-align:center;font-size:.9rem;margin:.2rem 0 .5rem">${t('NIVELES')} ${store.totalCleared()}/160${CONFIG.tester ? ' · ' + t('MODO TESTER') : ''}</div>
       <div class="scroll stagger">
         ${MAPS.map((m, i) => {
           const open = store.mapUnlocked(m.id);
@@ -259,8 +259,8 @@ export class UI {
           <img class="hz" src="${icon(m.hazard)}" alt="">
           ${open ? '' : `<div class="lock"><img src="${icon('lock')}" alt=""></div>`}
           <div class="info"><div><div class="nm worn">${ROMAN[i]} · ${m.name}</div>
-            ${open ? `<div class="dots">${Array.from({ length: 10 }, (_, k) => `<i class="${k < cl ? 'on' : ''}"></i>`).join('')}</div>` : `<div class="t-label dim" style="font-size:.8rem">SUPERA EL MAPA ${ROMAN[i - 1]}</div>`}
-          </div>${open ? `<span class="btn small">${cl >= 10 ? 'REPETIR' : cl ? 'SEGUIR' : 'JUGAR'}</span>` : ''}</div>
+            ${open ? `<div class="dots">${Array.from({ length: 10 }, (_, k) => `<i class="${k < cl ? 'on' : ''}"></i>`).join('')}</div>` : `<div class="t-label dim" style="font-size:.8rem">${t('SUPERA EL MAPA {m}', { m: ROMAN[i - 1] })}</div>`}
+          </div>${open ? `<span class="btn small">${t(cl >= 10 ? 'REPETIR' : cl ? 'SEGUIR' : 'JUGAR')}</span>` : ''}</div>
         </button>`;
         }).join('')}
       </div>
@@ -269,14 +269,14 @@ export class UI {
     this.wire(e, {
       dif: (b) => { this.S().diff = b.dataset.d; store.save(); this.go('maps'); },
       open: (b) => this.go('levels', { map: Number(b.dataset.map) }),
-      locked: () => this.toast('Completa los 10 niveles del mapa anterior'),
+      locked: () => this.toast(t('Completa los 10 niveles del mapa anterior')),
     });
     return { el: e };
   }
 
   // ------------------------------------------------------------ level select
   diffBar(active) {
-    return `<div class="diffbar">${Object.values(DIFFS).map((d) => `<button class="dchip ${d.id === active ? 'on' : ''}" data-act="dif" data-d="${d.id}" style="--dc:${d.color}">${d.label}</button>`).join('')}</div>`;
+    return `<div class="diffbar">${Object.values(DIFFS).map((d) => `<button class="dchip ${d.id === active ? 'on' : ''}" data-act="dif" data-d="${d.id}" style="--dc:${d.color}">${t(d.label)}</button>`).join('')}</div>`;
   }
 
   scr_levels({ map = 1, sel }) {
@@ -312,12 +312,12 @@ export class UI {
       const locked = selected > open;
       $(e, '#lp').innerHTML = `<div class="inner level-panel">
         <div>
-          <div class="t-display worn" style="font-size:2.1rem">${selected === 10 ? 'GUARDIÁN · ' : ''}NIVEL ${map}-${selected}</div>
-          <div class="obj"><img src="${icon('orb_red')}" alt="">RECOGE ${L.target} ORBES <span class="dtag" style="--dc:${DIFFS[dif].color}">${DIFFS[dif].label}</span></div>
-          <div class="obj dim"><img src="${icon('coin')}" alt="">${selected <= cl ? `REPETIR: +${ECONOMY.replayReward}` : `RECOMPENSA: +${L.reward}`}</div>
-          <div class="obj dim"><img src="${kit('star_gold')}" alt="">★★★: SIN MORIR Y EN MENOS DE ${fmtT(Math.round((L.target * 12) / L.speed))}</div>
+          <div class="t-display worn" style="font-size:2.1rem">${selected === 10 ? t('GUARDIÁN') + ' · ' : ''}${t('NIVEL')} ${map}-${selected}</div>
+          <div class="obj"><img src="${icon('orb_red')}" alt="">${t('RECOGE {n} ORBES', { n: L.target })} <span class="dtag" style="--dc:${DIFFS[dif].color}">${t(DIFFS[dif].label)}</span></div>
+          <div class="obj dim"><img src="${icon('coin')}" alt="">${selected <= cl ? `${t('REPETIR')}: +${ECONOMY.replayReward}` : `${t('RECOMPENSA')}: +${L.reward}`}</div>
+          <div class="obj dim"><img src="${kit('star_gold')}" alt="">★★★: ${t('SIN MORIR Y EN MENOS DE {t}', { t: fmtT(Math.round((L.target * 12) / L.speed)) })}</div>
         </div>
-        <button class="btn-primary" data-act="play" style="min-height:4rem;font-size:2.1rem;padding:0 1.4rem" ${locked ? 'disabled' : ''}>${locked ? '<img src="' + icon('lock') + '" style="width:2rem;border-radius:.2rem">' : '<span class="worn">JUGAR</span>'}</button>
+        <button class="btn-primary" data-act="play" style="min-height:4rem;font-size:2.1rem;padding:0 1.4rem" ${locked ? 'disabled' : ''}>${locked ? '<img src="' + icon('lock') + '" style="width:2rem;border-radius:.2rem">' : `<span class="worn">${t('JUGAR')}</span>`}</button>
       </div>`;
     };
     paint();
@@ -328,7 +328,7 @@ export class UI {
         this.go('levels', { map });
       },
       play: () => {
-        if (selected > open) return this.toast('Supera el nivel anterior para desbloquearlo');
+        if (selected > open) return this.toast(t('Supera el nivel anterior para desbloquearlo'));
         this.startGame({ mode: 'story', level: storyLevel(map, selected, dif) });
       },
     });
@@ -343,21 +343,21 @@ export class UI {
     let diff = 'hard';
     const keys = ['easy', 'medium', 'hard'];
     const e = el(`<section>
-      ${this.topbar('DUELO', 'modes')}
+      ${this.topbar(t('DUELO'), 'modes')}
       <div class="scroll stagger">
         ${keys.map((k, i) => {
           const b = BOTS[k];
           return `<button class="mode-card btn ${k === diff ? 'sel' : ''}" data-act="diff" data-k="${k}" ${stag(i)}>
             <canvas class="thumb" data-bot="${k}" width="220" height="220" style="background:radial-gradient(circle, rgba(60,50,40,.6), rgba(10,12,10,.8))"></canvas>
-            <div><div class="nm worn">${b.label} · ${b.name}</div>
-            <div class="ds">PRIMERO A ${b.target} ORBES</div>
-            <div class="sb">${k === 'easy' ? 'Lento y despistado.' : k === 'medium' ? 'Va directo a por los orbes.' : 'Usa orbes dorados y te corta el paso.'}</div>
-            <div class="rec glow-amber"><img src="${icon('coin')}" style="width:1rem;vertical-align:-.15rem;border-radius:50%"> +${ECONOMY.duelReward[k]} POR VICTORIA</div></div>
+            <div><div class="nm worn">${t(b.label)} · ${b.name}</div>
+            <div class="ds">${t('PRIMERO A {n} ORBES', { n: b.target })}</div>
+            <div class="sb">${t(k === 'easy' ? 'Lento y despistado.' : k === 'medium' ? 'Va directo a por los orbes.' : 'Usa orbes dorados y te corta el paso.')}</div>
+            <div class="rec glow-amber"><img src="${icon('coin')}" style="width:1rem;vertical-align:-.15rem;border-radius:50%"> +${ECONOMY.duelReward[k]} ${t('POR VICTORIA')}</div></div>
           </button>`;
         }).join('')}
-        <div class="demo-note">VICTORIAS PAGADAS HOY: ${wins}/${ECONOMY.duelPaidWinsPerDay}</div>
+        <div class="demo-note">${t('VICTORIAS PAGADAS HOY')}: ${wins}/${ECONOMY.duelPaidWinsPerDay}</div>
       </div>
-      <button class="btn-primary" data-act="fight" style="margin:.4rem 0 .8rem"><span class="worn">LUCHAR</span><i class="tri"></i></button>
+      <button class="btn-primary" data-act="fight" style="margin:.4rem 0 .8rem"><span class="worn">${t('LUCHAR')}</span><i class="tri"></i></button>
     </section>`);
     // static coiled previews of each rival
     e.querySelectorAll('canvas[data-bot]').forEach((c) => {
@@ -382,7 +382,7 @@ export class UI {
     let sel = S.equipped;
     let cat = 'all';
     const e = el(`<section>
-      ${this.topbar('SKINS')}
+      ${this.topbar(t('SKINS'))}
       <div class="skin-stage"><canvas id="stage"></canvas></div>
       <div class="skin-name" id="sn"></div>
       <div class="scroll" style="margin-top:.4rem">
@@ -395,7 +395,7 @@ export class UI {
     </section>`);
     const grid = $(e, '#grid');
     const paintGrid = () => {
-      $(e, '#col').textContent = `COLECCIÓN ${S.owned.length}/${SKINS.length}`;
+      $(e, '#col').textContent = `${t('COLECCIÓN')} ${S.owned.length}/${SKINS.length}`;
       const card = (s, i) => {
         const own = S.owned.includes(s.id);
         const rc = RARITY[s.rarity].color;
@@ -403,16 +403,16 @@ export class UI {
           <div class="ptw r-${s.rarity}"><img class="pt" src="${url('skins/' + s.id + '.jpg')}" alt="">${frameImg(s.rarity)}</div>
           ${own ? '' : `<img class="lk" src="${icon('lock')}" alt="">`}
           ${S.equipped === s.id ? `<img class="eq" src="${icon('check')}" alt="">` : ''}
-          <span class="rl" style="background:${rc}">${RARITY[s.rarity].label}</span>
-          <div class="foot">${own ? (S.equipped === s.id ? 'EQUIPADA' : 'TUYA') : s.season ? 'TEMPORADA' : `<img src="${icon('coin')}" alt="">${fmt(skinPrice(s))}`}</div>
+          <span class="rl" style="background:${rc}">${t(RARITY[s.rarity].label)}</span>
+          <div class="foot">${s.short}</div>
         </button>`;
       };
       // quality categories: básicas, normales, especiales, míticas, legendarias and season skins
       const groups = [
-        ['basic', 'BÁSICAS', '#C9D2B4', SKINS.filter((s) => s.basic)],
-        ...['normal', 'especial', 'mitico', 'legendario', 'temporada'].map((r) => [r, { normal: 'NORMALES', especial: 'ESPECIALES', mitico: 'MÍTICAS', legendario: 'LEGENDARIAS', temporada: 'TEMPORADA' }[r], RARITY[r].color, SKINS.filter((s) => !s.basic && s.rarity === r)]),
+        ['basic', t('BÁSICAS'), '#C9D2B4', SKINS.filter((s) => s.basic)],
+        ...['normal', 'especial', 'mitico', 'legendario', 'temporada'].map((r) => [r, t({ normal: 'NORMALES', especial: 'ESPECIALES', mitico: 'MÍTICAS', legendario: 'LEGENDARIAS', temporada: 'TEMPORADA' }[r]), RARITY[r].color, SKINS.filter((s) => !s.basic && s.rarity === r)]),
       ].filter((gr) => gr[3].length);
-      const tabs = `<div class="cat-tabs">${[['all', 'TODAS', '#E8E2C8'], ...groups.map(([k, l, c]) => [k, l, c])].map(([k, l, c]) =>
+      const tabs = `<div class="cat-tabs">${[['all', t('TODAS'), '#E8E2C8'], ...groups.map(([k, l, c]) => [k, l, c])].map(([k, l, c]) =>
         `<button class="cat ${cat === k ? 'on' : ''}" data-act="cat" data-cat="${k}" style="--cc:${c}">${l}</button>`).join('')}</div>`;
       let html = '', n = 0;
       for (const [k, l, c, list] of groups) {
@@ -426,20 +426,20 @@ export class UI {
     const paintInfo = () => {
       const s = skinById(sel);
       const R = RARITY[s.rarity];
-      $(e, '#sn').innerHTML = `<div class="t-display worn" style="font-size:2.3rem">${s.name.toUpperCase()}</div>
-        <span class="rarity" style="background:${R.color}">${R.label}</span>
-        <div class="dim" style="font-size:.9rem;margin-top:.3rem;padding:0 1rem">${s.desc}</div>`;
+      $(e, '#sn').innerHTML = `<div class="t-display worn" style="font-size:2.3rem">${t(s.name).toUpperCase()}</div>
+        <span class="rarity" style="background:${R.color}">${t(R.label)}</span>
+        <div class="dim" style="font-size:.9rem;margin-top:.3rem;padding:0 1rem">${t(s.desc)}</div>`;
       const own = S.owned.includes(s.id);
       const price = skinPrice(s);
       let html;
-      if (own && S.equipped === s.id) html = `<button class="btn" style="width:100%" disabled>EQUIPADA</button>`;
-      else if (own) html = `<button class="btn-primary" data-act="equip" style="width:100%;min-height:4rem;font-size:2.1rem"><span class="worn">EQUIPAR</span></button>`;
-      else if (s.season) html = `<button class="btn" data-act="toseason" style="width:100%">SE DESBLOQUEA EN LA TEMPORADA</button>`;
+      if (own && S.equipped === s.id) html = `<button class="btn" style="width:100%" disabled>${t('EQUIPADA')}</button>`;
+      else if (own) html = `<button class="btn-primary" data-act="equip" style="width:100%;min-height:4rem;font-size:2.1rem"><span class="worn">${t('EQUIPAR')}</span></button>`;
+      else if (s.season) html = `<button class="btn" data-act="toseason" style="width:100%">${t('SE DESBLOQUEA EN LA TEMPORADA')}</button>`;
       else {
         const pct = Math.min(100, (S.coins / price) * 100);
         html = `<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.45rem"><div class="progress" style="flex:1"><i style="width:${pct}%"></i></div><span class="t-label" style="font-size:.85rem">${fmt(S.coins)} / ${fmt(price)}</span></div>
           <div class="btn-row"><button class="btn-primary" data-act="buy" style="flex:1.4;min-height:3.8rem;font-size:1.8rem"><img src="${icon('coin')}" style="width:1.9rem;border-radius:50%"><span>${fmt(price)}</span></button>
-          <button class="btn" data-act="shop">MONEDAS</button></div>`;
+          <button class="btn" data-act="shop">${t('MONEDAS')}</button></div>`;
       }
       $(e, '#act').innerHTML = html;
     };
@@ -493,20 +493,20 @@ export class UI {
       toseason: () => this.go('season'),
       cat: (b) => { cat = b.dataset.cat; paintGrid(); },
       sk: (b) => { sel = b.dataset.id; ensureSkin(sel); grid.querySelectorAll('.skin-card').forEach((c) => c.classList.toggle('sel', c.dataset.id === sel)); paintInfo(); },
-      equip: () => { S.equipped = sel; store.save(); paintGrid(); paintInfo(); this.toast('¡Skin equipada!'); },
+      equip: () => { S.equipped = sel; store.save(); paintGrid(); paintInfo(); this.toast(t('¡Skin equipada!')); },
       buy: () => {
         const s = skinById(sel);
         const price = skinPrice(s);
         if (S.coins < price) {
           return this.popup({
             title: 'MONEDAS INSUFICIENTES', icon: 'coins',
-            text: `Te faltan <b>${fmt(price - S.coins)}</b> monedas para ${s.name}.`,
+            text: t('Te faltan <b>{n}</b> monedas para {s}.', { n: fmt(price - S.coins), s: t(s.name) }),
             buttons: [['CONSEGUIR MONEDAS', () => this.go('shop', { back: 'skins' }), true], ['LUEGO', null]],
           });
         }
         this.popup({
           title: '¿COMPRAR SKIN?', img: url('skins/' + s.id + '.jpg'),
-          text: `${s.name} · <span style="color:${RARITY[s.rarity].color}">${RARITY[s.rarity].label}</span><br><b>${fmt(price)}</b> monedas`,
+          text: `${t(s.name)} · <span style="color:${RARITY[s.rarity].color}">${t(RARITY[s.rarity].label)}</span><br>${t('<b>{n}</b> monedas', { n: fmt(price) })}`,
           buttons: [['COMPRAR', () => {
             store.spend(price);
             S.owned.push(s.id);
@@ -524,11 +524,11 @@ export class UI {
   celebrate(s) {
     const o = this.overlay(`<div class="overlay dark">
       <div class="panel strong"><div class="inner">
-        <div class="t-label glow-amber">¡SKIN DESBLOQUEADA!</div>
+        <div class="t-label glow-amber">${t('¡SKIN DESBLOQUEADA!')}</div>
         <div class="ptw big r-${s.rarity}" style="box-shadow:0 0 2rem ${RARITY[s.rarity].color};animation:pop .6s var(--ease) both"><img class="pt" src="${url('skins/' + s.id + '.jpg')}" alt="">${frameImg(s.rarity)}</div>
-        <div class="ov-title worn">${s.name.toUpperCase()}</div>
-        <span class="rarity" style="background:${RARITY[s.rarity].color}">${RARITY[s.rarity].label}</span>
-        <button class="btn-primary" data-act="ok" style="width:100%"><span class="worn">GENIAL</span></button>
+        <div class="ov-title worn">${t(s.name).toUpperCase()}</div>
+        <span class="rarity" style="background:${RARITY[s.rarity].color}">${t(RARITY[s.rarity].label)}</span>
+        <button class="btn-primary" data-act="ok" style="width:100%"><span class="worn">${t('GENIAL')}</span></button>
       </div></div></div>`);
     this.wire(o, { ok: () => this.closeOverlay(o) });
   }
@@ -539,8 +539,8 @@ export class UI {
     this.setBg('deep');
     let tab = 'daily';
     const e = el(`<section>
-      ${this.topbar('MISIONES')}
-      <div class="tabs"><button class="tab on" data-act="tab" data-t="daily">DIARIAS</button><button class="tab" data-act="tab" data-t="weekly">SEMANALES</button></div>
+      ${this.topbar(t('MISIONES'))}
+      <div class="tabs"><button class="tab on" data-act="tab" data-t="daily">${t('DIARIAS')}</button><button class="tab" data-act="tab" data-t="weekly">${t('SEMANALES')}</button></div>
       <div class="scroll" id="ml"></div>
       ${this.nav('home')}
     </section>`);
@@ -550,7 +550,7 @@ export class UI {
         : Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + (8 - (now.getUTCDay() || 7)));
       const s = Math.max(0, Math.floor((next - now.getTime()) / 1000));
       const h = Math.floor(s / 3600);
-      return tab === 'daily' || h < 48 ? `${String(h).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` : `${Math.floor(h / 24)} días`;
+      return tab === 'daily' || h < 48 ? `${String(h).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` : tn('{n} días', Math.floor(h / 24));
     };
     const paint = () => {
       const M = meta.missions();
@@ -558,26 +558,26 @@ export class UI {
       const ch = meta.WEEK_CHEST;
       $(e, '#ml').innerHTML = `<div class="stagger">${list.map((m, i) => `<div class="mission ${m.cur >= m.target ? 'done' : ''} ${m.claimed ? 'claimed' : ''}" ${stag(i)}>
           <img class="mi" src="${kit(tab === 'daily' ? 'scroll_daily' : 'scroll_weekly')}" alt="">
-          <div class="mb"><div class="mt">${m.text}</div>
+          <div class="mb"><div class="mt">${meta.missionText(m)}</div>
             <div class="mp"><div class="progress"><i style="width:${(m.cur / m.target) * 100}%"></i></div><span>${m.cur}/${m.target}</span></div></div>
           <div class="mr"><span class="coins"><img src="${icon('coin')}" alt="">${m.reward}</span>
-            <button class="btn small" data-act="claim" data-id="${m.id}" ${m.claimed || m.cur < m.target ? 'disabled' : ''}>${m.claimed ? '✓' : 'RECLAMAR'}</button></div>
+            <button class="btn small" data-act="claim" data-id="${m.id}" ${m.claimed || m.cur < m.target ? 'disabled' : ''}>${m.claimed ? '✓' : t('RECLAMAR')}</button></div>
         </div>`).join('')}</div>
-        <div class="t-label dim" style="text-align:center;margin:.5rem 0" id="cd">SE RENUEVA EN ${left()}</div>
+        <div class="t-label dim" style="text-align:center;margin:.5rem 0" id="cd">${t('SE RENUEVA EN {t}', { t: left() })}</div>
         <div class="chest-card ${M.chest ? 'claimed' : ''}">
           <img src="${kit(M.chest || M.claimedWeek >= ch.need ? 'chest_open' : 'chest_closed')}" alt="">
-          <div class="mb"><div class="mt">COFRE SEMANAL</div>
+          <div class="mb"><div class="mt">${t('COFRE SEMANAL')}</div>
             <div class="steps">${Array.from({ length: ch.need }, (_, k) => `<i class="${k < M.claimedWeek ? 'on' : ''}"></i>`).join('')}</div>
-            <div class="t-label dim" style="font-size:.8rem">Reclama ${ch.need} misiones esta semana</div></div>
+            <div class="t-label dim" style="font-size:.8rem">${t('Reclama {n} misiones esta semana', { n: ch.need })}</div></div>
           <button class="btn small" data-act="chest" ${M.chest || M.claimedWeek < ch.need ? 'disabled' : ''}><img class="ic" src="${icon('coin')}" alt="">${M.chest ? '✓' : ch.coins}</button>
         </div>`;
     };
     paint();
-    const iv = setInterval(() => { const c = $(e, '#cd'); if (c) c.textContent = `SE RENUEVA EN ${left()}`; }, 1000);
+    const iv = setInterval(() => { const c = $(e, '#cd'); if (c) c.textContent = t('SE RENUEVA EN {t}', { t: left() }); }, 1000);
     this.wire(e, {
-      tab: (b) => { tab = b.dataset.t; e.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t === b)); paint(); },
-      claim: (b) => { const c = meta.claimMission(b.dataset.id); if (c) { this.toast(`+${c} monedas`); paint(); } },
-      chest: () => { const c = meta.claimChest(); if (c) { this.toast(`¡Cofre! +${fmt(c)} monedas`); paint(); } },
+      tab: (b) => { tab = b.dataset.t; e.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === b)); paint(); },
+      claim: (b) => { const c = meta.claimMission(b.dataset.id); if (c) { this.toast(t('+{n} monedas', { n: c }), true); paint(); } },
+      chest: () => { const c = meta.claimChest(); if (c) { this.toast(t('¡Cofre! +{n} monedas', { n: fmt(c) }), true); paint(); } },
     });
     return { el: e, destroy: () => clearInterval(iv) };
   }
@@ -593,20 +593,20 @@ export class UI {
       const big = day === 7;
       return `<div class="day ${done ? 'done' : ''} ${today ? 'today' : ''} ${big ? 'big' : ''}">
         <b>${day}</b><img src="${kit(big ? (done ? 'chest_open' : 'chest_closed') : 'calendar')}" alt=""><span><img src="${icon('coin')}" alt="">${fmt(c)}</span>
-        ${done ? `<img class="stamp" src="${kit('collected')}" alt="">` : ''}${today ? '<em>HOY</em>' : ''}</div>`;
+        ${done ? `<img class="stamp" src="${kit('collected')}" alt="">` : ''}${today ? `<em>${t('HOY')}</em>` : ''}</div>`;
     }).join('');
     const o = this.overlay(`<div class="overlay dark"><div class="panel strong"><div class="inner">
-      ${ptitle('RACHA DIARIA', 4)}
-      <div class="ov-sub">Vuelve cada día para ganar más</div>
-      <div class="t-label glow-amber"><img src="${kit('flame')}" style="height:1.3rem;vertical-align:-.25rem"> RACHA: ${info.count} ${info.count === 1 ? 'DÍA' : 'DÍAS'}</div>
+      ${ptitle(t('RACHA DIARIA'), 4)}
+      <div class="ov-sub">${t('Vuelve cada día para ganar más')}</div>
+      <div class="t-label glow-amber"><img src="${kit('flame')}" style="height:1.3rem;vertical-align:-.25rem"> ${t('RACHA')}: ${tn('{n} DÍAS', info.count)}</div>
       <div class="days">${tiles}</div>
-      ${info.claimedToday ? '<button class="btn" data-act="close" style="width:100%" disabled>YA RECLAMADO HOY</button>' : `<button class="btn-primary" data-act="claim" style="width:100%"><span class="worn">RECLAMAR</span></button>
-        <button class="link" data-act="claim2">Ver anuncio para duplicar</button>`}
-      <button class="link" data-act="close">Cerrar</button>
+      ${info.claimedToday ? `<button class="btn" data-act="close" style="width:100%" disabled>${t('YA RECLAMADO HOY')}</button>` : `<button class="btn-primary" data-act="claim" style="width:100%"><span class="worn">${t('RECLAMAR')}</span></button>
+        <button class="link" data-act="claim2">${t('Ver anuncio para duplicar')}</button>`}
+      <button class="link" data-act="close">${t('Cerrar')}</button>
     </div></div></div>`);
     const done = (double) => {
       const c = meta.claimStreak(double);
-      if (c) this.toast(`+${fmt(c)} monedas`);
+      if (c) this.toast(t('+{n} monedas', { n: fmt(c) }), true);
       this.closeOverlay(o);
       if (this.cur && this.cur.name === 'home') this.go('home');
     };
@@ -624,32 +624,32 @@ export class UI {
     const A = meta.ACHIEVEMENTS;
     const got = A.filter((a) => S.ach[a.id]).length;
     const st = S.stats;
-    const fmtH = (s) => (s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} min` : `${Math.floor(s / 60)} min`);
+    const fmtH = (s) => (s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.floor((s % 3600) / 60)} ${t('min')}` : `${Math.floor(s / 60)} ${t('min')}`);
     const rows = [
-      ['orb', 'Orbes comidos', fmt(st.orbs)], ['flame', 'Mejor racha sin morir', `${st.bestClean} niveles`], ['snake', 'Serpiente más larga', st.maxLen],
-      ['map', 'Mapas completados', `${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].filter((m) => store.clearedLevels(m, 'easy') >= 10 || store.clearedLevels(m, 'normal') >= 10 || store.clearedLevels(m, 'hard') >= 10).length}/16`],
-      ['star_gold', 'Estrellas conseguidas', `${store.totalStars('easy') + store.totalStars('normal') + store.totalStars('hard')}`], ['bars', 'Duelos ganados', st.duelWins], ['chest_closed', 'Objetos recogidos', st.items],
+      ['orb', t('Orbes comidos'), fmt(st.orbs)], ['flame', t('Mejor racha sin morir'), tn('{n} niveles', st.bestClean)], ['snake', t('Serpiente más larga'), st.maxLen],
+      ['map', t('Mapas completados'), `${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].filter((m) => store.clearedLevels(m, 'easy') >= 10 || store.clearedLevels(m, 'normal') >= 10 || store.clearedLevels(m, 'hard') >= 10).length}/16`],
+      ['star_gold', t('Estrellas conseguidas'), `${store.totalStars('easy') + store.totalStars('normal') + store.totalStars('hard')}`], ['bars', t('Duelos ganados'), st.duelWins], ['chest_closed', t('Objetos recogidos'), st.items],
     ];
     const e = el(`<section>
-      ${this.topbar('LOGROS ' + got + '/' + A.length)}
+      ${this.topbar(t('LOGROS') + ' ' + got + '/' + A.length)}
       <div class="scroll">
         <div class="medal-grid stagger">${A.map((a, i) => {
           const have = !!S.ach[a.id];
           const p = meta.achievementProgress(a);
           return `<div class="medal ${have ? 'on' : ''}" ${stag(i)}><img src="${kit(have ? 'medal_' + a.tier : 'medal_locked')}" alt="">
-            <b>${a.name}</b><small>${a.text}</small><div class="progress"><i style="width:${(p / a.need) * 100}%"></i></div></div>`;
+            <b>${t(a.name)}</b><small>${t(a.text)}</small><div class="progress"><i style="width:${(p / a.need) * 100}%"></i></div></div>`;
         }).join('')}</div>
-        <div class="sec">ESTADÍSTICAS</div>
+        <div class="sec">${t('ESTADÍSTICAS')}</div>
         <div class="stat-list">${rows.map(([ic, k, v]) => `<div><img src="${ic === 'orb' ? icon('orb_red') : kit(ic)}" alt=""><span>${k}</span><b>${v}</b></div>`).join('')}
-          <div><img src="${kit('cloud')}" alt=""><span>Tiempo jugado</span><b>${fmtH(st.playSec)}</b></div></div>
-        <button class="btn" data-act="share" style="width:100%;margin:.6rem 0">COMPARTIR</button>
+          <div><img src="${kit('cloud')}" alt=""><span>${t('Tiempo jugado')}</span><b>${fmtH(st.playSec)}</b></div></div>
+        <button class="btn" data-act="share" style="width:100%;margin:.6rem 0">${t('COMPARTIR')}</button>
       </div>
       ${this.nav('home')}
     </section>`);
     this.wire(e, {
       share: async () => {
-        const text = `Llevo ${fmt(st.orbs)} orbes y ${got}/${A.length} logros en ZNAKEX. ¿Me superas?`;
-        try { if (navigator.share) await navigator.share({ title: 'ZNAKEX', text }); else { await navigator.clipboard.writeText(text); this.toast('Texto copiado'); } } catch { /* cancelled */ }
+        const text = t('Llevo {o} orbes y {a} logros en ZNAKEX. ¿Me superas?', { o: fmt(st.orbs), a: `${got}/${A.length}` });
+        try { if (navigator.share) await navigator.share({ title: 'ZNAKEX', text }); else { await navigator.clipboard.writeText(text); this.toast(t('Texto copiado')); } } catch { /* cancelled */ }
       },
     });
     return { el: e };
@@ -663,17 +663,17 @@ export class UI {
     const chapter = ch ?? (cleared >= 10 ? 1 : 0);
     const days = Math.ceil(meta.seasonLeft() / 86400000);
     const head = `<div class="season-head"><img src="${url('ui/season_badge.png')}" alt=""><div><div class="t-display worn" style="font-size:1.9rem">${meta.SEASON.name}</div>
-      <div class="t-label dim" style="font-size:.85rem">${meta.seasonActive() ? (CONFIG.tester ? 'MODO TESTER' : `TERMINA EN ${days} ${days === 1 ? 'DÍA' : 'DÍAS'}`) : 'TEMPORADA FINALIZADA'}</div></div></div>
-      <div class="tabs"><button class="tab ${tab === 'map' ? 'on' : ''}" data-act="stab" data-t="map">MAPA</button><button class="tab ${tab === 'pass' ? 'on' : ''}" data-act="stab" data-t="pass">PASE</button></div>`;
+      <div class="t-label dim" style="font-size:.85rem">${meta.seasonActive() ? (CONFIG.tester ? t('MODO TESTER') : t('TERMINA EN {t}', { t: tn('{n} DÍAS', days) })) : t('TEMPORADA FINALIZADA')}</div></div></div>
+      <div class="tabs"><button class="tab ${tab === 'map' ? 'on' : ''}" data-act="stab" data-t="map">${t('MAPA')}</button><button class="tab ${tab === 'pass' ? 'on' : ''}" data-act="stab" data-t="pass">${t('PASE')}</button></div>`;
     if (tab === 'pass') return this.seasonPass(head);
     const P = [[50, 93], [74, 84], [52, 75], [26, 66], [48, 57], [74, 48], [52, 39], [26, 30], [46, 21], [58, 9]];
     let selected = clamp(cleared + 1 - chapter * 10, 1, 10);
     if (cleared >= 20) selected = 10;
     const e = el(`<section style="background:url(${url(SEASON_MAP.key)}) center/cover">
       <div style="position:absolute;inset:0;background:linear-gradient(to bottom, rgba(6,9,6,.55), rgba(6,9,6,.2) 30%, rgba(6,9,6,.35) 70%, rgba(6,9,6,.9))"></div>
-      ${this.topbar('TEMPORADA', 'home')}
+      ${this.topbar(t('TEMPORADA'), 'home')}
       ${head}
-      <div class="diffbar" style="grid-template-columns:repeat(2,1fr)"><button class="dchip ${chapter === 0 ? 'on' : ''}" data-act="chap" data-c="0" style="--dc:#E87532">CAPÍTULO 1 · 1-10</button><button class="dchip ${chapter === 1 ? 'on' : ''}" data-act="chap" data-c="1" style="--dc:#E87532">CAPÍTULO 2 · 11-20</button></div>
+      <div class="diffbar" style="grid-template-columns:repeat(2,1fr)"><button class="dchip ${chapter === 0 ? 'on' : ''}" data-act="chap" data-c="0" style="--dc:#E87532">${t('CAPÍTULO')} 1 · 1-10</button><button class="dchip ${chapter === 1 ? 'on' : ''}" data-act="chap" data-c="1" style="--dc:#E87532">${t('CAPÍTULO')} 2 · 11-20</button></div>
       <div class="levels-wrap compact" id="lw">
         <svg class="path" viewBox="0 0 100 100" preserveAspectRatio="none"><polyline points="${P.map((p) => p.join(',')).join(' ')}" fill="none" stroke="rgba(242,239,230,.55)" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>
         ${P.map(([x, y], i) => {
@@ -697,11 +697,11 @@ export class UI {
       const locked = n > cleared + 1 || gated || !meta.seasonActive();
       $(e, '#lp').innerHTML = `<div class="inner level-panel">
         <div>
-          <div class="t-display worn" style="font-size:2.1rem">${L.guardian ? 'GUARDIÁN · ' : ''}NIVEL ${n}</div>
-          <div class="obj"><img src="${icon('orb_red')}" alt="">RECOGE ${L.target} ORBES</div>
-          <div class="obj dim">${gated ? 'Necesitas el pase premium (niveles 6-20)' : cleared >= 20 ? '<span style="color:var(--honey)">¡Skin de temporada conseguida!</span>' : `Completa los 20 niveles para la skin · ${cleared}/20`}</div>
+          <div class="t-display worn" style="font-size:2.1rem">${L.guardian ? t('GUARDIÁN') + ' · ' : ''}${t('NIVEL')} ${n}</div>
+          <div class="obj"><img src="${icon('orb_red')}" alt="">${t('RECOGE {n} ORBES', { n: L.target })}</div>
+          <div class="obj dim">${gated ? t('Necesitas el pase premium (niveles 6-20)') : cleared >= 20 ? `<span style="color:var(--honey)">${t('¡Skin de temporada conseguida!')}</span>` : `${t('Completa los 20 niveles para la skin')} · ${cleared}/20`}</div>
         </div>
-        <button class="btn-primary" data-act="play" style="min-height:4rem;font-size:2.1rem;padding:0 1.4rem">${gated ? `<span class="worn">PASE</span>` : locked ? '<img src="' + icon('lock') + '" style="width:2rem;border-radius:.2rem">' : '<span class="worn">JUGAR</span>'}</button>
+        <button class="btn-primary" data-act="play" style="min-height:4rem;font-size:2.1rem;padding:0 1.4rem">${gated ? `<span class="worn">${t('PASE')}</span>` : locked ? '<img src="' + icon('lock') + '" style="width:2rem;border-radius:.2rem">' : `<span class="worn">${t('JUGAR')}</span>`}</button>
       </div>`;
       e.querySelectorAll('.level-node').forEach((nd) => nd.classList.toggle('sel', Number(nd.dataset.n) === n));
     };
@@ -713,8 +713,8 @@ export class UI {
       play: () => {
         const n = chapter * 10 + selected;
         if (!meta.seasonMapAccess(n)) return this.go('season', { tab: 'pass' });
-        if (n > cleared + 1) return this.toast('Supera el nivel anterior');
-        if (!meta.seasonActive()) return this.toast('La temporada ha terminado');
+        if (n > cleared + 1) return this.toast(t('Supera el nivel anterior'));
+        if (!meta.seasonActive()) return this.toast(t('La temporada ha terminado'));
         this.startGame({ mode: 'story', level: storyLevel(17, n) });
       },
     });
@@ -738,14 +738,14 @@ export class UI {
       return `<button class="slot ${cls}" data-act="tclaim" data-t="${track}" data-i="${i}">${inner}${claimed ? '<i class="ck">✓</i>' : locked || !reached ? `<img class="lk2" src="${kit('slot_locked')}" alt="">` : ''}</button>`;
     };
     const e = el(`<section>
-      ${this.topbar('TEMPORADA', 'home')}
+      ${this.topbar(t('TEMPORADA'), 'home')}
       ${head}
-      <div class="pass-bar"><span class="t-display" style="font-size:1.5rem">NIVEL ${tier}/${SE.tiers}</span><div class="progress" style="flex:1"><i style="width:${tier >= SE.tiers ? 100 : (xpIn / SE.xpPerTier) * 100}%"></i></div><span class="t-label" style="font-size:.85rem">${tier >= SE.tiers ? 'MÁX' : `${xpIn}/${SE.xpPerTier} PX`}</span></div>
-      <div class="pass-cols"><span>GRATIS</span><span>PREMIUM</span></div>
+      <div class="pass-bar"><span class="t-display" style="font-size:1.5rem">${t('NIVEL')} ${tier}/${SE.tiers}</span><div class="progress" style="flex:1"><i style="width:${tier >= SE.tiers ? 100 : (xpIn / SE.xpPerTier) * 100}%"></i></div><span class="t-label" style="font-size:.85rem">${tier >= SE.tiers ? t('MÁX') : `${xpIn}/${SE.xpPerTier} ${t('PX')}`}</span></div>
+      <div class="pass-cols"><span>${t('GRATIS')}</span><span>${t('PREMIUM')}</span></div>
       <div class="scroll"><div class="pass-list">${Array.from({ length: SE.tiers }, (_, i) => `<div class="tier ${i < tier ? 'reach' : ''}"><em>${i + 1}</em>${cell('free', i)}${cell('prem', i)}</div>`).join('')}</div></div>
       <div style="padding:.5rem 0 .2rem">
-        ${se.premium ? '<div class="btn" style="width:100%;text-align:center">PASE PREMIUM ACTIVO ✓</div>' : `<button class="btn-primary" data-act="buypass" style="width:100%"><span class="stack"><span class="worn">OBTENER PASE PREMIUM · ${SE.price}</span><span class="sub">Skin exclusiva · ${fmt(SE.bonusCoins)} monedas · Mapa completo</span></span></button>`}
-        <div class="demo-note">Puntos de pase: superar niveles, estrellas y misiones. Compra simulada (demo).</div>
+        ${se.premium ? `<div class="btn" style="width:100%;text-align:center">${t('PASE PREMIUM ACTIVO')} ✓</div>` : `<button class="btn-primary" data-act="buypass" style="width:100%"><span class="stack"><span class="worn">${t('OBTENER PASE PREMIUM')} · ${SE.price}</span><span class="sub">${t('Skins exclusivas · {n} monedas · Mapa completo', { n: fmt(SE.bonusCoins) })}</span></span></button>`}
+        <div class="demo-note">${t('Puntos de pase: superar niveles, estrellas y misiones. Compra simulada (demo).')}</div>
       </div>
       ${this.nav('home')}
     </section>`);
@@ -753,13 +753,13 @@ export class UI {
       stab: (b) => this.go('season', { tab: b.dataset.t }),
       tclaim: (b) => {
         const r = meta.claimTier(b.dataset.t, Number(b.dataset.i));
-        if (r) { this.toast(r.skin ? '¡Skin de temporada!' : `+${r.c} monedas`); this.go('season', { tab: 'pass' }); }
-        else if (b.dataset.t === 'prem' && !se.premium) this.toast('Recompensa del pase premium');
-        else if (Number(b.dataset.i) >= tier) this.toast('Sube de nivel de pase para reclamarla');
+        if (r) { this.toast(r.skin ? t('¡Skin de temporada!') : t('+{n} monedas', { n: r.c }), true); this.go('season', { tab: 'pass' }); }
+        else if (b.dataset.t === 'prem' && !se.premium) this.toast(t('Recompensa del pase premium'));
+        else if (Number(b.dataset.i) >= tier) this.toast(t('Sube de nivel de pase para reclamarla'));
       },
       buypass: () => this.popup({
-        title: 'PASE DE TEMPORADA', icon: 'coins', text: `Skin exclusiva, <b>${fmt(SE.bonusCoins)}</b> monedas, mapa completo y recompensas premium por <b>${SE.price}</b>.<br><span class="dim">Compra simulada en la demo.</span>`,
-        buttons: [['COMPRAR', () => { meta.buyPass(); this.toast('¡Pase premium activado!'); this.go('season', { tab: 'pass' }); }, true], ['CANCELAR', null]],
+        title: t('PASE DE TEMPORADA'), icon: 'coins', text: `${t('Skins exclusivas, <b>{n}</b> monedas, mapa completo y recompensas premium por <b>{p}</b>.', { n: fmt(SE.bonusCoins), p: SE.price })}<br><span class="dim">${t('Compra simulada en la demo.')}</span>`,
+        buttons: [['COMPRAR', () => { meta.buyPass(); this.toast(t('¡Pase premium activado!'), true); this.go('season', { tab: 'pass' }); }, true], ['CANCELAR', null]],
       }),
     });
     return { el: e };
@@ -769,39 +769,39 @@ export class UI {
   scr_shop({ back = 'home' }) {
     this.setBg('deep');
     const e = el(`<section>
-      ${this.topbar('TIENDA', back)}
+      ${this.topbar(t('TIENDA'), back)}
       <div class="scroll stagger">
         <div class="panel" ${stag(0)} style="margin-bottom:1rem"><div class="inner" style="display:grid;grid-template-columns:7rem 1fr;gap:.8rem;align-items:center">
           <img src="${url('skins/pirata.jpg')}" style="width:7rem;border-radius:.5rem;box-shadow:0 0 1.2rem rgba(232,176,74,.5)">
-          <div><div class="t-display worn glow-amber" style="font-size:2rem">PACK DE INICIO</div>
-            <div class="t-label" style="font-size:.9rem">SKIN RARA + 5.000 MONEDAS</div>
-            <div class="dim" style="font-size:.8rem">Oferta única · −80 %</div>
+          <div><div class="t-display worn glow-amber" style="font-size:2rem">${t('PACK DE INICIO')}</div>
+            <div class="t-label" style="font-size:.9rem">${t('SKIN ESPECIAL + {n} MONEDAS', { n: fmt(5000) })}</div>
+            <div class="dim" style="font-size:.8rem">${t('Oferta única')} · −80 %</div>
             <button class="btn small" data-act="buy" data-coins="5000" data-skin="pirata" style="margin-top:.4rem">1,99 US$</button></div>
         </div></div>
         <div class="pack-grid">
           ${ECONOMY.packs.map((p, i) => `<button class="pack ${p.tag ? 'best' : ''}" data-act="buy" data-coins="${p.coins}" ${stag(i + 1)}>
-            ${p.tag ? `<span class="tag">${p.tag}</span>` : ''}
+            ${p.tag ? `<span class="tag">${t(p.tag)}</span>` : ''}
             <img src="${icon(i < 1 ? 'coin' : 'coins')}" alt="" style="transform:scale(${0.8 + i * 0.07})">
-            <div class="amt">${fmt(p.coins)}</div><div class="nm">${p.name.toUpperCase()}</div>
+            <div class="amt">${fmt(p.coins)}</div><div class="nm">${t(p.name).toUpperCase()}</div>
             <div class="price">${p.price}</div></button>`).join('')}
         </div>
-        <div class="demo-note" style="margin-top:1rem">DEMO: las compras son simuladas y no cobran nada.<br>En la versión final se usará Google Play Billing.</div>
-        <div style="text-align:center"><button class="link" data-act="restore">Restaurar compras</button></div>
+        <div class="demo-note" style="margin-top:1rem">${t('DEMO: las compras son simuladas y no cobran nada.')}<br>${t('En la versión final se usará Google Play Billing.')}</div>
+        <div style="text-align:center"><button class="link" data-act="restore">${t('Restaurar compras')}</button></div>
       </div>
     </section>`);
     this.wire(e, {
       buy: (b) => {
         const coins = Number(b.dataset.coins);
         this.popup({
-          title: 'COMPRA DE DEMO', icon: 'coins', text: `Se añadirán <b>${fmt(coins)}</b> monedas${b.dataset.skin ? ' y la skin Guardián del Bosque' : ''}.<br><span class="dim">(simulado, sin cobro)</span>`,
+          title: t('COMPRA DE DEMO'), icon: 'coins', text: `${b.dataset.skin ? t('Se añadirán <b>{n}</b> monedas y la skin {s}.', { n: fmt(coins), s: t(skinById(b.dataset.skin).name) }) : t('Se añadirán <b>{n}</b> monedas.', { n: fmt(coins) })}<br><span class="dim">${t('(simulado, sin cobro)')}</span>`,
           buttons: [['CONFIRMAR', () => {
             store.addCoins(coins);
             if (b.dataset.skin && !this.S().owned.includes(b.dataset.skin)) { this.S().owned.push(b.dataset.skin); store.save(); }
-            this.toast(`+${fmt(coins)} monedas`);
+            this.toast(t('+{n} monedas', { n: fmt(coins) }), true);
           }, true], ['CANCELAR', null]],
         });
       },
-      restore: () => this.toast('No hay compras que restaurar'),
+      restore: () => this.toast(t('No hay compras que restaurar')),
     });
     return { el: e };
   }
@@ -812,47 +812,49 @@ export class UI {
     const S = this.S();
     const set = S.settings;
     const e = el(`<section>
-      ${this.topbar('AJUSTES')}
+      ${this.topbar(t('AJUSTES'))}
       <div class="scroll"><div class="panel"><div class="inner pad">
-        <div class="sec">AUDIO</div>
-        <div class="set-row"><span class="l"><img src="${icon('mode_frenzy')}">MÚSICA</span><button class="toggle ${set.music ? 'on' : ''}" data-act="tg" data-k="music"></button></div>
-        <div class="set-row"><span class="l"><img src="${icon('play')}">EFECTOS DE SONIDO</span><button class="toggle ${set.sfx ? 'on' : ''}" data-act="tg" data-k="sfx"></button></div>
-        <div class="demo-note" style="text-align:left">El sonido llega en la siguiente fase.</div>
-        <div class="set-row"><span class="l"><img src="${icon('hz_wind')}">VIBRACIÓN</span><button class="toggle ${set.vibration ? 'on' : ''}" data-act="tg" data-k="vibration"></button></div>
-        <div class="set-row"><span class="l"><img src="${icon('hz_dark')}">MODO DALTÓNICO</span><button class="toggle ${set.colorblind ? 'on' : ''}" data-act="tg" data-k="colorblind"></button></div>
-        <div class="set-row"><span class="l"><img src="${icon('hz_wind')}">GRÁFICOS BAJOS</span><button class="toggle ${set.lowfx ? 'on' : ''}" data-act="tg" data-k="lowfx"></button></div>
-        <div class="demo-note" style="text-align:left">Menos partículas y sin desenfoques: para móviles antiguos. Se activa solo si el juego va lento.</div>
-        <div class="sec">CONTROLES</div>
-        <div class="ctl-grid">${[['swipe', 'DESLIZAR'], ['buttons', 'FLECHAS'], ['joystick', 'PALANCA'], ['tap', 'TOQUES']].map(([v, l]) => `<button class="ctl ${set.controls === v ? 'on' : ''}" data-act="ctl" data-v="${v}"><span class="ctl-ic ctl-${v}"></span>${l}</button>`).join('')}</div>
-        <div class="demo-note" id="ctlinfo" style="text-align:left;margin-top:.3rem">${CONTROL_INFO[set.controls] || ''}</div>
-        <div class="sec">CUENTA Y GUARDADO</div>
-        <div class="set-row"><span class="l"><img src="${kit('gamepad')}">GOOGLE PLAY GAMES</span><span class="t-label dim" style="font-size:.8rem">${cloud.available() ? 'CONECTADO' : 'EN LA APP DE GOOGLE PLAY'}</span></div>
-        <div class="set-row"><span class="l"><img src="${kit('cloud')}">CÓDIGO DE GUARDADO</span><span style="display:flex;gap:.4rem"><button class="btn small" data-act="savecode">COPIAR</button><button class="btn small" data-act="loadcode">RESTAURAR</button></span></div>
-        <div class="set-row"><span class="l"><img src="${kit('bulb')}">TUTORIAL</span><button class="btn small" data-act="tutorial">REPETIR</button></div>
+        <div class="sec">${t('IDIOMA')}</div>
+        <div class="lang-grid">${LANGS.map((L) => `<button class="lang ${getLang() === L.id ? 'on' : ''}" data-act="lang" data-l="${L.id}">${L.name}</button>`).join('')}</div>
+        <div class="sec">${t('AUDIO')}</div>
+        <div class="set-row"><span class="l"><img src="${icon('mode_frenzy')}">${t('MÚSICA')}</span><button class="toggle ${set.music ? 'on' : ''}" data-act="tg" data-k="music"></button></div>
+        <div class="set-row"><span class="l"><img src="${icon('play')}">${t('EFECTOS DE SONIDO')}</span><button class="toggle ${set.sfx ? 'on' : ''}" data-act="tg" data-k="sfx"></button></div>
+        <div class="set-row"><span class="l"><img src="${icon('hz_wind')}">${t('VIBRACIÓN')}</span><button class="toggle ${set.vibration ? 'on' : ''}" data-act="tg" data-k="vibration"></button></div>
+        <div class="set-row"><span class="l"><img src="${icon('hz_dark')}">${t('MODO DALTÓNICO')}</span><button class="toggle ${set.colorblind ? 'on' : ''}" data-act="tg" data-k="colorblind"></button></div>
+        <div class="set-row"><span class="l"><img src="${icon('hz_wind')}">${t('GRÁFICOS BAJOS')}</span><button class="toggle ${set.lowfx ? 'on' : ''}" data-act="tg" data-k="lowfx"></button></div>
+        <div class="demo-note" style="text-align:left">${t('Menos partículas y sin desenfoques: para móviles antiguos. Se activa solo si el juego va lento.')}</div>
+        <div class="sec">${t('CONTROLES')}</div>
+        <div class="ctl-grid">${[['swipe', 'DESLIZAR'], ['buttons', 'FLECHAS'], ['joystick', 'PALANCA'], ['tap', 'TOQUES']].map(([v, l]) => `<button class="ctl ${set.controls === v ? 'on' : ''}" data-act="ctl" data-v="${v}"><span class="ctl-ic ctl-${v}"></span>${t(l)}</button>`).join('')}</div>
+        <div class="demo-note" id="ctlinfo" style="text-align:left;margin-top:.3rem">${t(CONTROL_INFO[set.controls] || '')}</div>
+        <div class="sec">${t('CUENTA Y GUARDADO')}</div>
+        <div class="set-row"><span class="l"><img src="${kit('gamepad')}">GOOGLE PLAY GAMES</span><span class="t-label dim" style="font-size:.8rem">${t(cloud.available() ? 'CONECTADO' : 'EN LA APP DE GOOGLE PLAY')}</span></div>
+        <div class="set-row"><span class="l"><img src="${kit('cloud')}">${t('CÓDIGO DE GUARDADO')}</span><span style="display:flex;gap:.4rem"><button class="btn small" data-act="savecode">${t('COPIAR')}</button><button class="btn small" data-act="loadcode">${t('RESTAURAR')}</button></span></div>
+        <div class="set-row"><span class="l"><img src="${kit('bulb')}">${t('TUTORIAL')}</span><button class="btn small" data-act="tutorial">${t('REPETIR')}</button></div>
         <div class="sec">DEMO</div>
-        <div class="set-row"><span>+5.000 MONEDAS</span><button class="btn small" data-act="coins">AÑADIR</button></div>
-        <div class="set-row"><span>RULETA DE HOY</span><button class="btn small" data-act="wheel">REINICIAR</button></div>
-        <div class="set-row"><span>PROGRESO</span><button class="btn small" data-act="reset">BORRAR</button></div>
-        <div class="sec">CUENTA</div>
-        <button class="btn" style="width:100%;margin-top:.4rem" data-act="soon">CONECTAR GOOGLE PLAY GAMES</button>
-        <div class="btn-row" style="margin-top:.5rem"><button class="btn small" data-act="soon">PRIVACIDAD</button><button class="btn small" data-act="soon">SOPORTE</button></div>
-        <div style="display:flex;flex-direction:column;align-items:center;margin-top:1rem;gap:.3rem"><img src="${url('ui/logo.png')}" style="width:5rem;opacity:.8"><span class="demo-note">VERSIÓN ${CONFIG.version}${CONFIG.tester ? ' · TESTER' : ''}</span></div>
+        <div class="set-row"><span>+${fmt(5000)} ${t('MONEDAS')}</span><button class="btn small" data-act="coins">${t('AÑADIR')}</button></div>
+        <div class="set-row"><span>${t('RULETA DE HOY')}</span><button class="btn small" data-act="wheel">${t('REINICIAR')}</button></div>
+        <div class="set-row"><span>${t('PROGRESO')}</span><button class="btn small" data-act="reset">${t('BORRAR')}</button></div>
+        <div class="sec">${t('CUENTA')}</div>
+        <button class="btn" style="width:100%;margin-top:.4rem" data-act="soon">${t('CONECTAR GOOGLE PLAY GAMES')}</button>
+        <div class="btn-row" style="margin-top:.5rem"><button class="btn small" data-act="soon">${t('PRIVACIDAD')}</button><button class="btn small" data-act="soon">${t('SOPORTE')}</button></div>
+        <div style="display:flex;flex-direction:column;align-items:center;margin-top:1rem;gap:.3rem"><img src="${url('ui/logo.png')}" style="width:5rem;opacity:.8"><span class="demo-note">${t('VERSIÓN')} ${CONFIG.version}${CONFIG.tester ? ' · TESTER' : ''}</span></div>
       </div></div></div>
       ${this.nav('settings')}
     </section>`);
     this.wire(e, {
-      savecode: async () => { const c = cloud.exportCode(); try { await navigator.clipboard.writeText(c); this.toast('Código copiado'); } catch { window.prompt('Copia tu código de guardado:', c); } },
-      loadcode: () => { const c = window.prompt('Pega tu código de guardado:'); if (c) { if (cloud.importCode(c)) { this.toast('Partida restaurada'); this.go('home'); } else this.toast('Código no válido'); } },
+      savecode: async () => { const c = cloud.exportCode(); try { await navigator.clipboard.writeText(c); this.toast(t('Código copiado')); } catch { window.prompt(t('Copia tu código de guardado:'), c); } },
+      loadcode: () => { const c = window.prompt(t('Pega tu código de guardado:')); if (c) { if (cloud.importCode(c)) { this.toast(t('Partida restaurada')); this.go('home'); } else this.toast(t('Código no válido')); } },
+      lang: (b) => { setLang(b.dataset.l); set.lang = b.dataset.l; store.save(); this.go('settings'); },
       tutorial: () => this.startGame({ mode: 'story', level: tutorialLevel() }),
       tg: (b) => { set[b.dataset.k] = !set[b.dataset.k]; b.classList.toggle('on', set[b.dataset.k]); if (b.dataset.k === 'lowfx') { document.body.classList.toggle('lowfx', set.lowfx); window.dispatchEvent(new Event('resize')); } store.save(); },
-      ctl: (b) => { set.controls = b.dataset.v; e.querySelectorAll('[data-act=ctl]').forEach((x) => x.classList.toggle('on', x === b)); $(e, '#ctlinfo').textContent = CONTROL_INFO[set.controls]; store.save(); },
-      coins: () => { store.addCoins(5000); this.toast('+5.000 monedas'); },
-      wheel: () => { S.wheelDay = ''; store.save(); this.toast('Ruleta disponible'); },
+      ctl: (b) => { set.controls = b.dataset.v; e.querySelectorAll('[data-act=ctl]').forEach((x) => x.classList.toggle('on', x === b)); $(e, '#ctlinfo').textContent = t(CONTROL_INFO[set.controls]); store.save(); },
+      coins: () => { store.addCoins(5000); this.toast(t('+{n} monedas', { n: fmt(5000) }), true); },
+      wheel: () => { S.wheelDay = ''; store.save(); this.toast(t('Ruleta disponible')); },
       reset: () => this.popup({
-        title: '¿BORRAR PROGRESO?', icon: 'retry', text: 'Se perderán monedas, skins y niveles de la demo.',
-        buttons: [['BORRAR', () => { store.reset(); this.go('home'); this.toast('Progreso borrado'); }, true], ['CANCELAR', null]],
+        title: '¿BORRAR PROGRESO?', icon: 'retry', text: t('Se perderán monedas, skins y niveles de la demo.'),
+        buttons: [['BORRAR', () => { store.reset(); this.go('home'); this.toast(t('Progreso borrado')); }, true], ['CANCELAR', null]],
       }),
-      soon: () => this.toast('Disponible en la versión final'),
+      soon: () => this.toast(t('Disponible en la versión final')),
     });
     return { el: e };
   }
@@ -902,11 +904,11 @@ export class UI {
     const o = this.overlay(`<div class="overlay dark"><div class="panel strong"><div class="inner">
       ${ic ? `<img src="${icon(ic)}" style="width:4rem;border-radius:.4rem">` : ''}
       ${img ? `<img src="${img}" style="width:7rem;border-radius:.5rem">` : ''}
-      <div class="ov-title worn" style="font-size:2.4rem">${title}</div>
+      <div class="ov-title worn" style="font-size:2.4rem">${t(title)}</div>
       <div style="font-size:1.05rem;line-height:1.35">${text}</div>
       <div class="btn-row" style="flex-direction:column">${buttons.map(([l, , primary], i) => primary
-        ? `<button class="btn-primary" data-act="b" data-i="${i}" style="min-height:3.8rem;font-size:1.9rem"><span class="worn">${l}</span></button>`
-        : `<button class="btn" data-act="b" data-i="${i}">${l}</button>`).join('')}</div>
+        ? `<button class="btn-primary" data-act="b" data-i="${i}" style="min-height:3.8rem;font-size:1.9rem"><span class="worn">${t(l)}</span></button>`
+        : `<button class="btn" data-act="b" data-i="${i}">${t(l)}</button>`).join('')}</div>
     </div></div></div>`);
     this.wire(o, {
       b: (b) => {
@@ -921,10 +923,10 @@ export class UI {
   // Simulated rewarded ad (AdMob in the real build).
   fakeAd(onReward) {
     const o = this.overlay(`<div class="ad">
-      <span class="tagad">ANUNCIO · DEMO</span>
+      <span class="tagad">${t('ANUNCIO')} · DEMO</span>
       <div class="x" id="adx">5</div>
       <img class="logo" src="${url('ui/logo.png')}" alt="">
-      <div class="t">Aquí se mostrará un anuncio con recompensa de AdMob.<br>Espera unos segundos para recibir la recompensa.</div>
+      <div class="t">${t('Aquí se mostrará un anuncio con recompensa de AdMob.')}<br>${t('Espera unos segundos para recibir la recompensa.')}</div>
       <div class="loadbar" style="width:60%"><i id="adb"></i></div>
     </div>`);
     let left = 5;
@@ -946,13 +948,13 @@ export class UI {
     const ready = S.wheelDay !== store.today();
     const o = this.overlay(`<div class="overlay dark">
       <div class="panel strong"><div class="inner">
-        <div class="ov-title worn">RULETA DIARIA</div>
-        <div class="ov-sub" id="wsub">${ready ? 'Un giro gratis cada día' : 'Vuelve mañana para otro giro'}</div>
+        <div class="ov-title worn">${t('RULETA DIARIA')}</div>
+        <div class="ov-sub" id="wsub">${t(ready ? 'Un giro gratis cada día' : 'Vuelve mañana para otro giro')}</div>
         <div class="wheel-wrap"><canvas id="wc" width="600" height="600"></canvas>
           <svg class="wheel-ptr" viewBox="0 0 60 72"><path d="M30 70 L8 18 Q30 -6 52 18 Z" fill="#2B2418" stroke="#E8B04A" stroke-width="3"/><circle cx="22" cy="20" r="4" fill="#FFB030"/><circle cx="38" cy="20" r="4" fill="#FFB030"/></svg>
         </div>
-        <div id="wact" style="width:100%">${ready ? '<button class="btn-primary" data-act="spin" style="width:100%"><span class="worn">GIRAR</span></button>' : ''}</div>
-        <button class="link" data-act="close">${ready ? 'Más tarde' : 'Cerrar'}</button>
+        <div id="wact" style="width:100%">${ready ? `<button class="btn-primary" data-act="spin" style="width:100%"><span class="worn">${t('GIRAR')}</span></button>` : ''}</div>
+        <button class="link" data-act="close">${t(ready ? 'Más tarde' : 'Cerrar')}</button>
       </div></div></div>`);
     const cv = $(o, '#wc');
     const g = cv.getContext('2d');
@@ -1020,9 +1022,9 @@ export class UI {
           else {
             const v = W[idx].v;
             S.wheelDay = store.today(); store.save();
-            $(o, '#wsub').innerHTML = `<span class="glow-amber" style="font-size:1.4rem">¡HAS GANADO ${v} MONEDAS!</span>`;
-            $(o, '#wact').innerHTML = `<button class="btn-primary" data-act="claim" style="width:100%"><span class="stack"><span class="worn">RECLAMAR</span><span class="sub">VER ANUNCIO</span></span></button>`;
-            o.querySelector('[data-act=close]').textContent = 'Renunciar al premio';
+            $(o, '#wsub').innerHTML = `<span class="glow-amber" style="font-size:1.4rem">${t('¡HAS GANADO {n} MONEDAS!', { n: v })}</span>`;
+            $(o, '#wact').innerHTML = `<button class="btn-primary" data-act="claim" style="width:100%"><span class="stack"><span class="worn">${t('RECLAMAR')}</span><span class="sub">${t('VER ANUNCIO')}</span></span></button>`;
+            o.querySelector('[data-act=close]').textContent = t('Renunciar al premio');
             o.dataset.win = v;
           }
         };
@@ -1033,7 +1035,7 @@ export class UI {
           const v = Number(o.dataset.win);
           store.addCoins(v);
           this.closeOverlay(o);
-          this.toast(`+${v} monedas`);
+          this.toast(t('+{n} monedas', { n: v }), true);
           if (this.cur && this.cur.name === 'home') this.go('home');
         });
       },
@@ -1058,9 +1060,9 @@ export class UI {
     const S = this.S();
     const e = el(`<section style="padding:0">
       <div class="hud">
-        <button class="icon-btn" data-act="pause"><img src="${icon('pause')}" alt="Pausa"></button>
+        <button class="icon-btn" data-act="pause"><img src="${icon('pause')}" alt=""></button>
         <div class="hud-center" id="hc"></div>
-        <div class="hud-right"><div class="sc" id="hs">0</div><div class="lb">PUNTOS</div></div>
+        <div class="hud-right"><div class="sc" id="hs">0</div><div class="lb">${t('PUNTOS')}</div></div>
       </div>
       <div class="hud-bottom">
         <div class="tag-level" id="tl"></div>
@@ -1076,20 +1078,21 @@ export class UI {
     const hc = $(e, '#hc');
     if (mode === 'story') {
       hc.innerHTML = `<div class="hud-obj"><img src="${icon('orb_red')}" alt=""><span id="ho">0 / ${cfg.level.target}</span></div><div class="hud-bar"><i id="hb"></i></div>`;
-      $(e, '#tl').textContent = cfg.level.tutorial ? 'TUTORIAL · NIVEL 0'
-        : cfg.level.season ? `${cfg.level.guardian ? 'GUARDIÁN · ' : ''}TEMPORADA · NIVEL ${cfg.level.n}`
-          : `${cfg.level.guardian ? 'GUARDIÁN · ' : ''}NIVEL ${cfg.level.map}-${cfg.level.n} · ${cfg.level.mapInfo.name} · ${DIFFS[cfg.level.diff].label}`;
+      const G = cfg.level.guardian ? t('GUARDIÁN') + ' · ' : '';
+      $(e, '#tl').textContent = cfg.level.tutorial ? `${t('TUTORIAL')} · ${t('NIVEL')} 0`
+        : cfg.level.season ? `${G}${t('TEMPORADA')} · ${t('NIVEL')} ${cfg.level.n}`
+          : `${G}${t('NIVEL')} ${cfg.level.map}-${cfg.level.n} · ${cfg.level.mapInfo.name} · ${t(DIFFS[cfg.level.diff].label)}`;
     } else if (mode === 'classic') {
-      hc.innerHTML = `<div class="hud-obj"><img src="${icon('mode_classic')}" alt=""><span id="ho">LARGO 4</span></div><div class="t-label dim" style="font-size:.75rem">RÉCORD ${fmt(S.best.classic)}</div>`;
-      $(e, '#tl').textContent = 'CLÁSICO';
+      hc.innerHTML = `<div class="hud-obj"><img src="${icon('mode_classic')}" alt=""><span id="ho">${t('LARGO')} 4</span></div><div class="t-label dim" style="font-size:.75rem">${t('RÉCORD')} ${fmt(S.best.classic)}</div>`;
+      $(e, '#tl').textContent = t('CLÁSICO');
     } else if (mode === 'frenzy') {
-      hc.innerHTML = `<div class="timer-big" id="tm">1:00</div><div class="t-label dim" style="font-size:.75rem">RÉCORD ${fmt(S.best.frenzy)}</div>`;
-      $(e, '#tl').textContent = 'ORBES FRENÉTICOS';
+      hc.innerHTML = `<div class="timer-big" id="tm">1:00</div><div class="t-label dim" style="font-size:.75rem">${t('RÉCORD')} ${fmt(S.best.frenzy)}</div>`;
+      $(e, '#tl').textContent = t('ORBES FRENÉTICOS');
     } else if (mode === 'duel') {
       const b = BOTS[cfg.difficulty];
-      hc.innerHTML = `<div class="duel-bars"><span class="you">TÚ <b id="dp">0</b></span><span class="vs">A ${b.target}</span><span class="rival"><b id="db">0</b> RIVAL</span></div>
+      hc.innerHTML = `<div class="duel-bars"><span class="you">${t('TÚ')} <b id="dp">0</b></span><span class="vs">${t('A {n}', { n: b.target })}</span><span class="rival"><b id="db">0</b> ${t('RIVAL')}</span></div>
         <div class="duel-mini"><div class="hud-bar"><i id="dpb"></i></div><div class="hud-bar" style="transform:scaleX(-1)"><i class="r" id="dbb"></i></div></div>`;
-      $(e, '#tl').textContent = `DUELO · ${b.label}`;
+      $(e, '#tl').textContent = `${t('DUELO')} · ${t(b.label)}`;
     }
 
     // build the game
@@ -1129,7 +1132,7 @@ export class UI {
   warnBanner(sec) {
     const layer = this.hudEl; // not #fxl: the countdown rewrites that layer
     if (!layer) return;
-    const w = el(`<div class="plaque strip p0" style="top:${Math.round(this.warnTop || 0)}px;animation-duration:${sec}s"><img src="${url('ui/banners/b0.png')}" alt=""><span>EVITA LOS OBSTÁCULOS</span></div>`);
+    const w = el(`<div class="plaque strip p0" style="top:${Math.round(this.warnTop || 0)}px;animation-duration:${sec}s"><img src="${url('ui/banners/b0.png')}" alt=""><span>${t('EVITA LOS OBSTÁCULOS')}</span></div>`);
     layer.appendChild(w);
     setTimeout(() => w.remove(), sec * 1000 + 100);
   }
@@ -1138,14 +1141,14 @@ export class UI {
     const layer = this.fxLayer();
     const ctl = this.S().settings.controls || 'swipe';
     if (this.hudEl && ctl !== 'buttons' && !(this.lastCfg && this.lastCfg.level && this.lastCfg.level.tutorial)) {
-      const h = el(`<div class="ctl-hint"><span class="ctl-ic ctl-${ctl}"></span>${CONTROL_INFO[ctl]}</div>`);
+      const h = el(`<div class="ctl-hint"><span class="ctl-ic ctl-${ctl}"></span>${t(CONTROL_INFO[ctl])}</div>`);
       const dp = this.hudEl.querySelector('.dpad');
       if (dp) h.style.bottom = `${Math.round(window.innerHeight - dp.getBoundingClientRect().top + 8)}px`;
       this.hudEl.appendChild(h);
       setTimeout(() => h.classList.add('out'), 3200);
       setTimeout(() => h.remove(), 3800);
     }
-    const steps = ['3', '2', '1', '¡YA!'];
+    const steps = ['3', '2', '1', t('¡YA!')];
     let i = 0;
     const next = () => {
       if (!layer || !layer.isConnected) return;
@@ -1168,7 +1171,7 @@ export class UI {
       $(e, '#ho').textContent = `${h.objective.cur} / ${h.objective.target}`;
       $(e, '#hb').style.width = (h.objective.cur / h.objective.target) * 100 + '%';
     }
-    if (h.length && $(e, '#ho')) $(e, '#ho').textContent = `LARGO ${h.length}`;
+    if (h.length && $(e, '#ho')) $(e, '#ho').textContent = `${t('LARGO')} ${h.length}`;
     if (h.duel) {
       $(e, '#dp').textContent = h.duel.p;
       $(e, '#db').textContent = h.duel.b;
@@ -1196,7 +1199,7 @@ export class UI {
   combo(n) {
     const layer = this.fxLayer();
     if (!layer) return;
-    const c = el(`<div class="combo">COMBO x${n}</div>`);
+    const c = el(`<div class="combo">${t('COMBO')} x${n}</div>`);
     layer.appendChild(c);
     setTimeout(() => c.remove(), 1000);
   }
@@ -1215,11 +1218,11 @@ export class UI {
   goldFlash() { this.flash('gold'); }
   hitFlash() { this.flash('hit'); }
 
-  showHint(t) {
+  showHint(text) {
     const layer = this.fxLayer();
     if (!layer) return;
     this.hideHint();
-    layer.appendChild(el(`<div class="hint" id="hint">${t}</div>`));
+    layer.appendChild(el(`<div class="hint" id="hint">${t(text)}</div>`));
   }
 
   hideHint() {
@@ -1230,7 +1233,7 @@ export class UI {
   // wide banner plaque (banner kit) that announces an event on top of the board
   plaque(text, idx, sec = 2) {
     if (!this.hudEl) return;
-    const p = el(`<div class="plaque p${idx}" style="top:${Math.round((this.boardTop || 60) + 6)}px;animation-duration:${sec}s"><img src="${url('ui/banners/b' + idx + '.png')}" alt=""><span>${text}</span></div>`);
+    const p = el(`<div class="plaque p${idx}" style="top:${Math.round((this.boardTop || 60) + 6)}px;animation-duration:${sec}s"><img src="${url('ui/banners/b' + idx + '.png')}" alt=""><span>${t(text)}</span></div>`);
     this.hudEl.appendChild(p);
     setTimeout(() => p.remove(), sec * 1000 + 80);
   }
@@ -1266,7 +1269,7 @@ export class UI {
     const old = $(this.hudEl, '.tut-panel');
     if (old) old.remove();
     const p = el(`<div class="tut-panel" style="top:${Math.round(this.warnTop || 0)}px"><img class="ic" src="${T[2] === 'orb' ? icon('orb_red') : kit(T[2])}" alt="">
-      <div><div class="tt">${T[0]} <span>${i + 1}/4</span></div><div class="tx">${T[1]}</div></div></div>`);
+      <div><div class="tt">${t(T[0])} <span>${i + 1}/4</span></div><div class="tx">${t(T[1])}</div></div></div>`);
     this.hudEl.appendChild(p);
     if (i === 0) {
       const h = el(`<img class="tut-hand" src="${kit('swipe')}" alt="">`);
@@ -1281,14 +1284,14 @@ export class UI {
     game.paused = true;
     audio.duck(true);
     const cfg = this.lastCfg;
-    const info = cfg.mode === 'story' ? `NIVEL ${cfg.level.map}-${cfg.level.n} · ORBES ${game.player.orbs}/${game.target}` : `PUNTOS ${fmt(game.score)}`;
+    const info = cfg.mode === 'story' ? `${t('NIVEL')} ${cfg.level.map}-${cfg.level.n} · ${t('ORBES')} ${game.player.orbs}/${game.target}` : `${t('PUNTOS')} ${fmt(game.score)}`;
     const o = this.overlay(`<div class="overlay"><div class="panel"><div class="inner">
       <img src="${icon('pause')}" style="width:3.6rem;border-radius:.4rem">
-      ${ptitle('PAUSA', 3)}
+      ${ptitle(t('PAUSA'), 3)}
       <div class="ov-sub">${info}</div>
-      <button class="btn-primary" data-act="resume" style="width:100%"><span class="worn">CONTINUAR</span><i class="tri"></i></button>
-      <button class="btn" data-act="pset" style="width:100%"><img class="ic" src="${icon('settings')}">AJUSTES</button>
-      <div class="btn-row"><button class="btn" data-act="restart"><img class="ic" src="${icon('retry')}">REINICIAR</button><button class="btn" data-act="quit"><img class="ic" src="${icon('quit')}">SALIR</button></div>
+      <button class="btn-primary" data-act="resume" style="width:100%"><span class="worn">${t('CONTINUAR')}</span><i class="tri"></i></button>
+      <button class="btn" data-act="pset" style="width:100%"><img class="ic" src="${icon('settings')}">${t('AJUSTES')}</button>
+      <div class="btn-row"><button class="btn" data-act="restart"><img class="ic" src="${icon('retry')}">${t('REINICIAR')}</button><button class="btn" data-act="quit"><img class="ic" src="${icon('quit')}">${t('SALIR')}</button></div>
     </div></div></div>`);
     this.wire(o, {
       pset: () => this.pauseSettings(),
@@ -1301,17 +1304,17 @@ export class UI {
   // settings without leaving the game (audio, vibration, accessibility, controls)
   pauseSettings() {
     const set = this.S().settings;
-    const row = (k, ic, label) => `<div class="set-row"><span class="l"><img src="${ic}">${label}</span><button class="toggle ${set[k] ? 'on' : ''}" data-act="tg" data-k="${k}"></button></div>`;
+    const row = (k, ic, label) => `<div class="set-row"><span class="l"><img src="${ic}">${t(label)}</span><button class="toggle ${set[k] ? 'on' : ''}" data-act="tg" data-k="${k}"></button></div>`;
     const o = this.overlay(`<div class="overlay dark"><div class="panel strong"><div class="inner pad" style="width:100%">
-      ${ptitle('AJUSTES', 3)}
+      ${ptitle(t('AJUSTES'), 3)}
       ${row('music', icon('mode_frenzy'), 'MÚSICA')}
       ${row('sfx', icon('play'), 'EFECTOS DE SONIDO')}
       ${row('vibration', icon('hz_wind'), 'VIBRACIÓN')}
       ${row('colorblind', icon('hz_dark'), 'MODO DALTÓNICO')}
       ${row('lowfx', icon('hz_wind'), 'GRÁFICOS BAJOS')}
-      <div class="sec">CONTROLES</div>
-      <div class="ctl-grid">${[['swipe', 'DESLIZAR'], ['buttons', 'FLECHAS'], ['joystick', 'PALANCA'], ['tap', 'TOQUES']].map(([v, l]) => `<button class="ctl ${set.controls === v ? 'on' : ''}" data-act="ctl" data-v="${v}"><span class="ctl-ic ctl-${v}"></span>${l}</button>`).join('')}</div>
-      <button class="btn-primary" data-act="back" style="width:100%;margin-top:.5rem"><span class="worn">VOLVER</span></button>
+      <div class="sec">${t('CONTROLES')}</div>
+      <div class="ctl-grid">${[['swipe', 'DESLIZAR'], ['buttons', 'FLECHAS'], ['joystick', 'PALANCA'], ['tap', 'TOQUES']].map(([v, l]) => `<button class="ctl ${set.controls === v ? 'on' : ''}" data-act="ctl" data-v="${v}"><span class="ctl-ic ctl-${v}"></span>${t(l)}</button>`).join('')}</div>
+      <button class="btn-primary" data-act="back" style="width:100%;margin-top:.5rem"><span class="worn">${t('VOLVER')}</span></button>
     </div></div></div>`);
     this.wire(o, {
       tg: (b) => {
@@ -1359,10 +1362,10 @@ export class UI {
     const o = this.overlay(`<div class="overlay item-intro" style="background:radial-gradient(circle at ${px}px ${py}px, transparent 0, transparent ${R}px, rgba(4,6,4,.84) ${R + 60}px)">
       <div class="spot" style="left:${px}px;top:${py}px"></div>
       <div class="panel strong" style="margin-top:auto"><div class="inner">
-        <div class="t-label glow-amber">¡NUEVO OBJETO!</div>
-        <div class="ii-head"><img src="${D[1]}" alt=""><div class="t-display worn" style="font-size:2rem">${D[0]}</div></div>
-        <div class="ii-lines">${D[2].map(([ic, tx]) => `<div><img src="${ic}" alt=""><span>${tx}</span></div>`).join('')}</div>
-        <button class="btn-primary" data-act="ok" style="width:100%"><span class="worn">¡ENTENDIDO!</span></button>
+        <div class="t-label glow-amber">${t('¡NUEVO OBJETO!')}</div>
+        <div class="ii-head"><img src="${D[1]}" alt=""><div class="t-display worn" style="font-size:2rem">${t(D[0])}</div></div>
+        <div class="ii-lines">${D[2].map(([ic, tx]) => `<div><img src="${ic}" alt=""><span>${t(tx)}</span></div>`).join('')}</div>
+        <button class="btn-primary" data-act="ok" style="width:100%"><span class="worn">${t('¡ENTENDIDO!')}</span></button>
       </div></div></div>`);
     this.wire(o, { ok: () => { this.closeOverlay(o); onClose && onClose(); } });
   }
@@ -1384,25 +1387,25 @@ export class UI {
     if (r >= 2) { game.giveUp(); return; }
     const cost = ECONOMY.reviveCoins[r];
     const canAd = r === 0;
-    let sub = info.mode === 'story' ? (info.left === 1 ? 'Te faltó 1 orbe' : `Te faltaron ${info.left} orbes`) : info.mode === 'duel' ? '¡El duelo sigue abierto!' : `${fmt(info.score)} puntos`;
-    if (r === 1) sub = 'Última oportunidad';
+    let sub = info.mode === 'story' ? tn('Te faltaron {n} orbes', info.left) : info.mode === 'duel' ? t('¡El duelo sigue abierto!') : t('{n} puntos', { n: fmt(info.score) });
+    if (r === 1) sub = t('Última oportunidad');
     const prog = info.target ? `<div style="width:100%;display:flex;align-items:center;gap:.5rem"><img src="${icon('orb_red')}" style="width:1.8rem;border-radius:.2rem"><div class="progress" style="flex:1"><i style="width:${(info.cur / info.target) * 100}%"></i></div><span class="t-display" style="font-size:1.4rem">${info.cur}/${info.target}</span></div>` : '';
     const enough = S.coins >= cost;
     const tip = this.deathTip(info);
     const tipHtml = `<div class="tip-chip"><img src="${kit('bulb')}" alt=""><span>${tip}</span></div>`;
-    const adCoin = `<button class="chip-ad" data-act="adcoin"><img src="${kit('plus1')}" alt=""><span>+1 MONEDA · VER ANUNCIO</span></button>`;
+    const adCoin = `<button class="chip-ad" data-act="adcoin"><img src="${kit('plus1')}" alt=""><span>${t('+1 MONEDA')} · ${t('VER ANUNCIO')}</span></button>`;
     const o = this.overlay(`<div class="overlay" style="justify-content:flex-end;padding-bottom:12%"><div class="panel"><div class="inner">
-      ${ptitle(info.target && info.left / info.target > 0.4 ? '¡AY!' : '¡CASI!', 0)}
+      ${ptitle(t(info.target && info.left / info.target > 0.4 ? '¡AY!' : '¡CASI!'), 0)}
       <div class="ov-sub">${sub}</div>
       ${prog}
       ${tipHtml}
-      ${canAd ? `<div class="revive-main"><button class="btn-primary" data-act="ad" style="width:100%"><img src="${icon('ad')}" style="width:2.2rem;border-radius:.25rem"><span class="stack"><span class="worn">REVIVIR</span><span class="sub">VER ANUNCIO</span></span></button>
+      ${canAd ? `<div class="revive-main"><button class="btn-primary" data-act="ad" style="width:100%"><img src="${icon('ad')}" style="width:2.2rem;border-radius:.25rem"><span class="stack"><span class="worn">${t('REVIVIR')}</span><span class="sub">${t('VER ANUNCIO')}</span></span></button>
         <div class="ring"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="rgba(10,14,11,.9)" stroke="rgba(255,255,255,.15)" stroke-width="3"/><circle id="rr" cx="20" cy="20" r="17" fill="none" stroke="#E8B04A" stroke-width="3" stroke-dasharray="106.8" stroke-dashoffset="0" stroke-linecap="round"/></svg><span id="rn">6</span></div></div>` : ''}
-      <button class="${canAd ? 'btn' : 'btn-primary'}" data-act="coins" style="width:100%;${canAd ? '' : 'min-height:4rem;font-size:2rem'}"><img class="ic" src="${icon('coin')}" style="${canAd ? '' : 'width:2rem;height:2rem;border-radius:50%'}"><span>REVIVIR · ${cost}</span></button>
-      ${enough ? '' : `<div class="t-label" style="color:#FF8A7A;font-size:.85rem">TE FALTAN ${fmt(cost - S.coins)} MONEDAS · <button class="link" data-act="getcoins" style="padding:0;color:var(--honey)">CONSEGUIR</button></div>`}
+      <button class="${canAd ? 'btn' : 'btn-primary'}" data-act="coins" style="width:100%;${canAd ? '' : 'min-height:4rem;font-size:2rem'}"><img class="ic" src="${icon('coin')}" style="${canAd ? '' : 'width:2rem;height:2rem;border-radius:50%'}"><span>${t('REVIVIR')} · ${cost}</span></button>
+      ${enough ? '' : `<div class="t-label" style="color:#FF8A7A;font-size:.85rem">${t('TE FALTAN {n} MONEDAS', { n: fmt(cost - S.coins) })} · <button class="link" data-act="getcoins" style="padding:0;color:var(--honey)">${t('CONSEGUIR')}</button></div>`}
       ${adCoin}
-      <div class="btn-row"><button class="btn small" data-act="retry"><img class="ic" src="${icon('retry')}">REINTENTAR</button><button class="btn small" data-act="home"><img class="ic" src="${icon('home')}">SALIR</button></div>
-      <button class="link" data-act="no">No, gracias</button>
+      <div class="btn-row"><button class="btn small" data-act="retry"><img class="ic" src="${icon('retry')}">${t('REINTENTAR')}</button><button class="btn small" data-act="home"><img class="ic" src="${icon('home')}">${t('SALIR')}</button></div>
+      <button class="link" data-act="no">${t('No, gracias')}</button>
     </div></div></div>`);
     // countdown to auto-decline
     let left = 6, paused = false;
@@ -1429,7 +1432,7 @@ export class UI {
         if (!store.spend(cost)) {
           paused = true;
           this.popup({
-            title: 'MONEDAS INSUFICIENTES', icon: 'coins', text: `Necesitas <b>${cost}</b> monedas para revivir.`,
+            title: 'MONEDAS INSUFICIENTES', icon: 'coins', text: t('Necesitas <b>{n}</b> monedas para revivir.', { n: cost }),
             buttons: [['CONSEGUIR MONEDAS', () => this.quickShop(() => { paused = false; }), true], ['VOLVER', () => { paused = false; }]],
           });
           return;
@@ -1440,7 +1443,7 @@ export class UI {
       getcoins: () => { paused = true; this.quickShop(() => { paused = false; }); },
       adcoin: (b) => {
         paused = true;
-        this.fakeAd(() => { store.addCoins(1); this.toast('+1 moneda'); b.remove(); paused = false; });
+        this.fakeAd(() => { store.addCoins(1); this.toast(t('+1 moneda'), true); b.remove(); paused = false; });
       },
       retry: () => this.startGame(this.lastCfg),
       home: () => this.exitGame(),
@@ -1451,27 +1454,27 @@ export class UI {
   // One short line about what just happened, tuned to the map and the way the player died.
   deathTip(info) {
     const LETHAL = { 1: 'El río', 2: 'El estanque', 3: 'El agua', 4: 'El río de esporas', 5: 'La arena movediza', 6: 'El lodo tóxico', 7: 'El agua helada', 8: 'El abismo de cristal', 9: 'El agua profunda', 10: 'La lava', 11: 'El mar', 12: 'El foso', 13: 'El vacío', 14: 'El agua sagrada', 15: 'La ciénaga', 16: 'El canal de energía', 17: 'El pantano maldito' };
-    if (info.mode === 'duel') return 'Corta el paso al rival, pero no cruces su cuerpo.';
+    if (info.mode === 'duel') return t('Corta el paso al rival, pero no cruces su cuerpo.');
     if (info.reason === 'hazard') {
-      if (info.cellT === 6) return 'Los pinchos te eliminan. Recoge el campo de fuerza para romperlos.';
-      return `${LETHAL[info.map] || 'El terreno'} te elimina. Cruza por los puentes.`;
+      if (info.cellT === 6) return t('Los pinchos te eliminan. Recoge el campo de fuerza para romperlos.');
+      return t('{x} te elimina. Cruza por los puentes.', { x: t(LETHAL[info.map] || 'El terreno') });
     }
-    if (info.reason === 'obstacle') return 'Los obstáculos bloquean el paso. Rodéalos o rómpelos con el campo de fuerza.';
-    if (info.reason === 'wall') return 'Los muros del borde te detienen. Gira antes de llegar.';
-    if (info.reason === 'self') return 'Cuidado con tu cola: deja espacio para girar.';
-    return 'Planifica tu ruta un par de casillas por delante.';
+    if (info.reason === 'obstacle') return t('Los obstáculos bloquean el paso. Rodéalos o rómpelos con el campo de fuerza.');
+    if (info.reason === 'wall') return t('Los muros del borde te detienen. Gira antes de llegar.');
+    if (info.reason === 'self') return t('Cuidado con tu cola: deja espacio para girar.');
+    return t('Planifica tu ruta un par de casillas por delante.');
   }
 
   // Minimal in-game coin pack sheet (keeps the run alive).
   quickShop(onClose) {
     const o = this.overlay(`<div class="overlay dark"><div class="panel strong"><div class="inner">
-      <div class="ov-title worn" style="font-size:2.4rem">MONEDAS</div>
+      <div class="ov-title worn" style="font-size:2.4rem">${t('MONEDAS')}</div>
       <div class="pack-grid" style="width:100%">${ECONOMY.packs.slice(0, 3).map((p, i) => `<button class="pack" data-act="buy" data-coins="${p.coins}"><img src="${icon(i ? 'coins' : 'coin')}"><div class="amt">${fmt(p.coins)}</div><div class="price">${p.price}</div></button>`).join('')}</div>
-      <div class="demo-note">Compra simulada (demo)</div>
-      <button class="btn" data-act="close" style="width:100%">VOLVER</button>
+      <div class="demo-note">${t('Compra simulada (demo)')}</div>
+      <button class="btn" data-act="close" style="width:100%">${t('VOLVER')}</button>
     </div></div></div>`);
     this.wire(o, {
-      buy: (b) => { store.addCoins(Number(b.dataset.coins)); this.toast(`+${fmt(Number(b.dataset.coins))} monedas`); this.closeOverlay(o); onClose && onClose(); this.refreshReviveCoins(); },
+      buy: (b) => { store.addCoins(Number(b.dataset.coins)); this.toast(t('+{n} monedas', { n: fmt(Number(b.dataset.coins)) }), true); this.closeOverlay(o); onClose && onClose(); this.refreshReviveCoins(); },
       close: () => { this.closeOverlay(o); onClose && onClose(); },
     });
   }
@@ -1487,19 +1490,18 @@ export class UI {
     const S = this.S();
     const cfg = this.lastCfg;
     let html = '', coins = 0;
-    const statRow = (items) => `<div class="stat-row">${items.map(([k, v]) => `<div><span class="v">${v}</span><span class="k">${k}</span></div>`).join('')}</div>`;
-    const t = res.time;
-    const time = `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+    const statRow = (items) => `<div class="stat-row">${items.map(([k, v]) => `<div><span class="v">${v}</span><span class="k">${t(k)}</span></div>`).join('')}</div>`;
+    const time = fmtT(res.time);
 
     if (res.mode === 'story' && res.tutorial) {
       coins = res.won ? 100 : 0;
       if (res.won) { S.tutorialSeen = true; store.save(); }
-      html = `<div class="t-label glow-amber">TUTORIAL</div>
-        ${ptitle('¡LISTO PARA JUGAR!', 3)}
-        <div class="ov-sub">Ya conoces los orbes, los obstáculos y el campo de fuerza</div>
+      html = `<div class="t-label glow-amber">${t('TUTORIAL')}</div>
+        ${ptitle(t('¡LISTO PARA JUGAR!'), 3)}
+        <div class="ov-sub">${t('Ya conoces los orbes, los obstáculos y el campo de fuerza')}</div>
         <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>
-        <button class="btn-primary" data-act="first" style="width:100%"><span class="worn">JUGAR NIVEL 1-1</span><i class="tri"></i></button>
-        <div class="btn-row"><button class="btn" data-act="retry"><img class="ic" src="${icon('retry')}">REPETIR</button><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">INICIO</button></div>`;
+        <button class="btn-primary" data-act="first" style="width:100%"><span class="worn">${t('JUGAR')} ${t('NIVEL')} 1-1</span><i class="tri"></i></button>
+        <div class="btn-row"><button class="btn" data-act="retry"><img class="ic" src="${icon('retry')}">${t('REPETIR')}</button><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">${t('INICIO')}</button></div>`;
     } else if (res.mode === 'story') {
       const L = cfg.level;
       const back = L.season ? 'season' : 'levels';
@@ -1515,28 +1517,28 @@ export class UI {
         meta.addSeasonXp((L.season ? 25 : first ? 15 : 5) + (res.stars === 3 ? 10 : 0));
         const skinNow = L.season && L.n === 20 && meta.seasonSkinUnlock();
         for (let k = 0; k < res.stars; k++) audio.play('star_pop', { rate: 1 + 0.12 * k, delay: 0.5 + k * 0.3 });
-        html = `<div class="t-label glow-amber">${L.guardian ? '¡GUARDIÁN DERROTADO!' : '¡OBJETIVO CUMPLIDO!'}</div>
-          ${ptitle('¡NIVEL SUPERADO!', 2)}
-          <div class="ov-sub">${L.season ? 'TEMPORADA' : L.map + '-'}${L.season ? ' · NIVEL ' + L.n : L.n} · ${L.mapInfo.name}</div>
+        html = `<div class="t-label glow-amber">${t(L.guardian ? '¡GUARDIÁN DERROTADO!' : '¡OBJETIVO CUMPLIDO!')}</div>
+          ${ptitle(t('¡NIVEL SUPERADO!'), 2)}
+          <div class="ov-sub">${L.season ? t('TEMPORADA') + ' · ' + t('NIVEL') + ' ' + L.n : L.map + '-' + L.n} · ${L.mapInfo.name}</div>
           <div class="star-row">${[
-            ['Objetivo', true], [res.deaths ? 'Sin morir' : 'Sin morir', res.deaths === 0], [`Rápido · ${fmtT(res.par)}`, res.stars === 3],
+            [t('Objetivo'), true], [t('Sin morir'), res.deaths === 0], [`${t('Rápido')} · ${fmtT(res.par)}`, res.stars === 3],
           ].map(([cap, on], i) => `<div class="star ${on ? 'on' : ''}" style="--d:${0.35 + i * 0.3}s"><img src="${kit(on ? 'star_gold' : 'star_empty')}" alt=""><span>${cap}</span></div>`).join('')}</div>
-          ${res.stars === 3 ? ptitle('¡PERFECTO!', 2, 'small') : ''}
+          ${res.stars === 3 ? ptitle(t('¡PERFECTO!'), 2, 'small') : ''}
           ${statRow([['ORBES', `${Math.min(res.orbs, L.target)}/${L.target}`], ['PUNTOS', fmt(res.score)], ['TIEMPO', time]])}
           <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>
-          ${first ? '' : '<div class="demo-note">Nivel repetido: recompensa reducida</div>'}
-          ${skinNow ? `<div class="t-label glow-amber">¡SKIN DE TEMPORADA DESBLOQUEADA!</div>` : ''}
-          <button class="ad-x2" data-act="x2"><img src="${kit('x2')}" alt=""><span>x2 MONEDAS · VER ANUNCIO</span><img class="vid" src="${kit('video')}" alt=""></button>
-          ${L.season ? (L.n < 20 ? `<button class="btn-primary" data-act="next" style="width:100%"><span class="worn">SIGUIENTE</span><i class="tri"></i></button>` : `<div class="t-label glow-amber">¡TEMPORADA COMPLETADA!</div>`)
-            : L.n < 10 ? `<button class="btn-primary" data-act="next" style="width:100%"><span class="worn">SIGUIENTE</span><i class="tri"></i></button>`
-              : `<div class="t-label glow-amber">¡MAPA ${ROMAN[L.map - 1]} COMPLETADO!</div>${L.map < 16 ? `<button class="btn-primary" data-act="nextmap" style="width:100%"><span class="stack"><span class="worn">SIGUIENTE MAPA</span><span class="sub">${MAPS[L.map].name}</span></span></button>` : ''}`}
-          <div class="btn-row"><button class="btn" data-act="retry"><img class="ic" src="${icon('retry')}">REPETIR</button><button class="btn" data-act="levels"><img class="ic" src="${icon('levels')}">NIVELES</button></div>`;
+          ${first ? '' : `<div class="demo-note">${t('Nivel repetido: recompensa reducida')}</div>`}
+          ${skinNow ? `<div class="t-label glow-amber">${t('¡SKIN DE TEMPORADA DESBLOQUEADA!')}</div>` : ''}
+          <button class="ad-x2" data-act="x2"><img src="${kit('x2')}" alt=""><span>x2 ${t('MONEDAS')} · ${t('VER ANUNCIO')}</span><img class="vid" src="${kit('video')}" alt=""></button>
+          ${L.season ? (L.n < 20 ? `<button class="btn-primary" data-act="next" style="width:100%"><span class="worn">${t('SIGUIENTE')}</span><i class="tri"></i></button>` : `<div class="t-label glow-amber">${t('¡TEMPORADA COMPLETADA!')}</div>`)
+            : L.n < 10 ? `<button class="btn-primary" data-act="next" style="width:100%"><span class="worn">${t('SIGUIENTE')}</span><i class="tri"></i></button>`
+              : `<div class="t-label glow-amber">${t('¡MAPA {m} COMPLETADO!', { m: ROMAN[L.map - 1] })}</div>${L.map < 16 ? `<button class="btn-primary" data-act="nextmap" style="width:100%"><span class="stack"><span class="worn">${t('SIGUIENTE MAPA')}</span><span class="sub">${MAPS[L.map].name}</span></span></button>` : ''}`}
+          <div class="btn-row"><button class="btn" data-act="retry"><img class="ic" src="${icon('retry')}">${t('REPETIR')}</button><button class="btn" data-act="levels"><img class="ic" src="${icon('levels')}">${t('NIVELES')}</button></div>`;
       } else {
-        html = `${ptitle('NIVEL FALLIDO', 0)}
-          <div class="ov-sub">${L.season ? 'TEMPORADA · NIVEL ' + L.n : L.map + '-' + L.n} · ${L.mapInfo.name}</div>
+        html = `${ptitle(t('NIVEL FALLIDO'), 0)}
+          <div class="ov-sub">${L.season ? t('TEMPORADA') + ' · ' + t('NIVEL') + ' ' + L.n : L.map + '-' + L.n} · ${L.mapInfo.name}</div>
           ${statRow([['ORBES', `${res.orbs}/${L.target}`], ['PUNTOS', fmt(res.score)], ['TIEMPO', time]])}
-          <button class="btn-primary" data-act="retry" style="width:100%"><span class="worn">REINTENTAR</span></button>
-          <div class="btn-row"><button class="btn" data-act="levels"><img class="ic" src="${icon('levels')}">NIVELES</button><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">INICIO</button></div>`;
+          <button class="btn-primary" data-act="retry" style="width:100%"><span class="worn">${t('REINTENTAR')}</span></button>
+          <div class="btn-row"><button class="btn" data-act="levels"><img class="ic" src="${icon('levels')}">${t('NIVELES')}</button><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">${t('INICIO')}</button></div>`;
       }
       void back;
     } else if (res.mode === 'classic' || res.mode === 'frenzy') {
@@ -1545,15 +1547,15 @@ export class UI {
       const rec = res.score > prevBest;
       if (rec) { S.best[key] = res.score; store.save(); }
       coins = Math.floor(res.orbs / (key === 'classic' ? ECONOMY.classicCoinsPerOrbs : ECONOMY.frenzyCoinsPerOrbs));
-      html = `${rec ? ptitle('¡NUEVO RÉCORD!', 2, 'small') : ''}
-        ${ptitle(key === 'frenzy' ? (res.won ? '¡TIEMPO!' : 'FIN DEL FRENESÍ') : 'FIN DE LA PARTIDA', 2)}
+      html = `${rec ? ptitle(t('¡NUEVO RÉCORD!'), 2, 'small') : ''}
+        ${ptitle(t(key === 'frenzy' ? (res.won ? '¡TIEMPO!' : 'FIN DEL FRENESÍ') : 'FIN DE LA PARTIDA'), 2)}
         <div class="big-num">${fmt(res.score)}</div>
-        <div class="ov-sub">RÉCORD ${fmt(Math.max(prevBest, res.score))}</div>
+        <div class="ov-sub">${t('RÉCORD')} ${fmt(Math.max(prevBest, res.score))}</div>
         ${statRow(key === 'classic' ? [['ORBES', res.orbs], ['LARGO', res.length], ['TIEMPO', time]] : [['DORADOS', res.gold], ['LARGO', res.length], ['TIEMPO', time]])}
         <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>
-        ${coins > 0 ? `<button class="ad-x2" data-act="x2"><img src="${kit('x2')}" alt=""><span>x2 MONEDAS · VER ANUNCIO</span><img class="vid" src="${kit('video')}" alt=""></button>` : ''}
-        <button class="btn-primary" data-act="retry" style="width:100%"><span class="worn">JUGAR DE NUEVO</span></button>
-        <div class="btn-row"><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">INICIO</button><button class="btn" data-act="lb"><img class="ic" src="${icon('mode_leaderboard')}">RANKING</button></div>`;
+        ${coins > 0 ? `<button class="ad-x2" data-act="x2"><img src="${kit('x2')}" alt=""><span>x2 ${t('MONEDAS')} · ${t('VER ANUNCIO')}</span><img class="vid" src="${kit('video')}" alt=""></button>` : ''}
+        <button class="btn-primary" data-act="retry" style="width:100%"><span class="worn">${t('JUGAR DE NUEVO')}</span></button>
+        <div class="btn-row"><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">${t('INICIO')}</button><button class="btn" data-act="lb"><img class="ic" src="${icon('mode_leaderboard')}">${t('RANKING')}</button></div>`;
     } else if (res.mode === 'duel') {
       const b = BOTS[cfg.difficulty];
       if (res.won) {
@@ -1563,12 +1565,12 @@ export class UI {
         store.save();
         meta.track('duelwin');
       }
-      html = `${ptitle(res.won ? 'VICTORIA' : 'DERROTA', res.won ? 2 : 0)}
-        <div class="ov-sub">${res.won ? `${b.name} DERROTADO` : res.loseReason === 'bot' ? `${b.name} LLEGÓ PRIMERO` : `${b.name} TE HA VENCIDO`}</div>
+      html = `${ptitle(t(res.won ? 'VICTORIA' : 'DERROTA'), res.won ? 2 : 0)}
+        <div class="ov-sub">${t(res.won ? '{b} DERROTADO' : res.loseReason === 'bot' ? '{b} LLEGÓ PRIMERO' : '{b} TE HA VENCIDO', { b: b.name })}</div>
         ${statRow([['TÚ', res.duel.p], ['RIVAL', res.duel.b], ['TIEMPO', time]])}
-        ${res.won ? `<div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>${coins ? '' : '<div class="demo-note">Límite diario de victorias pagadas alcanzado</div>'}` : ''}
-        <button class="btn-primary" data-act="retry" style="width:100%"><span class="worn">REVANCHA</span></button>
-        <div class="btn-row"><button class="btn" data-act="duel"><img class="ic" src="${icon('mode_duel')}">RIVALES</button><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">INICIO</button></div>`;
+        ${res.won ? `<div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>${coins ? '' : `<div class="demo-note">${t('Límite diario de victorias pagadas alcanzado')}</div>`}` : ''}
+        <button class="btn-primary" data-act="retry" style="width:100%"><span class="worn">${t('REVANCHA')}</span></button>
+        <div class="btn-row"><button class="btn" data-act="duel"><img class="ic" src="${icon('mode_duel')}">${t('RIVALES')}</button><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">${t('INICIO')}</button></div>`;
     }
 
     const o = this.overlay(`<div class="overlay"><div class="panel"><div class="inner stagger">${html}</div></div></div>`);
@@ -1597,14 +1599,14 @@ export class UI {
       x2: (b) => {
         this.fakeAd(() => {
           store.addCoins(coins);
-          this.toast(`+${fmt(coins)} monedas más`);
+          this.toast(t('+{n} monedas más', { n: fmt(coins) }), true);
           const cr = $(o, '#cr'); if (cr) cr.textContent = '+' + fmt(coins * 2);
           b.remove();
         });
       },
       home: () => { this.game = null; this.go('home'); },
       duel: () => { this.game = null; this.go('duel'); },
-      lb: () => this.toast('Ranking con Google Play Games en la versión final'),
+      lb: () => this.toast(t('Ranking con Google Play Games en la versión final')),
     });
   }
 }

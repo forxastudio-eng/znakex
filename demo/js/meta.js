@@ -2,6 +2,7 @@
 import * as store from './store.js';
 import { CONFIG } from './config.js';
 import { SKINS, SEASON_MAP } from './data.js';
+import { t } from './i18n.js';
 
 const S = () => store.S();
 const dayKey = (d = new Date()) => d.toISOString().slice(0, 10);
@@ -31,6 +32,12 @@ const WEEKLY_POOL = [
   { id: 'wgold20', text: 'Come 20 orbes dorados', ev: ['gold'], target: 20, reward: 300 },
 ];
 export const WEEK_CHEST = { need: 4, coins: 1000 };
+
+// missions saved in older games keep their Spanish text: the definition by id is the source
+export function missionText(m) {
+  const d = [...DAILY_POOL, ...WEEKLY_POOL].find((x) => x.id === m.id);
+  return t(d ? d.text : m.text);
+}
 
 function hash(str) { let h = 2166136261; for (const c of str) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 function pick(pool, n, seed) {

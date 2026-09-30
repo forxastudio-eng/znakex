@@ -7,6 +7,14 @@
 @font-face { font-family: 'Barlow'; src: url(../fonts/barlow-latin-500-normal.woff2) format('woff2'); font-weight: 500; font-display: block; }
 @font-face { font-family: 'Barlow'; src: url(../fonts/barlow-latin-600-normal.woff2) format('woff2'); font-weight: 600; font-display: block; }
 
+/* Cyrillic (Russian): same family names, used only for Cyrillic characters */
+@font-face { font-family: 'Bebas Neue'; src: url(../fonts/oswald-cyrillic-600-normal.woff2) format('woff2'); font-weight: 400; font-display: block; unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Barlow Condensed'; src: url(../fonts/roboto-condensed-cyrillic-500-normal.woff2) format('woff2'); font-weight: 500; font-display: block; unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Barlow Condensed'; src: url(../fonts/roboto-condensed-cyrillic-600-normal.woff2) format('woff2'); font-weight: 600; font-display: block; unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Barlow Condensed'; src: url(../fonts/roboto-condensed-cyrillic-700-normal.woff2) format('woff2'); font-weight: 700 800; font-display: block; unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Barlow'; src: url(../fonts/roboto-cyrillic-500-normal.woff2) format('woff2'); font-weight: 500; font-display: block; unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+@font-face { font-family: 'Barlow'; src: url(../fonts/roboto-cyrillic-600-normal.woff2) format('woff2'); font-weight: 600; font-display: block; unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+
 :root {
   --bone: #F2EFE6;
   --bone-dim: rgba(242, 239, 230, 0.62);
@@ -291,6 +299,10 @@ svg.path { position: absolute; inset: 0; width: 100%; height: 100%; overflow: vi
 .skin-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .skin-name { text-align: center; margin-top: -0.4rem; }
 .rarity { display: inline-block; padding: 0.15rem 0.7rem; border-radius: 0.2rem; font-family: 'Barlow Condensed'; font-weight: 700; letter-spacing: 0.16em; font-size: 0.85rem; color: #120d06; }
+.lang-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem; margin: 0.2rem 0 0.6rem; }
+.lang { font-family: 'Barlow Condensed'; font-weight: 700; font-size: 1.05rem; letter-spacing: 0.04em; padding: 0.55rem 0.5rem; border-radius: 0.5rem;
+  color: var(--bone); background: rgba(0, 0, 0, 0.35); border: 1.5px solid rgba(232, 176, 74, 0.35); }
+.lang.on { color: #1A140C; background: var(--amber); border-color: var(--amber); }
 .cat-tabs { display: flex; gap: 0.35rem; overflow-x: auto; padding: 0.1rem 0.1rem 0.5rem; scrollbar-width: none; }
 .cat-tabs::-webkit-scrollbar { display: none; }
 .cat { flex: none; font-family: 'Bebas Neue'; font-size: 1.05rem; letter-spacing: 0.08em; padding: 0.3rem 0.7rem; border-radius: 999px;
@@ -300,7 +312,8 @@ svg.path { position: absolute; inset: 0; width: 100%; height: 100%; overflow: vi
 .skin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
 .skin-card { position: relative; aspect-ratio: 0.82; border-radius: 0.5rem; overflow: hidden; background: rgba(10, 14, 11, 0.55); box-shadow: inset 0 0 0 2px var(--line); display: flex; flex-direction: column; transition: transform .2s; }
 .skin-card img.pt { width: 100%; aspect-ratio: 1; object-fit: cover; }
-.skin-card .foot { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.25rem; font-family: 'Bebas Neue'; font-size: 1.15rem; letter-spacing: 0.05em; border-top: 3px solid var(--rc, #888); }
+.skin-card .foot { flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.25rem; font-family: 'Bebas Neue'; font-size: 1.15rem; letter-spacing: 0.05em; border-top: 3px solid var(--rc, #888); white-space: nowrap; overflow: hidden; padding: 0 0.2rem; }
+.skin-card.locked .foot { color: var(--bone-dim); }
 .skin-card .foot img { width: 1.1rem; height: 1.1rem; border-radius: 50%; }
 .skin-card.locked img.pt { filter: brightness(0.72) saturate(0.85); }
 .skin-card .lk { position: absolute; top: 28%; left: 50%; transform: translate(-50%, -50%); width: 2.2rem; height: 2.2rem; border-radius: 0.3rem; }
