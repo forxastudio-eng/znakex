@@ -1,5 +1,8 @@
 """Extract game-ready assets for the ZNAKEX web demo from the design sheets.
 
+Historical: the arenas, tiles and map parts still come from here; its UI kit / splash / skin parts
+belong to the v0.1-v0.5 identity, replaced by tools/build_brand.py (v1.0) and tools/build_v6.py.
+
 Run from the repository root:  python3 demo/tools/build_assets.py
 Requires Pillow. Output goes to demo/assets/.
 """

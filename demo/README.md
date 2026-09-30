@@ -4,7 +4,7 @@ Primera demo del juego: HTML5 + Canvas, empaquetada como APK de Android (WebView
 
 ## Probar
 
-- **Android:** instala `releases/ZNAKEX-tester-0.9.0.apk` (todo desbloqueado: 16 mapas × 3 dificultades, 160 niveles por dificultad, 64 skins, 999.999 monedas) o `releases/ZNAKEX-0.9.0.apk` (progresión normal).
+- **Android:** instala `releases/ZNAKEX-tester-1.0.0.apk` (todo desbloqueado: 16 mapas × 3 dificultades, 160 niveles por dificultad, 64 skins, 999.999 monedas) o `releases/ZNAKEX-1.0.0.apk` (progresión normal).
   Hay que permitir "instalar apps de origen desconocido". Los dos APK pueden convivir en el móvil.
 - **Navegador:** sirve la carpeta `demo/` con cualquier servidor estático (`npx http-server demo`) y abre `index.html`.
   Añade `?tester=1` a la URL para el modo tester.
@@ -22,6 +22,7 @@ Controles (Ajustes): deslizar, flechas en pantalla, palanca flotante (aparece do
 - **Nuevo en 0.7:** el juego en 5 idiomas (español, inglés, portugués de Brasil, indonesio y ruso), elegidos por los mercados más grandes de Google Play. Detecta el idioma del móvil y se puede cambiar en Ajustes → Idioma. El español es el texto base (`js/i18n.js`) y cada idioma tiene su diccionario en `js/lang/`. El ruso usa Oswald y Roboto Condensed solo para los caracteres cirílicos, con el mismo estilo. En la galería cada tarjeta muestra el nombre corto de la skin en inglés (igual en todos los idiomas) y el candado si está bloqueada.
 - **Nuevo en 0.8:** sonido completo: 30 efectos (Magnific, ElevenLabs Sound Effects) y 6 temas de música, uno por modo, en `assets/audio/` (OGG; se regeneran con `tools/build_audio.py`, que recorta silencios, iguala volúmenes y hace los bucles continuos). La estrella dorada ya no hace desaparecer la serpiente: brillo dorado suave con chispas. Morir en agua, lava o ácido tiene su animación: la cabeza se hunde, salpica, salen ondas y burbujas (chispas y humo en la lava).
 - **Nuevo en 0.9:** animación de GPUnlock al arrancar (2,5 s, se salta tocando; usa `assets/ui/studio_logo.png` cuando exista) y créditos en Ajustes. Deslizadores de volumen para música y efectos (en Ajustes y en la pausa). Arreglo: salir de una partida del mapa de temporada ya no deja la pantalla trabada. Prompts de icono, gráfico destacado, pantalla de carga, menú y vídeo en `ZNAKEX_Prompts_Tienda_y_Pantallas.md`.
+- **Nuevo en 1.0 (identidad de marca):** todo el juego con la identidad nueva (reparto 60/30/10: piedra carbón y marfil, arte de jungla-templo, lima de marca solo en el botón JUGAR y en lo seleccionado, oro para monedas y recompensas). Logo ZNAKEX en la carga, la pantalla de inicio y el menú; fondos propios para carga, inicio, menú, skins, tienda, temporada y el resto de menús; vídeos en bucle en el inicio y en el menú (se apagan en gráficos bajos). Kit nuevo de paneles, botones, placas e iconos (marfil sin verde). Objetos y efectos nuevos: rayos de luz, estallidos, esquirlas de piedra, estela de la estrella, anillo del imán girando, pausa breve en los impactos y fuegos artificiales al superar un nivel. Intro con el vídeo de GPUnlock y su logo en los créditos. Icono de la app y gráfico destacado de Google Play en `store/`. Recursos en `assets/brand/`, generados desde `Pantallas/v2/` y `gpunlock/` con `tools/build_brand.py`. Se han borrado los recursos de la identidad anterior y las portadas de las skins pasan a WebP (5,5 → 3,6 MB).
 - Muerte con revivir (anuncio simulado o 100 / 200 monedas), pausa, victoria, resultados y récords.
 - 64 skins dibujadas con las piezas reales de cada ficha (cabeza, lengua, módulos A/B/C, módulo especial y cola; se regeneran con `tools/build_v6.py` y los marcos con `tools/frames_v6.py`). Ruleta diaria, tienda de monedas (compras simuladas), ajustes.
 - Cada mapa tiene mecánicas propias: agua, lava, arenas movedizas, hielo, portales, según su ficha.
@@ -42,7 +43,8 @@ Aún no: anuncios reales (AdMob), compras reales (Play Billing), guardado en la 
 ## Regenerar
 
 ```bash
-python3 demo/tools/build_assets.py      # requiere Pillow, numpy y scipy
+python3 demo/tools/build_brand.py       # identidad v1.0 (requiere Pillow, numpy y scipy)
+python3 demo/tools/build_v6.py          # skins
 demo/android/build_apk.sh tester        # o: release
 ```
 

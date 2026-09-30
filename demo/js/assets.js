@@ -1,7 +1,7 @@
 // Image preloader with progress callback.
 import { BOTS, skinById } from './data.js';
 import { MX } from './mapmanifest.js';
-import { PW_FILES, KIT_FILES, BANNER_FILES } from './newmanifest.js';
+import { PW_FILES, PLAQUES } from './newmanifest.js';
 
 export const IMG = {};
 
@@ -23,7 +23,9 @@ function mapFiles() {
 }
 
 export const MANIFEST = [
-  'bg/splash.jpg', 'bg/menu.jpg', 'bg/blur.jpg', 'ui/logo.png',
+  'brand/logo/logo_full.webp', 'brand/bg/carga.webp', 'brand/bg/inicio.webp', 'brand/bg/menu.webp', 'brand/bg/interior.webp',
+  ...['panel', 'btn_primary', 'btn_primary_down', 'btn_secondary', 'btn_reward', 'btn_round', 'btn_pill', 'title', 'divider', 'ring'].map((n) => `brand/kit/${n}.webp`),
+  ...PLAQUES.map((n) => `brand/plaques/${n}.webp`),
   ...range(4, (i) => `tiles/court/floor${i}.jpg`),
   ...range(7, (i) => `tiles/court/deco${i}.png`),
   'tiles/court/wall_h.png', 'tiles/court/wall_v.png', 'tiles/court/wall_corner.png',
@@ -39,9 +41,7 @@ export const MANIFEST = [
   'tiles/ritual/pillar.png', 'tiles/ritual/column.png', 'tiles/ritual/totem.png',
   ...range(16, (i) => [0, 1, 2].map((k) => `tiles/maps/m${String(i).padStart(2, '0')}_f${k}.jpg`)).flat(),
   ...mapFiles(),
-  ...PW_FILES.map((n) => `pw/${n}.png`),
-  ...KIT_FILES.map((n) => `ui/v3/${n}.png`),
-  ...BANNER_FILES.map((n) => `ui/banners/${n}.png`),
+  ...PW_FILES.map((n) => `brand/${n}.webp`),
   'ui/season_badge.png', 'maps/season1.jpg',
 ];
 

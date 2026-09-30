@@ -65,10 +65,29 @@ export class FX {
     }
   }
 
-  // an image (RGBA) that grows and fades: used for the pickup bursts
-  sprite(x, y, img, size, dur = 0.5, rot = 0, grow = 1.4) {
-    if (img) this.parts.push({ x, y, vx: 0, vy: 0, life: 0, max: dur, size, color: '#fff', type: 'sprite', img, drag: 0, grav: 0, rot, vr: 0.6, add: true, fade: 1, grow });
+  // an image (RGBA) that grows and fades: used for the pickup bursts. `top` draws it with normal
+  // blending above the snake (brand art with dark outlines); otherwise it is added as light.
+  sprite(x, y, img, size, dur = 0.5, rot = 0, grow = 1.4, top = false) {
+    if (img && this.parts.length < this.cap) this.parts.push({ x, y, vx: 0, vy: 0, life: 0, max: dur, size, color: '#fff', type: 'sprite', img, drag: 0, grav: 0, rot, vr: 0.6, add: !top, top, fade: 1, grow });
   }
+
+  // pieces of an image flying out (shield shards, stone chips)
+  shards(x, y, img, n, size, speed = 320, life = 0.8) {
+    if (!img) return;
+    for (let i = 0; i < n && this.parts.length < this.cap; i++) {
+      const a = rand(TAU), sp = rand(speed * 0.4, speed);
+      this.parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: rand(life * 0.6, life), size: rand(size * 0.5, size),
+        color: '#fff', type: 'chip', img, drag: 2.4, grav: 300, rot: rand(TAU), vr: rand(-9, 9), add: false, top: true, fade: 1, grow: 0 });
+    }
+  }
+
+  // god rays: a rotating fan of light wedges behind a big moment
+  rays(x, y, color, r, dur = 0.7, n = 12) {
+    if (this.parts.length < this.cap) this.parts.push({ x, y, vx: 0, vy: 0, life: 0, max: dur, size: r, color, type: 'rays', n, drag: 0, grav: 0, rot: rand(TAU), vr: 0.9, add: true, fade: 1, grow: 0 });
+  }
+
+  // a short freeze on hard impacts (read by the game loop)
+  hitStop(sec = 0.06) { this.stopT = Math.max(this.stopT || 0, sec); }
 
   ring(x, y, color, maxR, dur = 0.5, width = 6) {
     this.rings.push({ x, y, color, maxR, dur, t: 0, width });
@@ -123,7 +142,7 @@ export class FX {
 
   // Particles that render under the snake (dust, leaves, petals).
   drawUnder(g) {
-    for (const p of this.parts) if (!p.add) drawPart(g, p);
+    for (const p of this.parts) if (!p.add && !p.top) drawPart(g, p);
   }
 
   drawOver(g) {
@@ -163,6 +182,9 @@ export class FX {
       g.fillText(t.str, t.x, y);
     }
     g.restore();
+    g.save();
+    for (const p of this.parts) if (p.top) drawPart(g, p);
+    g.restore();
   }
 }
 
@@ -179,6 +201,37 @@ function drawPart(g, p) {
       g.translate(p.x, p.y);
       g.rotate(p.rot);
       g.drawImage(p.img, -sz / 2, -sz / 2, sz, sz);
+      g.restore();
+      break;
+    }
+    case 'chip': {
+      g.globalAlpha = a;
+      g.save();
+      g.translate(p.x, p.y);
+      g.rotate(p.rot);
+      g.drawImage(p.img, -s / 2, -s / 2, s, s);
+      g.restore();
+      break;
+    }
+    case 'rays': {
+      const e = ease.outCubic(Math.min(1, k * 1.8));
+      const R = p.size * (0.5 + 0.5 * e);
+      g.globalAlpha = a * 0.55;
+      g.save();
+      g.translate(p.x, p.y);
+      g.rotate(p.rot);
+      const grd = g.createRadialGradient(0, 0, 0, 0, 0, R);
+      grd.addColorStop(0, p.color);
+      grd.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grd;
+      g.beginPath();
+      const w = Math.PI / p.n * 0.45;
+      for (let i = 0; i < p.n; i++) {
+        const an = (i / p.n) * TAU;
+        g.moveTo(0, 0);
+        g.arc(0, 0, R, an - w, an + w);
+      }
+      g.fill();
       g.restore();
       break;
     }

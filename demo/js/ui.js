@@ -14,13 +14,31 @@ import { Game } from './game.js';
 import { CONFIG } from './config.js';
 import { CONTROL_INFO } from './input.js';
 import { t, tn, LANGS, getLang, setLang } from './i18n.js';
+import { BRAND_ICONS, PLAQUES } from './newmanifest.js';
+import { pwPath } from './powerups.js';
 
-const icon = (n) => url(`ui/icons/${n}.png`);
-const kit = (n) => url(`ui/v3/${n}.png`);
-const pwi = (n) => url(`pw/${n}.png`);
+// brand v2 icons (ivory symbols, gold rewards); the few the new set doesn't have (x2/x3 badges, map hazards) keep the old art
+const BRAND = new Set(BRAND_ICONS);
+const ICON_ALIAS = { ad: 'video' };
+const icon = (n) => { n = ICON_ALIAS[n] || n; return BRAND.has(n) ? url(`brand/icons/${n}.webp`) : url(`ui/icons/${n}.png`); };
+const kit = icon;
+const pwi = (n) => url(pwPath(n));
+const LOGO = url('brand/logo/logo_full.webp');
+// plaque colours by meaning: 0 danger, 1 brand, 2 reward, 3 info, 4 special
+const PLAQUE = ['danger', 'brand', 'reward', 'info', 'special'];
+const plaqueImg = (idx) => url(`brand/plaques/${PLAQUE[idx] || PLAQUES[0]}.webp`);
 // rarity frame drawn over a skin cover (assets/ui/rfr/<rarity>.png); without the file the card just keeps its coloured edge
 const frameImg = (rarity) => `<img class="fr" src="${url('ui/rfr/' + rarity + '.png')}" alt="" onload="this.parentNode.classList.add('has-fr')" onerror="this.remove()">`;
-const ptitle = (text, idx = 2, cls = '') => `<div class="ptitle p${idx} ${cls}"><img src="${url('ui/banners/b' + idx + '.png')}" alt=""><span>${text}</span></div>`;
+// long texts (Russian, Portuguese) shrink so they stay between the plaque's end ornaments
+const fit = (text, chars = 13) => { const n = String(text).replace(/<[^>]*>/g, '').length; return n > chars ? ` style="font-size:${(chars / n).toFixed(3)}em"` : ''; };
+// measured fit (the estimate above can't know how wide Cyrillic glyphs are)
+function fitPlaques(root) {
+  requestAnimationFrame(() => root.querySelectorAll('.ptitle span b, .plaque span b').forEach((b) => {
+    const box = b.parentElement.clientWidth;
+    if (box && b.scrollWidth > box) b.style.fontSize = `${(parseFloat(getComputedStyle(b).fontSize) * box / b.scrollWidth * 0.96).toFixed(1)}px`;
+  }));
+}
+const ptitle = (text, idx = 2, cls = '') => `<div class="ptitle p${idx} ${cls}"><img src="${plaqueImg(idx)}" alt=""><span><b${fit(text)}>${text}</b></span></div>`;
 const fmtT = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 const $ = (root, sel) => root.querySelector(sel);
 
@@ -53,6 +71,23 @@ export class UI {
     this.app.dataset.bg = kind;
     if (art) this.app.style.setProperty('--art', `url("${new URL(url(art), location.href).href}")`);
     else this.app.style.removeProperty('--art');
+    this.bgVideo({ menu: 'menu', title: 'inicio' }[kind]);
+  }
+
+  // The title and menu art loop a short video over the still (off in low graphics mode).
+  bgVideo(name) {
+    const bg = $(this.app, '#bg');
+    const old = $(bg, 'video');
+    if (old && old.dataset.name === name) return;
+    if (old) { old.classList.remove('on'); setTimeout(() => old.remove(), 800); }
+    if (!name || this.S().settings.lowfx) return;
+    const v = el(`<video muted loop playsinline autoplay preload="auto" data-name="${name}"></video>`);
+    v.muted = true;
+    v.src = url(`brand/video/${name}.mp4`);
+    v.addEventListener('playing', () => v.classList.add('on'), { once: true });
+    $(bg, '.bg-dim').before(v);
+    const p = v.play();
+    if (p && p.catch) p.catch(() => {});
   }
 
   // ------------------------------------------------------------ navigation
@@ -77,6 +112,7 @@ export class UI {
     scr.name = name;
     scr.el.classList.add('screen');
     this.screensEl.appendChild(scr.el);
+    fitPlaques(scr.el);
     requestAnimationFrame(() => requestAnimationFrame(() => scr.el.classList.add('active')));
     this.cur = scr;
     this.refreshCoins(false);
@@ -133,8 +169,8 @@ export class UI {
   credits() {
     const line = (k, v) => `<div class="cr-line"><span>${t(k)}</span><b>${v}</b></div>`;
     const o = this.overlay(`<div class="overlay dark"><div class="panel strong"><div class="inner pad" style="width:100%">
-      ${ptitle(t('CRÉDITOS'), 3)}
-      <div class="cr-studio"><img src="${url('ui/studio_logo.png')}" alt="GPUnlock" onerror="this.remove()"><div><span>${t('Un juego de')}</span><b>GPUnlock</b></div></div>
+      ${ptitle(t('CRÉDITOS'), 1)}
+      <div class="cr-studio"><span>${t('Un juego de')}</span><img src="${url('brand/logo/gpunlock_color.webp')}" alt="GPUnlock"></div>
       ${line('Diseño y dirección de arte', 'GPUnlock')}
       ${line('Desarrollo', 'GPUnlock')}
       ${line('Música y efectos', 'GPUnlock')}
@@ -149,7 +185,8 @@ export class UI {
   // Plays over the loading screen (the game keeps loading underneath); a tap skips it.
   studioIntro() {
     const o = el(`<div class="studio-intro">
-      <div class="st-logo"><img alt="GPUnlock" src="${url('ui/studio_logo.png')}" onerror="this.remove()"><span class="st-word">GPUnlock</span></div>
+      <video muted playsinline preload="auto"></video>
+      <div class="st-logo"><img alt="GPUnlock" src="${url('brand/logo/gpunlock_color.webp')}"><span class="st-word">GPUnlock</span></div>
       <div class="st-sub">${t('PRESENTA')}</div>
     </div>`);
     const img = $(o, 'img');
@@ -158,13 +195,24 @@ export class UI {
     let gone = false;
     const end = () => { if (gone) return; gone = true; o.classList.add('out'); setTimeout(() => o.remove(), 500); };
     o.addEventListener('pointerup', end);
-    setTimeout(end, 2600);
+    // the brand reveal video (4 s); if it can't play (old WebView, low graphics) the animated logo shows instead
+    const v = $(o, 'video');
+    let timer = setTimeout(end, 2600);
+    if (!this.S().settings.lowfx) {
+      v.muted = true;
+      v.src = url('brand/video/gpunlock.mp4');
+      v.addEventListener('playing', () => { o.classList.add('has-video'); clearTimeout(timer); timer = setTimeout(end, 4600); }, { once: true });
+      v.addEventListener('ended', () => setTimeout(end, 250));
+      const p = v.play();
+      if (p && p.catch) p.catch(() => {});
+    }
   }
 
   // ------------------------------------------------------------ splash
   scr_splash() {
     this.setBg('splash');
     const e = el(`<section>
+      <img class="brand-logo" src="${LOGO}" alt="ZNAKEX" style="margin-top:6%">
       <div class="splash-bottom">
         <div class="panel" style="width:100%"><div class="inner pad" style="display:flex;flex-direction:column;align-items:center;gap:.6rem">
           <div class="t-label" id="ldt">${t('CARGANDO...')}</div>
@@ -177,6 +225,7 @@ export class UI {
       el: e,
       progress: (p) => { $(e, '#ldb').style.width = Math.round(p * 100) + '%'; },
       ready: (onTap) => {
+        this.setBg('title');
         $(e, '#ldt').outerHTML = `<div class="tap">${t('TOCA PARA JUGAR')}</div>`;
         $(e, '#ldb').parentElement.style.display = 'none';
         e.addEventListener('pointerup', onTap, { once: true });
@@ -192,10 +241,11 @@ export class UI {
     const wheelReady = S.wheelDay !== store.today();
     const e = el(`<section>
       <div class="topbar">
-        <button class="avatar" data-act="nav" data-to="skins"><img src="${url('skins/' + S.equipped + '.jpg')}" alt=""></button>
+        <button class="avatar" data-act="nav" data-to="skins"><img src="${url('skins/' + S.equipped + '.webp')}" alt=""></button>
         ${CONFIG.tester ? `<span class="rarity" style="background:var(--amber)">${t('MODO TESTER')}</span>` : ''}
         ${this.coinPill()}
       </div>
+      <img class="brand-logo sm" src="${LOGO}" alt="ZNAKEX" style="margin-top:.4rem">
       <div class="home-mid stagger">
         <div class="home-tools" ${stag(0)}>
           <button class="tool" data-act="missions"><img src="${kit('scroll_daily')}" alt=""><span>${t('MISIONES')}</span>${meta.claimableMissions() ? '<i class="dot"></i>' : ''}</button>
@@ -413,7 +463,7 @@ export class UI {
 
   // ------------------------------------------------------------ skins
   scr_skins() {
-    this.setBg('deep');
+    this.setBg('deep', 'brand/bg/skins.webp');
     const S = this.S();
     let sel = S.equipped;
     let cat = 'all';
@@ -436,7 +486,7 @@ export class UI {
         const own = S.owned.includes(s.id);
         const rc = RARITY[s.rarity].color;
         return `<button class="skin-card ${own ? '' : 'locked'} ${s.id === sel ? 'sel' : ''}" data-act="sk" data-id="${s.id}" style="--rc:${rc};--i:${i}">
-          <div class="ptw r-${s.rarity}"><img class="pt" src="${url('skins/' + s.id + '.jpg')}" alt="">${frameImg(s.rarity)}</div>
+          <div class="ptw r-${s.rarity}"><img class="pt" src="${url('skins/' + s.id + '.webp')}" alt="">${frameImg(s.rarity)}</div>
           ${own ? '' : `<img class="lk" src="${icon('lock')}" alt="">`}
           ${S.equipped === s.id ? `<img class="eq" src="${icon('check')}" alt="">` : ''}
           <span class="rl" style="background:${rc}">${t(RARITY[s.rarity].label)}</span>
@@ -541,7 +591,7 @@ export class UI {
           });
         }
         this.popup({
-          title: '¿COMPRAR SKIN?', img: url('skins/' + s.id + '.jpg'),
+          title: '¿COMPRAR SKIN?', img: url('skins/' + s.id + '.webp'),
           text: `${t(s.name)} · <span style="color:${RARITY[s.rarity].color}">${t(RARITY[s.rarity].label)}</span><br>${t('<b>{n}</b> monedas', { n: fmt(price) })}`,
           buttons: [['COMPRAR', () => {
             store.spend(price);
@@ -561,7 +611,7 @@ export class UI {
     const o = this.overlay(`<div class="overlay dark">
       <div class="panel strong"><div class="inner">
         <div class="t-label glow-amber">${t('¡SKIN DESBLOQUEADA!')}</div>
-        <div class="ptw big r-${s.rarity}" style="box-shadow:0 0 2rem ${RARITY[s.rarity].color};animation:pop .6s var(--ease) both"><img class="pt" src="${url('skins/' + s.id + '.jpg')}" alt="">${frameImg(s.rarity)}</div>
+        <div class="ptw big r-${s.rarity}" style="box-shadow:0 0 2rem ${RARITY[s.rarity].color};animation:pop .6s var(--ease) both"><img class="pt" src="${url('skins/' + s.id + '.webp')}" alt="">${frameImg(s.rarity)}</div>
         <div class="ov-title worn">${t(s.name).toUpperCase()}</div>
         <span class="rarity" style="background:${RARITY[s.rarity].color}">${t(RARITY[s.rarity].label)}</span>
         <button class="btn-primary" data-act="ok" style="width:100%"><span class="worn">${t('GENIAL')}</span></button>
@@ -693,7 +743,7 @@ export class UI {
 
   // ------------------------------------------------------------ season: map + pass
   scr_season({ tab = 'map', ch } = {}) {
-    this.setBg('deep');
+    this.setBg('deep', 'brand/bg/temporada.webp');
     const S = this.S();
     const cleared = store.seasonCleared();
     const chapter = ch ?? (cleared >= 10 ? 1 : 0);
@@ -770,7 +820,7 @@ export class UI {
       const locked = track === 'prem' && !se.premium;
       const cls = claimed ? 'claimed' : reached && !locked ? 'ready' : 'lock';
       const realSkin = r.skin && SKINS.some((s) => s.id === r.skin);
-      const inner = realSkin ? `<img class="sk" src="${url('skins/' + r.skin + '.jpg')}" alt="">` : `<img src="${icon('coin')}" alt=""><b>${r.skin ? 1000 : r.c}</b>`;
+      const inner = realSkin ? `<img class="sk" src="${url('skins/' + r.skin + '.webp')}" alt="">` : `<img src="${icon('coin')}" alt=""><b>${r.skin ? 1000 : r.c}</b>`;
       return `<button class="slot ${cls}" data-act="tclaim" data-t="${track}" data-i="${i}">${inner}${claimed ? '<i class="ck">✓</i>' : locked || !reached ? `<img class="lk2" src="${kit('slot_locked')}" alt="">` : ''}</button>`;
     };
     const e = el(`<section>
@@ -803,12 +853,12 @@ export class UI {
 
   // ------------------------------------------------------------ shop
   scr_shop({ back = 'home' }) {
-    this.setBg('deep');
+    this.setBg('deep', 'brand/bg/tienda.webp');
     const e = el(`<section>
       ${this.topbar(t('TIENDA'), back)}
       <div class="scroll stagger">
         <div class="panel" ${stag(0)} style="margin-bottom:1rem"><div class="inner" style="display:grid;grid-template-columns:7rem 1fr;gap:.8rem;align-items:center">
-          <img src="${url('skins/pirata.jpg')}" style="width:7rem;border-radius:.5rem;box-shadow:0 0 1.2rem rgba(232,176,74,.5)">
+          <img src="${url('skins/pirata.webp')}" style="width:7rem;border-radius:.5rem;box-shadow:0 0 1.2rem rgba(232,176,74,.5)">
           <div><div class="t-display worn glow-amber" style="font-size:2rem">${t('PACK DE INICIO')}</div>
             <div class="t-label" style="font-size:.9rem">${t('SKIN ESPECIAL + {n} MONEDAS', { n: fmt(5000) })}</div>
             <div class="dim" style="font-size:.8rem">${t('Oferta única')} · −80 %</div>
@@ -874,7 +924,7 @@ export class UI {
         <button class="btn" style="width:100%;margin-top:.4rem" data-act="soon">${t('CONECTAR GOOGLE PLAY GAMES')}</button>
         <div class="btn-row" style="margin-top:.5rem"><button class="btn small" data-act="soon">${t('PRIVACIDAD')}</button><button class="btn small" data-act="soon">${t('SOPORTE')}</button></div>
         <button class="btn" style="width:100%;margin-top:.5rem" data-act="credits">${t('CRÉDITOS')}</button>
-        <div style="display:flex;flex-direction:column;align-items:center;margin-top:1rem;gap:.3rem"><img src="${url('ui/logo.png')}" style="width:5rem;opacity:.8"><span class="demo-note">${t('VERSIÓN')} ${CONFIG.version}${CONFIG.tester ? ' · TESTER' : ''}</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;margin-top:1rem;gap:.3rem"><img src="${LOGO}" style="width:6rem"><span class="demo-note">${t('VERSIÓN')} ${CONFIG.version}${CONFIG.tester ? ' · TESTER' : ''}</span></div>
       </div></div></div>
       ${this.nav('settings')}
     </section>`);
@@ -925,6 +975,7 @@ export class UI {
     audio.play('ui_open', { vol: 0.7 });
     const o = el(html);
     this.overEl.appendChild(o);
+    fitPlaques(o);
     requestAnimationFrame(() => o.classList.add('show'));
     return o;
   }
@@ -964,7 +1015,7 @@ export class UI {
     const o = this.overlay(`<div class="ad">
       <span class="tagad">${t('ANUNCIO')} · DEMO</span>
       <div class="x" id="adx">5</div>
-      <img class="logo" src="${url('ui/logo.png')}" alt="">
+      <img class="logo" src="${LOGO}" alt="">
       <div class="t">${t('Aquí se mostrará un anuncio con recompensa de AdMob.')}<br>${t('Espera unos segundos para recibir la recompensa.')}</div>
       <div class="loadbar" style="width:60%"><i id="adb"></i></div>
     </div>`);
@@ -1038,7 +1089,7 @@ export class UI {
     };
     const logo = new Image();
     logo.onload = () => { draw(); g.drawImage(logo, 250, 250, 100, 100); };
-    logo.src = url('ui/logo.png');
+    logo.src = url('brand/logo/logo_mark.webp');
     draw();
     this.wire(o, {
       close: () => this.closeOverlay(o),
@@ -1171,8 +1222,9 @@ export class UI {
   warnBanner(sec) {
     const layer = this.hudEl; // not #fxl: the countdown rewrites that layer
     if (!layer) return;
-    const w = el(`<div class="plaque strip p0" style="top:${Math.round(this.warnTop || 0)}px;animation-duration:${sec}s"><img src="${url('ui/banners/b0.png')}" alt=""><span>${t('EVITA LOS OBSTÁCULOS')}</span></div>`);
+    const w = el(`<div class="plaque strip p0" style="top:${Math.round(this.warnTop || 0)}px;animation-duration:${sec}s"><img src="${plaqueImg(0)}" alt=""><span><b${fit(t('EVITA LOS OBSTÁCULOS'), 16)}>${t('EVITA LOS OBSTÁCULOS')}</b></span></div>`);
     layer.appendChild(w);
+    fitPlaques(w);
     setTimeout(() => w.remove(), sec * 1000 + 100);
   }
 
@@ -1272,8 +1324,9 @@ export class UI {
   // wide banner plaque (banner kit) that announces an event on top of the board
   plaque(text, idx, sec = 2) {
     if (!this.hudEl) return;
-    const p = el(`<div class="plaque p${idx}" style="top:${Math.round((this.boardTop || 60) + 6)}px;animation-duration:${sec}s"><img src="${url('ui/banners/b' + idx + '.png')}" alt=""><span>${t(text)}</span></div>`);
+    const p = el(`<div class="plaque p${idx}" style="top:${Math.round((this.boardTop || 60) + 6)}px;animation-duration:${sec}s"><img src="${plaqueImg(idx)}" alt=""><span><b${fit(t(text), 12)}>${t(text)}</b></span></div>`);
     this.hudEl.appendChild(p);
+    fitPlaques(p);
     setTimeout(() => p.remove(), sec * 1000 + 80);
   }
 
@@ -1326,7 +1379,7 @@ export class UI {
     const info = cfg.mode === 'story' ? `${t('NIVEL')} ${cfg.level.map}-${cfg.level.n} · ${t('ORBES')} ${game.player.orbs}/${game.target}` : `${t('PUNTOS')} ${fmt(game.score)}`;
     const o = this.overlay(`<div class="overlay"><div class="panel"><div class="inner">
       <img src="${icon('pause')}" style="width:3.6rem;border-radius:.4rem">
-      ${ptitle(t('PAUSA'), 3)}
+      ${ptitle(t('PAUSA'), 1)}
       <div class="ov-sub">${info}</div>
       <button class="btn-primary" data-act="resume" style="width:100%"><span class="worn">${t('CONTINUAR')}</span><i class="tri"></i></button>
       <button class="btn" data-act="pset" style="width:100%"><img class="ic" src="${icon('settings')}">${t('AJUSTES')}</button>
@@ -1369,7 +1422,7 @@ export class UI {
     const set = this.S().settings;
     const row = (k, ic, label) => `<div class="set-row"><span class="l"><img src="${ic}">${t(label)}</span><button class="toggle ${set[k] ? 'on' : ''}" data-act="tg" data-k="${k}"></button></div>`;
     const o = this.overlay(`<div class="overlay dark"><div class="panel strong"><div class="inner pad" style="width:100%">
-      ${ptitle(t('AJUSTES'), 3)}
+      ${ptitle(t('AJUSTES'), 1)}
       ${this.volRow('music', icon('mode_frenzy'), 'MÚSICA')}
       ${this.volRow('sfx', icon('play'), 'EFECTOS DE SONIDO')}
       ${row('vibration', icon('hz_wind'), 'VIBRACIÓN')}
@@ -1565,7 +1618,7 @@ export class UI {
       coins = res.won ? 100 : 0;
       if (res.won) { S.tutorialSeen = true; store.save(); }
       html = `<div class="t-label glow-amber">${t('TUTORIAL')}</div>
-        ${ptitle(t('¡LISTO PARA JUGAR!'), 3)}
+        ${ptitle(t('¡LISTO PARA JUGAR!'), 1)}
         <div class="ov-sub">${t('Ya conoces los orbes, los obstáculos y el campo de fuerza')}</div>
         <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>
         <button class="btn-primary" data-act="first" style="width:100%"><span class="worn">${t('JUGAR')} ${t('NIVEL')} 1-1</span><i class="tri"></i></button>

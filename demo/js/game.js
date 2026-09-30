@@ -290,6 +290,38 @@ export class Game {
     }
   }
 
+  // streaks behind the head while the golden star or a golden boost is running
+  trailFx(dt) {
+    const s = this.player;
+    if (!s.alive || this.low) return;
+    const star = this.pw.star > 0, boost = s.boostT > 0;
+    if (!star && !boost) return;
+    this.trailT = (this.trailT || 0) - dt;
+    if (this.trailT > 0) return;
+    this.trailT = star ? 0.07 : 0.11;
+    const hp = this.headPixel();
+    const R = this.R;
+    const ang = { up: -Math.PI / 2, down: Math.PI / 2, left: Math.PI, right: 0 }[s.dir] || 0;
+    if (star) this.fx.sprite(hp.x - Math.cos(ang) * R, hp.y - Math.sin(ang) * R, pwImg('star_streak'), R * 3.2, 0.35, ang + Math.PI / 4, 0.8);
+    this.fx.burst(hp.x, hp.y, star ? 3 : 2, { type: 'star', color: star ? ['#FFE08A', '#FFFFFF'] : ['#FFD36A', '#B8FF1A'], speed: 60, size: 3.5, life: 0.6, drag: 3 });
+  }
+
+  // a burst of fireworks over the board (level cleared)
+  fireworks(n) {
+    const b = this.board;
+    for (let i = 0; i < n; i++) {
+      setTimeout(() => {
+        if (this.ui.game !== this) return;
+        const x = b.cx(1.5 + Math.random() * 9), y = b.cy(2 + Math.random() * 12);
+        const gold = i % 2 === 0;
+        this.fx.sprite(x, y, pwImg(gold ? 'burst_gold' : 'burst_lime'), this.R * rand(7, 10), 0.8, rand(TAU));
+        this.fx.rays(x, y, gold ? '#FFE08A' : '#D8FF6A', this.R * 9, 0.8, 10);
+        this.fx.burst(x, y, 24, { type: 'star', color: gold ? ['#FFE08A', '#FFFFFF'] : ['#D8FF6A', '#FFFFFF'], speed: 420, size: 5, life: 1.1, drag: 2, grav: 120 });
+        audio.play('star_pop', { rate: 0.9 + Math.random() * 0.4, vol: 0.5 });
+      }, 250 + i * 260);
+    }
+  }
+
   pickItem(s, it) {
     const def = PW[it.type];
     audio.play('item_pick', { rate: { shield: 1, magnet: 0.9, portal: 1.1, star: 1.25 }[it.type] || 1 });
@@ -302,6 +334,10 @@ export class Game {
     this.fx.flash(x, y, def.glow, this.R * 8, 0.5);
     this.fx.ring(x, y, def.glow, this.R * 6, 0.7, 6);
     this.fx.burst(x, y, 26, { type: 'spark', color: [def.glow, '#FFFFFF'], speed: 380, speedMin: 100, size: 5, life: 0.6, drag: 3 });
+    this.fx.rays(x, y, def.glow, this.R * 10, 0.8, 12);
+    this.fx.sprite(x, y, pwImg(it.type === 'star' ? 'burst_gold' : 'burst_lime'), this.R * 9, 0.6, rand(TAU));
+    this.fx.sprite(x, y, pwImg(def.img), this.R * 3.2, 0.45, 0, 1.6, true);
+    this.fx.hitStop(0.05);
     vibrate(25, this.cfg.settings.vibration);
     if (it.type === 'shield') this.pw.shield = SHIELD_CHARGES;
     else this.pw[it.type] = def.dur;
@@ -333,6 +369,7 @@ export class Game {
     }
     if (boosting || this.wasBoosting) this.hudFxT = Math.min(this.hudFxT || 0, 0.1);
     this.ui.pwHud(this.pwState());
+    this.trailFx(dt);
     for (const k of ['magnet', 'portal', 'star']) {
       if (this.pw[k] > 0) {
         this.pw[k] = Math.max(0, this.pw[k] - dt);
@@ -417,7 +454,11 @@ export class Game {
     this.fx.ring(cx, cy, col, this.R * 5, 0.6, 6);
     this.fx.burst(cx, cy, 30, { type: 'spark', color: [col, '#FFFFFF'], speed: 460, speedMin: 120, size: 5, life: 0.6, drag: 3 });
     this.fx.burst(cx, cy, 14, { type: 'dust', color: '#B8AA8A', speed: 200, size: 14, life: 0.8, add: false, drag: 3 });
-    this.fx.shake(6, 0.25);
+    this.fx.shards(cx, cy, pwImg('shield_shards'), this.low ? 3 : 7, this.R * 1.6, 380, 0.9);
+    this.fx.sprite(cx, cy, pwImg('shield_crack2'), this.R * 4, 0.35, 0, 1.3, true);
+    this.fx.rays(cx, cy, col, this.R * 7, 0.5, 8);
+    this.fx.hitStop(0.07);
+    this.fx.shake(8, 0.3);
     vibrate([15, 20, 25], this.cfg.settings.vibration);
     track('break');
   }
@@ -537,6 +578,8 @@ export class Game {
 
   // ---------------------------------------------------------------- update
   update(dtReal) {
+    // hit-stop: a few frames frozen on big impacts (effects keep glowing)
+    if (this.fx.stopT > 0) { this.fx.stopT -= dtReal; this.fx.update(dtReal * 0.08); return; }
     this.timeScale = lerp(this.timeScale, 1, 1 - Math.exp(-dtReal * 2.2));
     const dt = dtReal * this.timeScale;
     this.t += dt;
@@ -806,6 +849,7 @@ export class Game {
       this.fx.ring(x, y, '#FFE08A', R * 11, 1.1, 2);
       this.fx.sprite(x, y, pwImg('burst_gold'), R * 8.5, 0.6, rand(TAU));
       this.fx.sprite(x, y, pwImg('star_pop'), R * 4.5, 0.5, 0, 0.6);
+      this.fx.rays(x, y, '#FFE08A', R * 10, 0.7, 12);
       this.fx.burst(x, y, 30, { type: 'spark', color: ['#FFE08A', '#FFC23A', '#FFFFFF'], speed: 560, speedMin: 160, size: 6, life: 0.65, drag: 3.2 });
       this.fx.burst(x, y, 12, { type: 'star', color: '#FFD36A', speed: 240, size: 5, life: 0.95, drag: 2.4 });
       if (s === this.player) {
@@ -818,7 +862,8 @@ export class Game {
       this.fx.flash(x, y, '#FF4A5A', R * 4, 0.3);
       this.fx.ring(x, y, '#FF8A8A', R * 3.4, 0.4, 6);
       this.fx.ring(x, y, '#FF3A4A', R * 5.6, 0.65, 3);
-      this.fx.sprite(x, y, tinted('burst_gold', '#FF3040'), R * 8, 0.55, rand(TAU));
+      this.fx.sprite(x, y, tinted('burst_gold', '#FF3040'), R * 7, 0.5, rand(TAU));
+      if (s === this.player && this.combo >= 3) this.fx.rays(x, y, '#FF8A5A', R * (5 + this.combo), 0.45, 8);
       this.fx.burst(x, y, 18, { type: 'spark', color: ['#FF6A6A', '#FF2A3A', '#FFC0C0'], speed: 380, speedMin: 120, size: 5, life: 0.45, drag: 3.5 });
       this.fx.burst(x, y, 6, { type: 'dot', color: '#FF8A8A', speed: 120, size: 6, life: 0.5 });
       if (s === this.player) this.fx.shake(2, 0.16);
@@ -871,6 +916,12 @@ export class Game {
       };
     } else {
       this.fx.flash(x, y, '#FFFFFF', this.R * 5, 0.3);
+      if (!s.isBot) {
+        this.fx.sprite(x, y, pwImg('burst_white'), this.R * 8, 0.55, rand(TAU));
+        this.fx.rays(x, y, '#FFFFFF', this.R * 9, 0.6, 10);
+        this.fx.shards(x, y, pwImg('shield_shards'), this.low ? 2 : 5, this.R * 1.3, 300, 0.8);
+        this.fx.hitStop(0.1);
+      }
       this.fx.burst(x, y, 26, { type: 'dust', color: '#D8C8A0', speed: 200, size: 18, life: 0.9, add: false, drag: 3 });
       this.fx.burst(x, y, 16, { type: 'leaf', color: '#7FAE4E', speed: 240, size: 7, life: 1.3, add: false, drag: 2, grav: 60 });
       this.fx.burst(x, y, 14, { type: 'spark', color: '#FFFFFF', speed: 420, size: 4, life: 0.35 });
@@ -964,6 +1015,9 @@ export class Game {
     for (let i = 0; i < 3; i++) this.fx.ring(x, y, '#FFE08A', this.board.cell * (4 + i * 3), 0.8 + i * 0.2, 6);
     this.fx.burst(x, y, 60, { type: 'star', color: ['#FFE08A', '#FFFFFF', '#E8B04A'], speed: 520, size: 6, life: 1.4, drag: 1.6 });
     this.fx.burst(x, y, 30, { type: 'leaf', color: ['#9CDA6B', '#E8B04A', '#F7B6C8'], speed: 380, size: 8, life: 2, add: false, drag: 1.4, grav: 50 });
+    this.fx.rays(x, y, '#FFE08A', this.board.cell * 12, 1.4, 14);
+    this.fx.sprite(x, y, pwImg('burst_gold'), this.board.cell * 9, 0.9, rand(TAU));
+    this.fireworks(this.low ? 2 : 5);
     this.player.boostT = 0.0001;
     audio.stopLoop('boost_loop'); audio.stopLoop('magnet_loop'); audio.stopLoop('star_loop'); audio.setMusicRate(1);
     audio.play('level_win');
