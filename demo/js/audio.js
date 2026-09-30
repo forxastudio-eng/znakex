@@ -36,7 +36,7 @@ export function unlock() {
     [...SFX, ...MUSIC].forEach((n, i) => setTimeout(() => load(n), 60 * i));
   }
   if (ctx.state === 'suspended') ctx.resume();
-  if (musicWant) playMusic(musicWant);
+  if (musicWant) playMusic(musicWant, musicWant.startsWith('mus_map') ? 'mus_story' : undefined);
 }
 
 export function applySettings() {
@@ -106,13 +106,20 @@ export function loop(name, { rate = 1, vol = 0.8 } = {}) {
 export function stopLoop(name) { const l = loops.get(name); if (l) l.stop(); }
 export function stopAllLoops() { [...loops.values()].forEach((l) => l.stop()); }
 
-// background music with a short crossfade
-export async function playMusic(name) {
+// background music with a short crossfade. `fallback` plays when `name` has no file
+// (each story map has its own 15 s loop mus_map01..16; without it the general story theme plays)
+export async function playMusic(name, fallback) {
   musicWant = name;
   if (!ctx || ctx.state !== 'running') return;
   if (music && music.name === name) return;
-  const buf = await load(name);
+  let buf = await load(name);
   if (musicWant !== name) return; // changed while loading
+  if (!buf && fallback) {
+    if (music && music.name === fallback) return;
+    buf = await load(fallback);
+    if (musicWant !== name) return;
+    name = fallback;
+  }
   if (music) { const old = music; old.gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6); setTimeout(() => { try { old.src.stop(); } catch { /* done */ } }, 700); music = null; }
   if (!buf) return;
   const src = ctx.createBufferSource();
