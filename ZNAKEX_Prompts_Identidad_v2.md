@@ -18,23 +18,23 @@ Los marcados con ☆ son opcionales: el juego funciona sin ellos.
 5. **Nada de texto dentro de los botones, placas y paneles.** El juego escribe el texto en los 5 idiomas.
 6. Adjunta siempre el logo como referencia de estilo, con la frase: *"style reference only, do not draw the logo"*.
 
-### Paleta del logo
+### Paleta y reparto del color (60 / 30 / 10)
 
-| Uso | Color |
-| --- | --- |
-| Verde oscuro (fondos y contornos) | `#0B2A18` |
-| Verde bosque | `#0F5A2A` |
-| Verde marca | `#00A04A` |
-| Lima (acento) | `#B8FF1A` |
-| Lima suave (contornos claros) | `#A8F25A` |
-| Amarillo lima (centro del degradado) | `#D6E021` |
-| Verde azulado (final del degradado) | `#2BB574` |
-| Oro (solo monedas, recompensas y rarezas) | `#E8B04A` |
+El verde es de la marca, así que **se usa poco para que destaque**. Si todo es verde, nada lo es.
+
+| Papel | Proporción | Colores | Dónde |
+| --- | --- | --- | --- |
+| Neutros | 60 % | Carbón `#14181A`, piedra oscura `#1E2426`, piedra gris cálida `#3A3E3A`, marfil `#F2EFE6`, marfil apagado `#C9C3B2` | Paneles, botones secundarios, **iconos**, textos |
+| Mundo | 30 % | Piedra templo `#6B6A5E`, musgo apagado `#4E5E3A`, sombra azulada `#1C2A33`, luz cálida `#F5D48A` | Fondos: jungla, ruinas, cielo |
+| Marca | 10 % | Verde marca `#00A04A`, lima `#B8FF1A`, degradado `#00A04A → #D6E021 → #2BB574` | Logo, botón JUGAR, lo seleccionado, destellos puntuales |
+| Significado | cuando toca | Oro `#E8B04A` (monedas, recompensas, rarezas), rojo `#E0443A` (peligro, orbe rojo), azul `#5FA0E0` (información) | Donde el color explica algo |
+
+Regla rápida: **ningún fondo ni icono debe ser mayoritariamente verde**. El verde vive en la serpiente mascota, en el logo y en un par de brillos por pantalla.
 
 ### STYLE LOCK (pégalo al final de cada prompt)
 
 ```text
-STYLE LOCK: bold modern esports-mascot art direction matching the attached ZNAKEX logo (style reference only, do not draw the logo): thick clean dark-green outlines (#0B2A18), cel-shaded forms, glossy highlights, deep forest greens (#0B2A18, #0F5A2A, #00A04A) with electric lime accents (#B8FF1A, #A8F25A) and a green-to-yellow-lime-to-teal gradient glow (#00A04A -> #D6E021 -> #2BB574); gold (#E8B04A) only for coins and rewards. Jungle-temple world (mossy stone, carved runes, glowing orbs), stylized and energetic. High contrast, crisp, readable on a phone. NO text, NO letters, NO numbers, NO logo, NO watermark.
+STYLE LOCK: bold modern esports-mascot art direction matching the attached ZNAKEX logo (style reference only, do not draw the logo): thick clean dark outlines (#14181A), cel-shaded forms, glossy highlights. Color balance 60/30/10: mostly neutral dark charcoal and warm stone greys (#14181A, #1E2426, #3A3E3A) with ivory highlights (#F2EFE6); natural world colors for the environment (weathered temple stone #6B6A5E, muted moss #4E5E3A, cool blue shadows #1C2A33, warm sunlight #F5D48A); the brand green and electric lime (#00A04A, #B8FF1A) used ONLY as small accents (the mascot snake, a few rune glows, one highlight) - the image must NOT look mostly green. Gold (#E8B04A) only for coins and rewards. Jungle-temple world, stylized and energetic, high contrast, crisp, readable on a phone. NO text, NO letters, NO numbers, NO logo, NO watermark.
 ```
 
 ### Plantilla para hojas de piezas sueltas (magenta)
@@ -66,14 +66,14 @@ El icono del lanzador de Android (el adaptativo, con sus dos capas) lo preparo y
 ### 2.1 Icono (512 × 512) → `store/icon_512.png`
 
 ```text
-Mobile game app icon, square 1:1, 1024x1024, full-bleed background, no transparency, no rounded corners. The attached ZNAKEX snake-Z emblem as the central subject, redrawn big and bold: the dark-green snake forming a Z, glowing white eyes, lime outline, filling about 70% of the canvas and fully inside the central safe circle (66% of the canvas). Background: deep forest green #0B2A18 with a soft radial glow behind the snake using the green-to-yellow-lime-to-teal gradient, a few small glowing lime orbs and faint rune patterns fading into the corners. Readable at 48x48 px.
+Mobile game app icon, square 1:1, 1024x1024, full-bleed background, no transparency, no rounded corners. The attached ZNAKEX snake-Z emblem as the central subject, redrawn big and bold: the green snake forming a Z, glowing white eyes, lime outline, filling about 70% of the canvas and fully inside the central safe circle (66% of the canvas). Background: dark charcoal stone (#14181A to #1E2426) with a soft warm ivory-gold radial glow behind the snake (#F5D48A, low intensity) so the green snake is the only green element and pops, faint carved rune patterns in grey stone fading into the corners. Readable at 48x48 px.
 [STYLE LOCK]
 ```
 
 ### 2.2 Gráfico destacado (1024 × 500) → `store/feature_1024x500.png`
 
 ```text
-Google Play feature graphic background, 1024x500. Right 55%: the dark-green mascot snake (lime outline, glowing white eyes) coiling through a stylized jungle temple, chasing a glowing lime orb, gradient glow behind it. Left 45%: calm dark-green area (#0B2A18 with a soft glow) left EMPTY for the logo, which is added later. Everything important 5% away from the edges.
+Google Play feature graphic background, 1024x500. Right 55%: the dark-green mascot snake (lime outline, glowing white eyes) coiling through a stylized jungle temple, chasing a glowing golden orb, weathered grey temple stone and muted moss, warm sunlight. Left 45%: calm dark charcoal area (#14181A with a soft warm glow) left EMPTY for the logo, which is added later. Everything important 5% away from the edges.
 [STYLE LOCK]
 ```
 
@@ -82,7 +82,7 @@ Google Play feature graphic background, 1024x500. Right 55%: the dark-green masc
 Las capturas las hago yo del juego real. Este fondo sirve para enmarcarlas con una frase arriba.
 
 ```text
-Vertical 1080x1920 promotional background for app-store screenshots: deep forest green #0B2A18 with a large soft radial glow of the green-to-yellow-lime-to-teal gradient behind the center, subtle carved rune patterns and a few glowing orbs near the edges, leaves framing the bottom corners. The center 70% is plain and calm (a phone screenshot will be placed there) and the top 18% is plain (a caption will be written there).
+Vertical 1080x1920 promotional background for app-store screenshots: dark charcoal stone (#14181A) with a large soft warm ivory glow behind the center, subtle grey carved rune patterns with a couple of tiny lime rune sparks and a few golden orbs near the edges, leaves framing the bottom corners. The center 70% is plain and calm (a phone screenshot will be placed there) and the top 18% is plain (a caption will be written there).
 [STYLE LOCK]
 ```
 
@@ -93,14 +93,14 @@ Vertical 1080x1920 promotional background for app-store screenshots: deep forest
 ### 3.1 Inicio ("toca para jugar") → `Pantallas/v2/inicio.png`
 
 ```text
-Vertical mobile game title-screen background, 1080x2400 (20:9). The ZNAKEX mascot snake (dark forest-green scales, lime outline, glowing white eyes) coils around a huge ancient stone pillar in a jungle temple at dusk, head raised in the middle of the image looking at the viewer, lime light glowing from carved runes, glowing orbs floating around, vines and leaves in the foreground. Top third: calm dark canopy with a soft lime glow (empty for the logo). Snake head around 45-55% of the height. Bottom quarter: dark mossy ground. Important content only inside the central 1080x1920 area.
+Vertical mobile game title-screen background, 1080x2400 (20:9). The ZNAKEX mascot snake (dark forest-green scales, lime outline, glowing white eyes) coils around a huge ancient stone pillar in a jungle temple at dusk, head raised in the middle of the image looking at the viewer; weathered grey-beige temple stone, muted moss, cool blue dusk shadows and warm sunset light (#F5D48A), only a few carved runes glowing lime, golden orbs floating around, dark vines and leaves in the foreground. Top third: calm dark canopy with a soft warm glow (empty for the logo). Snake head around 45-55% of the height. Bottom quarter: dark mossy ground. Important content only inside the central 1080x1920 area.
 [STYLE LOCK]
 ```
 
 ### 3.2 Carga → `Pantallas/v2/carga.png`
 
 ```text
-Vertical mobile game loading-screen background, 1080x2400 (20:9), a different scene from the title screen: an underground snake temple at night, a circular stone altar with a giant carved snake-Z sigil glowing lime on the floor, a single glowing lime orb floating above the altar lighting the chamber, the mascot snake's silhouette coiled in the shadows with only its white eyes glowing, roots and moss hanging from cracked pillars, drifting lime particles. Top third calm and dark (logo). Bottom quarter dark and plain (loading bar and tips). Important content only inside the central 1080x1920 area.
+Vertical mobile game loading-screen background, 1080x2400 (20:9), a different scene from the title screen: an underground snake temple at night, cool blue-grey stone lit by moonlight, a circular stone altar with a giant carved snake-Z sigil softly glowing lime on the floor (the only green light), a single warm golden orb floating above the altar lighting the chamber, the mascot snake's silhouette coiled in the shadows with only its white eyes glowing, roots and moss hanging from cracked pillars, drifting warm dust particles. Top third calm and dark (logo). Bottom quarter dark and plain (loading bar and tips). Important content only inside the central 1080x1920 area.
 [STYLE LOCK]
 ```
 
@@ -120,7 +120,7 @@ Seamless looping animation of this exact image with a locked camera (no zoom, no
 ### 3.4 Biblioteca de skins → `Pantallas/v2/skins.png`
 
 ```text
-Vertical mobile game background for a skins collection screen, 1080x2400 (20:9). Inside an ancient snake-temple treasure vault: dark forest-green stone walls with rows of carved empty niches, soft lime glow lines along the rune carvings, faint gold dust in the air, subtle vignette. Very low detail in the center (cards and text go on top), slightly more detail at the top and bottom edges. No characters, no snake, no objects in the center.
+Vertical mobile game background for a skins collection screen, 1080x2400 (20:9). Inside an ancient snake-temple treasure vault: dark charcoal and weathered grey stone walls with rows of carved empty niches, warm ivory light in the niches, a few thin lime glow lines on some runes only, faint gold dust in the air, subtle vignette. Very low detail in the center (cards and text go on top), slightly more detail at the top and bottom edges. No characters, no snake, no objects in the center.
 [STYLE LOCK]
 ```
 
@@ -136,7 +136,7 @@ Vertical mobile game background, 1080x2400 (20:9), for secondary menu screens: a
 ### 3.6 Tienda → `Pantallas/v2/tienda.png`
 
 ```text
-Vertical mobile game shop background, 1080x2400 (20:9): a temple treasure room with piles of gold coins and open chests on the far sides and in the lower corners, warm gold light (#E8B04A) mixed with the lime glow of carved runes, dark forest-green stone. The center is dark and calm (coin packs and prices go on top). No characters, no text.
+Vertical mobile game shop background, 1080x2400 (20:9): a temple treasure room with piles of gold coins and open chests on the far sides and in the lower corners, warm gold light (#E8B04A) on dark charcoal and grey stone, one or two tiny lime rune glows. The center is dark and calm (coin packs and prices go on top). No characters, no text.
 [STYLE LOCK]
 ```
 
@@ -175,24 +175,24 @@ El panel grande se estira al tamaño de cada ventana, así que sus bordes tienen
 
 ```text
 [SHEET TEMPLATE] with N=6, LIST:
-1) large window panel 900x600: dark forest-green translucent stone slab (#0B2A18 at 85% opacity feel), thick dark outline, thin lime inner rim light (#A8F25A), small carved snake-rune ornaments ONLY in the four corners, straight uniform edges, completely plain center;
+1) large window panel 900x600: dark charcoal stone slab (#1E2426, slightly translucent feel), thick dark outline (#14181A), thin warm ivory inner rim (#C9C3B2), small carved snake-rune ornaments ONLY in the four corners with one tiny lime glowing dot each, straight uniform edges, completely plain center;
 2) item card 640x460: same style, smaller corner ornaments;
-3) square slot 360x360: recessed dark socket with a lime inner rim;
-4) title plate 880x270: horizontal stone plate with pointed ends and a lime rim, plain center for a title;
-5) divider 420x80: thin horizontal ornament with a small snake-Z sigil in the middle, lime and dark green;
-6) avatar ring 360x360: round stone frame with a lime rim and a plain hollow center.
+3) square slot 360x360: recessed dark charcoal socket with an ivory-grey inner rim;
+4) title plate 880x270: horizontal weathered stone plate (#3A3E3A) with pointed ends and an ivory rim, plain center for a title;
+5) divider 420x80: thin horizontal ivory-grey ornament with a small snake-Z sigil in the middle glowing lime;
+6) avatar ring 360x360: round weathered stone frame with an ivory rim and a plain hollow center.
 ```
 
 ### 5.2 Botones → `Pantallas/v2/kit_botones.png`
 
 ```text
 [SHEET TEMPLATE] with N=6, LIST:
-1) PRIMARY button 700x300: chunky rounded rectangle, lime gradient (#B8FF1A top to #00A04A bottom), thick dark-green outline, glossy top highlight, small darker bevel at the bottom, plain center;
+1) PRIMARY button 700x300: chunky rounded rectangle, lime gradient (#B8FF1A top to #00A04A bottom), thick dark charcoal outline (#14181A), glossy top highlight, small darker bevel at the bottom, plain center;
 2) PRIMARY PRESSED: same button 6 px lower, slightly darker, no bottom bevel;
-3) SECONDARY button 700x300: dark forest-green stone with a lime rim, plain center;
+3) SECONDARY button 700x300: dark charcoal stone (#1E2426) with an ivory-grey rim (#C9C3B2), plain center;
 4) REWARD button 700x300: gold (#E8B04A to #B87A1A) with a dark outline and a warm glossy highlight, plain center;
-5) ROUND icon button 300x300: dark green disc with a lime rim and a glossy top, empty center;
-6) SMALL pill button 520x170: dark green with a lime rim, plain center.
+5) ROUND icon button 300x300: dark charcoal stone disc with an ivory-grey rim and a glossy top, empty center;
+6) SMALL pill button 520x170: dark charcoal stone with an ivory-grey rim, plain center.
 ```
 
 ### 5.3 Placas de aviso (900 × 110) → `Pantallas/v2/kit_placas.png`
@@ -202,7 +202,7 @@ Los carteles que salen durante la partida ("¡VELOCIDAD x2!", "EVITA LOS OBSTÁC
 ```text
 [SHEET TEMPLATE] with N=5, LIST (each a long horizontal banner 1800x220 with pointed or scrolled ends, ornaments only at the ends, wide plain center):
 1) DANGER: dark red stone with an orange-red rim;
-2) BRAND: dark green with a lime rim;
+2) BRAND: dark charcoal stone with a lime rim (the only green one);
 3) REWARD: gold with warm highlights;
 4) INFO: deep teal (#1F6A5A) with a light aqua rim;
 5) SPECIAL: deep purple (#3A2352) with a lilac rim.
@@ -211,17 +211,17 @@ Los carteles que salen durante la partida ("¡VELOCIDAD x2!", "EVITA LOS OBSTÁC
 ### 5.4 ☆ Esquinas decorativas → `Pantallas/v2/kit_esquinas.png`
 
 ```text
-[SHEET TEMPLATE] with N=4, LIST: four matching corner ornaments 300x300 (top-left, top-right, bottom-left, bottom-right orientation), carved dark-green stone with a curling vine and a small lime-glowing rune, each filling one corner of its square and fading to transparent-looking magenta toward the opposite corner.
+[SHEET TEMPLATE] with N=4, LIST: four matching corner ornaments 300x300 (top-left, top-right, bottom-left, bottom-right orientation), carved weathered grey stone with a curling vine and a small lime-glowing rune, each filling one corner of its square and fading to transparent-looking magenta toward the opposite corner.
 ```
 
 ---
 
 ## 6 · Iconos (hojas de 12, sobre magenta)
 
-Mismo estilo para todos: placa redondeada verde oscuro (`#0B2A18` → `#0F5A2A`) con contorno lima (`#A8F25A`) y un símbolo blanco o lima en el centro. Las excepciones (orbes, monedas, estrellas, medallas y cofres) van sin placa.
+**Iconos sin verde.** Son símbolos sueltos color marfil (`#F2EFE6`) con sombreado gris cálido (`#C9C3B2`), contorno oscuro grueso (`#14181A`) y un brillo arriba, **sin placa ni fondo**. Así se leen sobre cualquier panel. El juego los tiñe de lima solo cuando están seleccionados (eso lo hago yo por código). Las excepciones llevan su color de significado: monedas, estrellas, cofres y recompensas en oro, medallas en su metal y el orbe rojo en rojo.
 
 ```text
-Game UI icon sheet, 2048x2048, a 4x3 grid of 12 separate icons, each about 380x380 px, separated by at least 80 px of flat pure magenta #FF00FF (no magenta inside the icons). Default icon style: a rounded-square dark-green badge (#0B2A18 to #0F5A2A) with a thick lime outline (#A8F25A) and a bold white or lime symbol in the center, glossy highlight on top, identical line weight in all icons, readable at 48 px. ICONS in order: [LIST].
+Game UI icon sheet, 2048x2048, a 4x3 grid of 12 separate icons, each about 380x380 px, separated by at least 80 px of flat pure magenta #FF00FF (no magenta or pink inside the icons). Default icon style: a bold standalone symbol with NO badge and NO background shape, colored ivory (#F2EFE6) with warm grey shading (#C9C3B2), a thick dark charcoal outline (#14181A), a small glossy highlight on top, chunky rounded shapes, identical line weight in all icons, readable at 48 px. NO green in the icons. Exceptions keep their meaning colors: coins, stars, chests and rewards in gold (#E8B04A), medals in gold/silver/bronze metal, the red orb in red. ICONS in order: [LIST].
 [STYLE LOCK]
 ```
 
@@ -229,10 +229,10 @@ Sustituye `[LIST]` por cada hoja. Entre paréntesis va el nombre de archivo del 
 
 1. **Navegación y modos** → `iconos_1.png`: `open book (modes), folded map with a pin (maps), temple house (home), snake-scale shirt (skins), gear (settings), shopping bag (shop), snake head over an open book (mode_story), snake coiled in a square (mode_classic), lightning bolt with a golden orb (mode_frenzy), two snake heads facing each other (mode_duel), trophy on a podium (mode_leaderboard), prize wheel (mode_spin)`
 2. **Acciones** → `iconos_2.png`: `left arrow (back), X cross (close), check mark (check), pause bars (pause), play triangle (play), circular arrow (retry), door with an exit arrow (quit), padlock (lock), stacked steps (levels), two circular arrows (refresh), video camera (ad), play button inside a film frame (video)`
-3. **Economía** (sin placa: objetos sueltos) → `iconos_3.png`: `single gold coin with a snake-Z emblem (coin), small stack of gold coins (coins), big pile of gold coins (coins_a), gold coin with a small plus sign (plus1), "x2" multiplier badge in lime (x2), "x3" multiplier badge in gold (x3), closed treasure chest (chest_closed), open treasure chest glowing (chest_open), gift box in a slot (slot_gift), locked slot with a padlock (slot_locked), "collected" round stamp with a check (collected), wax seal with the snake-Z (wax_seal)`
-4. **Progreso y logros** (sin placa) → `iconos_4.png`: `gold star (star_gold), empty star outline (star_empty), glowing gold star with rays (star_glow), star bursting with sparkles (star_pop), gold medal (medal_gold), silver medal (medal_silver), bronze medal (medal_bronze), grey locked medal (medal_locked), rosette ribbon (rosette), rolled daily scroll with a lime ribbon (scroll_daily), rolled weekly scroll with a gold ribbon (scroll_weekly), calendar page (calendar)`
+3. **Economía** (en oro) → `iconos_3.png`: `single gold coin with a snake-Z emblem (coin), small stack of gold coins (coins), big pile of gold coins (coins_a), gold coin with a small plus sign (plus1), "x2" multiplier badge in gold (x2), "x3" multiplier badge in gold (x3), closed treasure chest (chest_closed), open treasure chest glowing (chest_open), gift box in a slot (slot_gift), locked slot with a padlock (slot_locked), "collected" round stamp with a check (collected), wax seal with the snake-Z (wax_seal)`
+4. **Progreso y logros** (oro y metales) → `iconos_4.png`: `gold star (star_gold), empty star outline (star_empty), glowing gold star with rays (star_glow), star bursting with sparkles (star_pop), gold medal (medal_gold), silver medal (medal_silver), bronze medal (medal_bronze), grey locked medal (medal_locked), rosette ribbon (rosette), rolled daily scroll with an ivory ribbon (scroll_daily), rolled weekly scroll with a gold ribbon (scroll_weekly), calendar page (calendar)`
 5. **Ajustes y varios** → `iconos_5.png`: `flame (flame), ascending bars (bars), light bulb (bulb), cloud with an up arrow (cloud), eye (eye), feather (feather), gamepad (gamepad), joystick (joystick), directional pad (dpad), phone vibrating (vibration), snake head (snake), map scroll (map)`
-6. **Gestos y orbes** → `iconos_6.png`: `hand swiping with an arrow (swipe), hand swiping in the other direction (swipe2), finger tapping (tap), tap ripple ring (tap_ring), two little people with a flame (streak_people), glossy red orb without a badge (orb_red), glossy golden orb without a badge (orb_gold), glossy lime orb without a badge (orb), checkbox with a check (check_box), "x2" coin badge (x2 kit), and two empty spare slots`
+6. **Gestos y orbes** → `iconos_6.png`: `hand swiping with an arrow (swipe), hand swiping in the other direction (swipe2), finger tapping (tap), tap ripple ring (tap_ring), two little people with a flame (streak_people), glossy red orb without a badge (orb_red), glossy golden orb without a badge (orb_gold), glossy golden-white orb (orb), checkbox with a check (check_box), "x2" coin badge (x2 kit), and two empty spare slots`
 
 ---
 
