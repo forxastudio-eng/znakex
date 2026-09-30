@@ -1145,8 +1145,7 @@ export class UI {
   scr_game(cfg) {
     const art = cfg.mode === 'story' ? (cfg.level.mapInfo.key) : { classic: 'maps/key06.jpg', frenzy: 'maps/key12.jpg', duel: 'maps/key09.jpg' }[cfg.mode];
     this.setBg('game', art);
-    if (cfg.mode === 'story' && !cfg.level.season && cfg.level.map) audio.playMusic(`mus_map${String(cfg.level.map).padStart(2, '0')}`, 'mus_story');
-    else audio.playMusic(cfg.mode === 'story' ? (cfg.level.season ? 'mus_season' : 'mus_story') : { classic: 'mus_classic', frenzy: 'mus_frenzy', duel: 'mus_duel' }[cfg.mode]);
+    audio.playMusic(cfg.mode === 'story' ? (cfg.level.season ? 'mus_season' : 'mus_story') : { classic: 'mus_classic', frenzy: 'mus_frenzy', duel: 'mus_duel' }[cfg.mode]);
     audio.setMusicRate(1);
     const S = this.S();
     const e = el(`<section style="padding:0">
