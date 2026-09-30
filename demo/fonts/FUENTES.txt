@@ -1,0 +1,14 @@
+Fuentes incluidas en ZNAKEX. Todas se distribuyen bajo la SIL Open Font License 1.1
+(texto completo en OFL-LICENSE.txt). Se usan sin modificar, empaquetadas con el juego.
+
+- Bebas Neue      Copyright 2019 The Bebas Neue Project Authors (https://github.com/dharmatype/Bebas-Neue)
+- Barlow / Barlow Condensed
+                  Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
+- Oswald (cirílico, ruso)
+                  Copyright 2016 The Oswald Project Authors (https://github.com/googlefonts/OswaldFont)
+- Roboto (cirílico, ruso)
+                  Copyright 2011 The Roboto Project Authors (https://github.com/googlefonts/roboto-classic)
+- Roboto Condensed (cirílico, ruso)
+                  Copyright 2011 Google Inc. All Rights Reserved.
+
+Subconjuntos woff2 obtenidos de Fontsource (@fontsource/*, versión 5).
