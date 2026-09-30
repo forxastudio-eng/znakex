@@ -74,20 +74,17 @@ export class UI {
     this.bgVideo({ menu: 'menu', title: 'inicio' }[kind]);
   }
 
-  // The title and menu art loop a short video over the still (off in low graphics mode).
+  // The title and menu art are animated loops (animated WebP over the still; off in low graphics mode).
   bgVideo(name) {
     const bg = $(this.app, '#bg');
-    const old = $(bg, 'video');
+    const old = $(bg, '.anim');
     if (old && old.dataset.name === name) return;
     if (old) { old.classList.remove('on'); setTimeout(() => old.remove(), 800); }
     if (!name || this.S().settings.lowfx) return;
-    const v = el(`<video muted loop playsinline autoplay preload="auto" data-name="${name}"></video>`);
-    v.muted = true;
-    v.src = url(`brand/video/${name}.mp4`);
-    v.addEventListener('playing', () => v.classList.add('on'), { once: true });
-    $(bg, '.bg-dim').before(v);
-    const p = v.play();
-    if (p && p.catch) p.catch(() => {});
+    const a = el(`<img class="anim" alt="" data-name="${name}">`);
+    a.addEventListener('load', () => a.classList.add('on'), { once: true });
+    a.src = url(`brand/anim/${name}.webp`);
+    $(bg, '.bg-dim').before(a);
   }
 
   // ------------------------------------------------------------ navigation
@@ -185,7 +182,7 @@ export class UI {
   // Plays over the loading screen (the game keeps loading underneath); a tap skips it.
   studioIntro() {
     const o = el(`<div class="studio-intro">
-      <video muted playsinline preload="auto"></video>
+      <img class="anim" alt="">
       <div class="st-logo"><img alt="GPUnlock" src="${url('brand/logo/gpunlock_color.webp')}"><span class="st-word">GPUnlock</span></div>
       <div class="st-sub">${t('PRESENTA')}</div>
     </div>`);
@@ -195,16 +192,12 @@ export class UI {
     let gone = false;
     const end = () => { if (gone) return; gone = true; o.classList.add('out'); setTimeout(() => o.remove(), 500); };
     o.addEventListener('pointerup', end);
-    // the brand reveal video (4 s); if it can't play (old WebView, low graphics) the animated logo shows instead
-    const v = $(o, 'video');
+    // the brand reveal (4 s, animated WebP that plays once); in low graphics the logo animation shows instead
+    const a = $(o, '.anim');
     let timer = setTimeout(end, 2600);
     if (!this.S().settings.lowfx) {
-      v.muted = true;
-      v.src = url('brand/video/gpunlock.mp4');
-      v.addEventListener('playing', () => { o.classList.add('has-video'); clearTimeout(timer); timer = setTimeout(end, 4600); }, { once: true });
-      v.addEventListener('ended', () => setTimeout(end, 250));
-      const p = v.play();
-      if (p && p.catch) p.catch(() => {});
+      a.addEventListener('load', () => { o.classList.add('has-video'); clearTimeout(timer); timer = setTimeout(end, 4300); }, { once: true });
+      a.src = url('brand/anim/gpunlock.webp');
     }
   }
 

@@ -141,6 +141,26 @@ def videos():
            "-movflags", "+faststart", os.path.join(OUT, "video", n + ".mp4"))
 
 
+def drop_videos():
+    """the mp4s are only an intermediate step now: the game ships the animated WebPs"""
+    import shutil
+    shutil.rmtree(os.path.join(OUT, "video"), ignore_errors=True)
+
+
+def anims():
+    """The videos as animated WebP (15 fps, 720x1280): plain images that loop by themselves in any
+    WebView, with no video player, and can be checked frame by frame. The GPUnlock intro plays once."""
+    import glob, shutil, tempfile
+    for n, loop in (("menu", 0), ("inicio", 0), ("gpunlock", 1)):
+        tmp = tempfile.mkdtemp()
+        ff("-i", os.path.join(OUT, "video", n + ".mp4"), "-vf", "fps=15,scale=720:1280:flags=lanczos", os.path.join(tmp, "f%03d.png"))
+        ims = [Image.open(f).convert("RGB") for f in sorted(glob.glob(os.path.join(tmp, "*.png")))]
+        os.makedirs(os.path.join(OUT, "anim"), exist_ok=True)
+        ims[0].save(os.path.join(OUT, "anim", n + ".webp"), "WEBP", save_all=True, append_images=ims[1:],
+                    duration=67, loop=loop, quality=62, method=4)
+        shutil.rmtree(tmp)
+
+
 def logos():
     for out, src in LOGOS.items():
         im = trim(Image.open(os.path.join(SRC, "logos", src + ".png")).convert("RGBA"))
@@ -191,5 +211,6 @@ if __name__ == "__main__":
             fh.write(f"export const PW_FILES = {json.dumps(['pw/' + n for n in names('pw')] + ['fx/' + n for n in names('fx')])};\n")
             fh.write(f"export const PLAQUES = {json.dumps(names('plaques'))};\n")
     if not sys.argv[1:]:
-        backgrounds(); videos(); logos(); launcher(); studio()
+        backgrounds(); videos(); logos(); launcher(); studio(); anims()
+        drop_videos()
         print("backgrounds, videos, logos, launcher icon: ok")
