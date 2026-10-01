@@ -20,3 +20,11 @@ export function showNative(kind, done) {
   try { window.ZnakexAds.show(kind); } catch { pending = null; return false; }
   return true;
 }
+
+// EU / UK: players can change their ad consent at any time (button in Settings)
+export function privacyRequired() {
+  try { return !!(window.ZnakexAds && window.ZnakexAds.privacyRequired && window.ZnakexAds.privacyRequired()); } catch { return false; }
+}
+export function privacyOptions() {
+  try { window.ZnakexAds && window.ZnakexAds.privacyOptions(); } catch { /* ignore */ }
+}

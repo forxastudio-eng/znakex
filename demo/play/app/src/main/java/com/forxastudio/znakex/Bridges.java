@@ -379,6 +379,14 @@ public class Bridges {
             return gamesOn;
         }
 
+        /** answers __znakexGames again (the automatic sign-in can finish before the game has loaded) */
+        @JavascriptInterface
+        public void refresh() {
+            if (!gamesOn) return;
+            act.runOnUiThread(() -> PlayGames.getGamesSignInClient(act).isAuthenticated().addOnCompleteListener(t ->
+                    signedIn(t.isSuccessful() && t.getResult().isAuthenticated())));
+        }
+
         @JavascriptInterface
         public void signIn() {
             if (!gamesOn) return;

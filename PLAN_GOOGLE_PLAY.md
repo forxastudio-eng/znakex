@@ -249,3 +249,36 @@ Cada punto dice **quién lo hace**: **TÚ** (cosas que solo puede hacer el dueñ
 - [Firma de apps y formato AAB](https://developer.android.com/studio/publish/app-signing)
 - [Sección de seguridad de los datos](https://support.google.com/googleplay/android-developer/answer/10787469?hl=es)
 - [Política de Familias y AdMob](https://support.google.com/admob/answer/6223431?hl=es)
+
+---
+
+## Versión para Google Play (hecho: proyecto Gradle + compilación automática)
+
+- Proyecto en `demo/play` (Android 16 / API 36, formato **AAB**). Se compila solo en GitHub Actions
+  (`.github/workflows/android.yml`) y deja descargables: el **.aab** para Play Console y los APK de prueba.
+- Nombre de paquete: `com.gpunlock.znakex` (en `demo/play/gradle.properties`, **pendiente de confirmar**: no se puede cambiar después de la primera subida).
+- Ya conectado en el juego: anuncios reales de AdMob con aviso de consentimiento (UE), compras reales
+  (Google Play Billing 8), progreso guardado en la cuenta de Google (Play Games) y rankings.
+  Hasta tener los IDs reales usa los IDs de prueba de Google (no cobran ni pagan).
+
+### Productos que hay que crear en Play Console (Monetizar > Productos integrados), con estos IDs exactos
+| ID | Qué da | Tipo |
+|---|---|---|
+| coins_1200 | 1.200 monedas | consumible |
+| coins_4000 | 4.000 monedas | consumible |
+| coins_7000 | 7.000 monedas | consumible |
+| coins_15000 | 15.000 monedas | consumible |
+| coins_32000 | 32.000 monedas | consumible |
+| coins_90000 | 90.000 monedas | consumible |
+| starter_pack | skin Pirata + 5.000 monedas (una vez) | no consumible |
+| season_pass_1 | Pase premium temporada 1 | no consumible |
+
+### Secretos de GitHub (repo > Settings > Secrets and variables > Actions)
+| Secreto | De dónde sale |
+|---|---|
+| ZNAKEX_KEYSTORE_BASE64, ZNAKEX_KEYSTORE_PASSWORD, ZNAKEX_KEY_ALIAS, ZNAKEX_KEY_PASSWORD | clave de subida (la genero yo y te paso los pasos) |
+| ADMOB_APP_ID, ADMOB_INTERSTITIAL, ADMOB_REWARDED | AdMob > Apps > ZNAKEX |
+| GAMES_PROJECT_ID | Play Console > Play Games Services > Configuración (número del proyecto) |
+| LB_CLASSIC, LB_FRENZY | Play Games Services > Marcadores (crear "Clásico" y "Frenético") |
+
+En Play Games Services hay que activar **"Juegos guardados" (Saved Games)**.

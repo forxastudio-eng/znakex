@@ -18,6 +18,7 @@ import { BRAND_ICONS, PLAQUES } from './newmanifest.js';
 import { pwPath } from './powerups.js';
 import * as ads from './ads.js';
 import * as notify from './notify.js';
+import * as billing from './billing.js';
 
 // brand v2 icons (ivory symbols, gold rewards); the few the new set doesn't have (x2/x3 badges, map hazards) keep the old art
 const BRAND = new Set(BRAND_ICONS);
@@ -98,6 +99,10 @@ export class UI {
     this.cur = null;
     this.game = null;
     this.timers = [];
+    // Google Play: a purchase, the prices or the cloud save changed -> show it
+    billing.setGranter((prod) => { if (prod.pass) meta.buyPass(); });
+    billing.onChange(() => this.refreshLive());
+    cloud.onChange(() => this.refreshLive());
     document.addEventListener('coins', () => this.refreshCoins(true));
     document.addEventListener('achievement', (e) => e.detail.forEach((a, i) => setTimeout(() => this.toast(`<img src="${kit('medal_gold')}" style="height:1.6rem;vertical-align:-.4rem;margin-right:.4rem">${t('LOGRO')} · ${t(a.name).toUpperCase()}`, true), i * 2000)));
     document.addEventListener('mission', (e) => this.toast(`<img src="${kit('check_box')}" style="height:1.5rem;vertical-align:-.35rem;margin-right:.4rem">${t('MISIÓN LISTA')} · ${meta.missionText(e.detail)}`, true));
@@ -188,6 +193,7 @@ export class UI {
       throw err;
     }
     scr.name = name;
+    this.curParams = params;
     scr.el.classList.add('screen');
     this.screensEl.appendChild(scr.el);
     fitPlaques(scr.el);
@@ -927,8 +933,8 @@ export class UI {
       <div class="pass-cols"><span>${t('GRATIS')}</span><span>${t('PREMIUM')}</span></div>
       <div class="scroll"><div class="pass-list">${Array.from({ length: SE.tiers }, (_, i) => `<div class="tier ${i < tier ? 'reach' : ''}"><em>${i + 1}</em>${cell('free', i)}${cell('prem', i)}</div>`).join('')}</div></div>
       <div style="padding:.5rem 0 .2rem">
-        ${se.premium ? `<div class="btn" style="width:100%;text-align:center">${t('PASE PREMIUM ACTIVO')} ✓</div>` : `<button class="btn-primary" data-act="buypass" style="width:100%"><span class="stack"><span class="worn">${t('OBTENER PASE PREMIUM')} · ${SE.price}</span><span class="sub">${t('Skins exclusivas · {n} monedas · Mapa completo', { n: fmt(SE.bonusCoins) })}</span></span></button>`}
-        <div class="demo-note">${t('Puntos de pase: superar niveles, estrellas y misiones. Compra simulada (demo).')}</div>
+        ${se.premium ? `<div class="btn" style="width:100%;text-align:center">${t('PASE PREMIUM ACTIVO')} ✓</div>` : `<button class="btn-primary" data-act="buypass" style="width:100%"><span class="stack"><span class="worn">${t('OBTENER PASE PREMIUM')} · ${billing.price('season_pass_1')}</span><span class="sub">${t('Skins exclusivas · {n} monedas · Mapa completo', { n: fmt(SE.bonusCoins) })}</span></span></button>`}
+        <div class="demo-note">${t('Puntos de pase: superar niveles, estrellas y misiones.')}${billing.real() ? '' : ' ' + t('Compra simulada (demo).')}</div>
       </div>
       ${this.nav('home')}
     </section>`);
@@ -940,10 +946,13 @@ export class UI {
         else if (b.dataset.t === 'prem' && !se.premium) this.toast(t('Recompensa del pase premium'));
         else if (Number(b.dataset.i) >= tier) this.toast(t('Sube de nivel de pase para reclamarla'));
       },
-      buypass: () => this.popup({
-        title: t('PASE DE TEMPORADA'), icon: 'coins', text: `${t('Skins exclusivas, <b>{n}</b> monedas, mapa completo y recompensas premium por <b>{p}</b>.', { n: fmt(SE.bonusCoins), p: SE.price })}<br><span class="dim">${t('Compra simulada en la demo.')}</span>`,
-        buttons: [['COMPRAR', () => { meta.buyPass(); this.toast(t('¡Pase premium activado!'), true); this.go('season', { tab: 'pass' }); }, true], ['CANCELAR', null]],
-      }),
+      buypass: () => {
+        if (billing.real()) { this.realBuy('season_pass_1', () => this.go('season', { tab: 'pass' })); return; }
+        this.popup({
+          title: t('PASE DE TEMPORADA'), icon: 'coins', text: `${t('Skins exclusivas, <b>{n}</b> monedas, mapa completo y recompensas premium por <b>{p}</b>.', { n: fmt(SE.bonusCoins), p: billing.price('season_pass_1') })}<br><span class="dim">${t('Compra simulada en la demo.')}</span>`,
+          buttons: [['COMPRAR', () => { meta.buyPass(); this.toast(t('¡Pase premium activado!'), true); this.go('season', { tab: 'pass' }); }, true], ['CANCELAR', null]],
+        });
+      },
     });
     return { el: e };
   }
@@ -954,26 +963,27 @@ export class UI {
     const e = el(`<section>
       ${this.topbar(t('TIENDA'), back)}
       <div class="scroll stagger">
-        <div class="panel" ${stag(0)} style="margin-bottom:1rem"><div class="inner" style="display:grid;grid-template-columns:7rem 1fr;gap:.8rem;align-items:center">
+        ${billing.owns('starter_pack') ? '' : `<div class="panel" ${stag(0)} style="margin-bottom:1rem"><div class="inner" style="display:grid;grid-template-columns:7rem 1fr;gap:.8rem;align-items:center">
           <img src="${url('skins/pirata.webp')}" style="width:7rem;border-radius:.5rem;box-shadow:0 0 1.2rem rgba(232,176,74,.5)">
           <div><div class="t-display worn glow-amber" style="font-size:2rem">${t('PACK DE INICIO')}</div>
             <div class="t-label" style="font-size:.9rem">${t('SKIN ESPECIAL + {n} MONEDAS', { n: fmt(5000) })}</div>
             <div class="dim" style="font-size:.8rem">${t('Oferta única')} · −80 %</div>
-            <button class="btn small" data-act="buy" data-coins="5000" data-skin="pirata" style="margin-top:.4rem">1,99 US$</button></div>
-        </div></div>
+            <button class="btn small" data-act="buy" data-pid="starter_pack" data-coins="5000" data-skin="pirata" style="margin-top:.4rem">${billing.price('starter_pack')}</button></div>
+        </div></div>`}
         <div class="pack-grid">
-          ${ECONOMY.packs.map((p, i) => `<button class="pack ${p.tag ? 'best' : ''}" data-act="buy" data-coins="${p.coins}" ${stag(i + 1)}>
+          ${ECONOMY.packs.map((p, i) => `<button class="pack ${p.tag ? 'best' : ''}" data-act="buy" data-pid="${billing.packId(p)}" data-coins="${p.coins}" ${stag(i + 1)}>
             ${p.tag ? `<span class="tag">${t(p.tag)}</span>` : ''}
             <img src="${icon(i < 1 ? 'coin' : 'coins')}" alt="" style="transform:scale(${0.8 + i * 0.07})">
             <div class="amt">${fmt(p.coins)}</div><div class="nm">${t(p.name).toUpperCase()}</div>
-            <div class="price">${p.price}</div></button>`).join('')}
+            <div class="price">${billing.price(billing.packId(p))}</div></button>`).join('')}
         </div>
-        <div class="demo-note" style="margin-top:1rem">${t('DEMO: las compras son simuladas y no cobran nada.')}<br>${t('En la versión final se usará Google Play Billing.')}</div>
+        ${billing.real() ? '' : `<div class="demo-note" style="margin-top:1rem">${t('DEMO: las compras son simuladas y no cobran nada.')}<br>${t('En la versión final se usará Google Play Billing.')}</div>`}
         <div style="text-align:center"><button class="link" data-act="restore">${t('Restaurar compras')}</button></div>
       </div>
     </section>`);
     this.wire(e, {
       buy: (b) => {
+        if (billing.real()) { this.realBuy(b.dataset.pid, () => this.go('shop', { back })); return; }
         const coins = Number(b.dataset.coins);
         this.popup({
           title: t('COMPRA DE DEMO'), icon: 'coins', text: `${b.dataset.skin ? t('Se añadirán <b>{n}</b> monedas y la skin {s}.', { n: fmt(coins), s: t(skinById(b.dataset.skin).name) }) : t('Se añadirán <b>{n}</b> monedas.', { n: fmt(coins) })}<br><span class="dim">${t('(simulado, sin cobro)')}</span>`,
@@ -984,7 +994,10 @@ export class UI {
           }, true], ['CANCELAR', null]],
         });
       },
-      restore: () => this.toast(t('No hay compras que restaurar')),
+      restore: () => {
+        if (!billing.real()) { this.toast(t('No hay compras que restaurar')); return; }
+        billing.restore((n) => { this.toast(n > 0 ? t('Compras restauradas') : n < 0 ? t('Google Play no está disponible ahora') : t('No hay compras que restaurar')); this.go('shop', { back }); });
+      },
     });
     return { el: e };
   }
@@ -1012,7 +1025,8 @@ export class UI {
         <div class="ctl-grid">${[['swipe', 'DESLIZAR'], ['buttons', 'FLECHAS'], ['joystick', 'PALANCA'], ['tap', 'TOQUES']].map(([v, l]) => `<button class="ctl ${set.controls === v ? 'on' : ''}" data-act="ctl" data-v="${v}"><span class="ctl-ic ctl-${v}"></span>${t(l)}</button>`).join('')}</div>
         <div class="demo-note" id="ctlinfo" style="text-align:left;margin-top:.3rem">${t(CONTROL_INFO[set.controls] || '')}</div>
         <div class="sec">${t('CUENTA Y GUARDADO')}</div>
-        <div class="set-row"><span class="l"><img src="${kit('gamepad')}">GOOGLE PLAY GAMES</span><span class="t-label dim" style="font-size:.8rem">${t(cloud.available() ? 'CONECTADO' : 'EN LA APP DE GOOGLE PLAY')}</span></div>
+        <div class="set-row"><span class="l"><img src="${kit('gamepad')}">GOOGLE PLAY GAMES</span><span class="t-label dim" style="font-size:.8rem;text-align:right">${cloud.signedIn() ? (cloud.playerName() || t('CONECTADO')) : t(cloud.available() ? 'SIN CONECTAR' : 'EN LA APP DE GOOGLE PLAY')}</span></div>
+        ${cloud.available() ? `<div class="demo-note" style="text-align:left">${t(cloud.signedIn() ? 'Tu progreso se guarda en tu cuenta de Google.' : 'Conéctate para guardar tu progreso en tu cuenta de Google.')}</div>` : ''}
         <div class="set-row"><span class="l"><img src="${kit('cloud')}">${t('CÓDIGO DE GUARDADO')}</span><span style="display:flex;gap:.4rem"><button class="btn small" data-act="savecode">${t('COPIAR')}</button><button class="btn small" data-act="loadcode">${t('RESTAURAR')}</button></span></div>
         <div class="set-row"><span class="l"><img src="${kit('bulb')}">${t('TUTORIAL')}</span><button class="btn small" data-act="tutorial">${t('REPETIR')}</button></div>
         ${CONFIG.tester ? `        <div class="sec">DEMO</div>
@@ -1020,7 +1034,8 @@ export class UI {
         <div class="set-row"><span>${t('RULETA DE HOY')}</span><button class="btn small" data-act="wheel">${t('REINICIAR')}</button></div>
         <div class="set-row"><span>${t('PROGRESO')}</span><button class="btn small" data-act="reset">${t('BORRAR')}</button></div>` : ''}
         <div class="sec">${t('CUENTA')}</div>
-        <button class="btn" style="width:100%;margin-top:.4rem" data-act="soon">${t('CONECTAR GOOGLE PLAY GAMES')}</button>
+        ${cloud.available() && !cloud.signedIn() ? `<button class="btn" style="width:100%;margin-top:.4rem" data-act="gsign">${t('CONECTAR GOOGLE PLAY GAMES')}</button>` : ''}
+        ${ads.privacyRequired() ? `<button class="btn" style="width:100%;margin-top:.4rem" data-act="adprivacy">${t('PRIVACIDAD DE ANUNCIOS')}</button>` : ''}
         <div class="btn-row" style="margin-top:.5rem"><button class="btn small" data-act="privacy">${t('PRIVACIDAD')}</button><button class="btn small" data-act="support">${t('SOPORTE')}</button></div>
         <button class="btn" style="width:100%;margin-top:.5rem" data-act="credits">${t('CRÉDITOS')}</button>
         <div style="display:flex;flex-direction:column;align-items:center;margin-top:1rem;gap:.3rem"><img src="${LOGO}" style="width:6rem"><span class="demo-note">${t('VERSIÓN')} ${CONFIG.version}${CONFIG.tester ? ' · TESTER' : ''}</span></div>
@@ -1044,7 +1059,8 @@ export class UI {
         title: '¿BORRAR PROGRESO?', icon: 'retry', text: t('Se perderán monedas, skins y niveles de la demo.'),
         buttons: [['BORRAR', () => { store.reset(); this.go('home'); this.toast(t('Progreso borrado')); }, true], ['CANCELAR', null]],
       }),
-      soon: () => this.toast(t('Disponible en la versión final')),
+      gsign: () => cloud.signIn(),
+      adprivacy: () => ads.privacyOptions(),
       privacy: () => openExternal(CONFIG.privacyUrl),
       support: () => openExternal(`mailto:${CONFIG.supportEmail}?subject=${encodeURIComponent('ZNAKEX ' + CONFIG.version)}`),
       credits: () => this.credits(),
@@ -1117,6 +1133,26 @@ export class UI {
 
   // Simulated rewarded ad (AdMob in the real build).
   // rewarded ad chosen by the player (revive, x2 coins, +1 coin...): it also resets the every-10-games count
+  // redraw the screens that show purchases, prices or the account (never over an open popup or a game)
+  refreshLive() {
+    const c = this.cur;
+    if (!c) return;
+    if (['settings', 'shop', 'season'].includes(c.name) && !this.overEl.children.length) this.go(c.name, this.curParams);
+    else this.refreshCoins(false);
+  }
+
+  // real Google Play purchase: Google shows its own payment sheet; then = called after a successful purchase
+  realBuy(pid, then) {
+    billing.buy(pid, (r, prod) => {
+      if (r === 'ok') {
+        audio.play('reward_chime');
+        this.toast(prod && prod.pass ? t('¡Pase premium activado!') : prod && prod.coins ? t('+{n} monedas', { n: fmt(prod.coins) }) : t('Compra completada'), true);
+        then && then();
+      } else if (r === 'pending') this.toast(t('Pago pendiente: lo recibirás cuando se complete'));
+      else if (r === 'error') this.toast(t('No se pudo completar la compra'));
+    });
+  }
+
   fakeAd(onReward) {
     const reward = () => { this.S().adCounter = 0; store.save(); onReward(); };
     if (ads.showNative('rewarded', (ok) => { audio.resume(); if (ok) reward(); })) { audio.suspend(); return; }
@@ -1739,12 +1775,14 @@ export class UI {
   quickShop(onClose) {
     const o = this.overlay(`<div class="overlay dark"><div class="panel strong"><div class="inner">
       <div class="ov-title worn" style="font-size:2.4rem">${t('MONEDAS')}</div>
-      <div class="pack-grid" style="width:100%">${ECONOMY.packs.slice(0, 3).map((p, i) => `<button class="pack" data-act="buy" data-coins="${p.coins}"><img src="${icon(i ? 'coins' : 'coin')}"><div class="amt">${fmt(p.coins)}</div><div class="price">${p.price}</div></button>`).join('')}</div>
-      <div class="demo-note">${t('Compra simulada (demo)')}</div>
+      <div class="pack-grid" style="width:100%">${ECONOMY.packs.slice(0, 3).map((p, i) => `<button class="pack" data-act="buy" data-pid="${billing.packId(p)}" data-coins="${p.coins}"><img src="${icon(i ? 'coins' : 'coin')}"><div class="amt">${fmt(p.coins)}</div><div class="price">${billing.price(billing.packId(p))}</div></button>`).join('')}</div>
+      ${billing.real() ? '' : `<div class="demo-note">${t('Compra simulada (demo)')}</div>`}
       <button class="btn" data-act="close" style="width:100%">${t('VOLVER')}</button>
     </div></div></div>`);
     this.wire(o, {
-      buy: (b) => { store.addCoins(Number(b.dataset.coins)); this.toast(t('+{n} monedas', { n: fmt(Number(b.dataset.coins)) }), true); this.closeOverlay(o); onClose && onClose(); this.refreshReviveCoins(); },
+      buy: (b) => {
+        if (billing.real()) { this.realBuy(b.dataset.pid, () => { this.closeOverlay(o); onClose && onClose(); this.refreshReviveCoins(); }); return; }
+        store.addCoins(Number(b.dataset.coins)); this.toast(t('+{n} monedas', { n: fmt(Number(b.dataset.coins)) }), true); this.closeOverlay(o); onClose && onClose(); this.refreshReviveCoins(); },
       close: () => { this.closeOverlay(o); onClose && onClose(); },
     });
   }
@@ -1823,6 +1861,7 @@ export class UI {
       const prevBest = S.best[key];
       const rec = res.score > prevBest;
       if (rec) { S.best[key] = res.score; store.save(); }
+      cloud.submitScore(key, res.score);
       coins = Math.floor(res.orbs / (key === 'classic' ? ECONOMY.classicCoinsPerOrbs : ECONOMY.frenzyCoinsPerOrbs));
       html = `${rec ? ptitle(t('¡NUEVO RÉCORD!'), 2, 'small') : ''}
         ${ptitle(t(key === 'frenzy' ? (res.won ? '¡TIEMPO!' : 'FIN DEL FRENESÍ') : 'FIN DE LA PARTIDA'), 2)}
@@ -1883,7 +1922,7 @@ export class UI {
       },
       home: () => { this.game = null; this.go('home'); },
       duel: () => { this.game = null; this.go('duel'); },
-      lb: () => this.toast(t('Ranking con Google Play Games en la versión final')),
+      lb: () => { if (!cloud.showLeaderboard(res.mode)) this.toast(t('Ranking disponible en la app de Google Play')); },
     });
   }
 }

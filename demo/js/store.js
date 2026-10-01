@@ -3,7 +3,7 @@
 import { ECONOMY, SKINS } from './data.js';
 import { CONFIG } from './config.js';
 
-const KEY = 'znakex.demo.v1';
+export const KEY = 'znakex.demo.v1';
 
 const DEFAULTS = () => ({
   coins: ECONOMY.startCoins,
@@ -23,6 +23,7 @@ const DEFAULTS = () => ({
   streak: { last: '', count: 0, best: 0 },
   season: { id: 'season1', xp: 0, premium: false, free: [], prem: [], bonus: false },
   ach: {},
+  purchases: [], // Google Play purchases already granted: { id, token, t }
 });
 
 let state = DEFAULTS();
@@ -60,8 +61,69 @@ export function load() {
   return state;
 }
 
+const saveHooks = [];
+export const onSave = (f) => saveHooks.push(f);
+
 export function save() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ignore */ }
+  for (const f of saveHooks) { try { f(); } catch { /* ignore */ } }
+}
+
+// how far a save has got: decides which copy keeps its coins when the phone and the cloud differ
+function weight(s) {
+  let w = 0;
+  for (const d of ['easy', 'normal', 'hard']) for (const v of Object.values((s.progress && s.progress[d]) || {})) w += ((v && v.cleared) || 0) * 100;
+  w += ((s.owned && s.owned.length) || 0) * 50;
+  w += Math.floor(((s.stats && s.stats.playSec) || 0) / 60);
+  if (s.season && s.season.premium) w += 200;
+  return w;
+}
+
+// Merge the copy saved in the player's Google account with this phone's, keeping the most progress:
+// levels, stars, records, skins and purchases from both; coins from the copy that has got further.
+export function mergeCloud(remote) {
+  if (CONFIG.tester || !remote || typeof remote !== 'object') return false;
+  const before = JSON.stringify(state);
+  const D = DEFAULTS();
+  const r = { ...D, ...remote };
+  const base = weight(r) > weight(state) ? r : state;
+  const other = base === r ? state : r;
+  const out = { ...base, settings: state.settings };
+  const max = (a, b) => Math.max(a || 0, b || 0);
+  out.owned = [...new Set([...(base.owned || []), ...(other.owned || [])])];
+  out.progress = {};
+  out.stars = {};
+  for (const d of ['easy', 'normal', 'hard']) {
+    const pa = (base.progress || {})[d] || {}, pb = (other.progress || {})[d] || {};
+    out.progress[d] = {};
+    for (const m of new Set([...Object.keys(pa), ...Object.keys(pb)])) out.progress[d][m] = { cleared: max(pa[m] && pa[m].cleared, pb[m] && pb[m].cleared) };
+    const sa = (base.stars || {})[d] || {}, sb = (other.stars || {})[d] || {};
+    out.stars[d] = {};
+    for (const m of new Set([...Object.keys(sa), ...Object.keys(sb)])) {
+      const a = sa[m] || [], b = sb[m] || [];
+      out.stars[d][m] = Array.from({ length: Math.max(a.length, b.length) }, (_, i) => max(a[i], b[i]));
+    }
+  }
+  out.best = { classic: max(base.best && base.best.classic, other.best && other.best.classic), frenzy: max(base.best && base.best.frenzy, other.best && other.best.frenzy) };
+  out.stats = { ...D.stats };
+  for (const k of Object.keys(out.stats)) out.stats[k] = max(base.stats && base.stats[k], other.stats && other.stats[k]);
+  const sea = { ...D.season, ...(base.season || {}) }, seo = { ...D.season, ...(other.season || {}) };
+  out.season = sea.id === seo.id ? {
+    ...sea, xp: max(sea.xp, seo.xp), premium: !!(sea.premium || seo.premium), bonus: !!(sea.bonus || seo.bonus),
+    free: [...new Set([...(sea.free || []), ...(seo.free || [])])], prem: [...new Set([...(sea.prem || []), ...(seo.prem || [])])],
+  } : sea;
+  out.ach = { ...(other.ach || {}), ...(base.ach || {}) };
+  const tokens = new Set();
+  out.purchases = [...(base.purchases || []), ...(other.purchases || [])].filter((p) => p && !tokens.has(p.token) && tokens.add(p.token));
+  out.tutorialSeen = !!(base.tutorialSeen || other.tutorialSeen);
+  out.notifyAsked = !!(base.notifyAsked || other.notifyAsked);
+  out.gamesTotal = max(base.gamesTotal, other.gamesTotal);
+  state = out;
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ignore */ }
+  load();
+  const changed = JSON.stringify(state) !== before;
+  if (changed) document.dispatchEvent(new CustomEvent('coins', { detail: state.coins }));
+  return changed;
 }
 
 export function reset() {

@@ -8,6 +8,8 @@ import { t, setLang, detectLang } from './i18n.js';
 import { setupInput } from './input.js';
 import * as audio from './audio.js';
 import * as notify from './notify.js';
+import * as cloud from './cloud.js';
+import * as billing from './billing.js';
 
 const app = document.getElementById('app');
 const gameCanvas = document.getElementById('game');
@@ -40,6 +42,9 @@ window.addEventListener('resize', resize);
 resize();
 
 // ------------------------------------------------------------------ boot
+// Google Play services (Android app only): progress in the player's Google account and real purchases
+cloud.init();
+billing.init();
 // sound from the very start (the WebView allows it without a tap; in a browser the first tap starts it)
 audio.unlock();
 ui.go('splash');
@@ -121,4 +126,4 @@ window.addEventListener('pageshow', () => ui.resumeMedia());
 // Expose for quick debugging in the console.
 document.addEventListener('pointerdown', () => audio.unlock(), { capture: true });
 // called by the Android shell (MainActivity.onPause / onResume)
-window.ZNAKEX = { ui, store, back: () => ui.back(), onPause: () => { ui.pause(); ui.pauseMedia(); audio.suspend(); }, onResume: () => { ui.resumeMedia(); audio.resume(); } };
+window.ZNAKEX = { ui, store, back: () => ui.back(), onPause: () => { ui.pause(); ui.pauseMedia(); audio.suspend(); cloud.upload(); }, onResume: () => { ui.resumeMedia(); audio.resume(); } };
