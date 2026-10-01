@@ -5,7 +5,9 @@
     android:versionName="@VERSION_NAME@">
 
     <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
+    <!-- the only permissions: vibration (no prompt) and reminders (asked only if the player wants them) -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:label="@LABEL@"
@@ -24,5 +26,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver android:name="com.forxastudio.znakex.Reminder" android:exported="false" />
     </application>
 </manifest>

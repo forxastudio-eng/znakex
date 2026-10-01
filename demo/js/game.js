@@ -421,14 +421,33 @@ export class Game {
     }
   }
 
+  // Music has three speeds per game, by progress: start, after one third, after two thirds
+  // (story / duel: orbs of the objective; frenzy: the 60 s; classic: every 10 orbs). The golden
+  // orb and the golden star speed it up on top of that.
+  musicTier() {
+    if (this.mode === 'story' || this.mode === 'duel') return Math.min(2, Math.floor((3 * this.player.orbs) / Math.max(1, this.target)));
+    if (this.mode === 'frenzy') return Math.min(2, Math.floor((60 - this.timer) / 20));
+    return Math.min(2, Math.floor(this.eaten / 10));
+  }
+
+  syncMusic() {
+    const tier = this.musicTier();
+    let r = [1, 1.06, 1.12][tier] * (this.shifted ? 1.03 : 1);
+    if (this.pw.star > 0) r *= 1.18;
+    else if (this.player.boostT > 0 && this.player.alive) r *= 1.15;
+    if (this.musicRateNow !== r) { this.musicRateNow = r; audio.setMusicRate(r); }
+    this.musicTierNow = tier;
+  }
+
   pickItem(s, it) {
     const def = PW[it.type];
     audio.play('item_pick', { rate: { shield: 1, magnet: 0.9, portal: 1.1, star: 1.25 }[it.type] || 1 });
     if (it.type === 'magnet') audio.loop('magnet_loop', { vol: 0.5 });
-    if (it.type === 'star') { audio.loop('star_loop', { vol: 0.6 }); audio.setMusicRate(1.3); }
+    if (it.type === 'star') audio.loop('star_loop', { vol: 0.6 });
     this.items.splice(this.items.indexOf(it), 1);
     const x = this.board.cx(it.x), y = this.board.cy(it.y);
     this.itemsPicked++;
+    if (it.type === 'star') setTimeout(() => this.syncMusic(), 0);
     track('item');
     this.fx.flash(x, y, def.glow, this.R * 8, 0.5);
     this.fx.ring(x, y, def.glow, this.R * 6, 0.7, 6);
@@ -463,8 +482,9 @@ export class Game {
     const boosting = s.boostT > 0 && s.alive;
     if (boosting !== this.wasBoosting) {
       this.wasBoosting = boosting;
-      if (boosting) { audio.loop('boost_loop', { vol: 0.7, rate: 1 }); audio.setMusicRate(1.22); }
-      else { audio.stopLoop('boost_loop'); audio.play('boost_end'); audio.setMusicRate(this.shifted ? 1.06 : 1); }
+      if (boosting) audio.loop('boost_loop', { vol: 0.7, rate: 1 });
+      else { audio.stopLoop('boost_loop'); audio.play('boost_end'); }
+      this.syncMusic();
     }
     if (boosting || this.wasBoosting) this.hudFxT = Math.min(this.hudFxT || 0, 0.1);
     this.ui.pwHud(this.pwState());
@@ -491,7 +511,7 @@ export class Game {
   effectEnded(k) {
     this.ui.pwHud(this.pwState());
     if (k === 'magnet') audio.stopLoop('magnet_loop');
-    if (k === 'star') { audio.stopLoop('star_loop'); audio.setMusicRate(this.wasBoosting ? 1.22 : 1); }
+    if (k === 'star') { audio.stopLoop('star_loop'); this.syncMusic(); }
     const s = this.player;
     if (k === 'star') {
       // never leave the snake inside a rock: if it is on a blocked cell, give it a moment then rescue it
@@ -626,7 +646,7 @@ export class Game {
     this.redLife = 16;
     for (const o of this.orbs) if (o.type === 'red') { o.life = this.redLife; o.born = this.t; }
     audio.play('map_change');
-    if (!this.wasBoosting) audio.setMusicRate(1.06);
+    this.syncMusic();
     this.ui.plaque('¡EL MAPA CAMBIA!', 1, 2.6);
     this.ui.shiftFlash();
     vibrate([20, 30, 20, 30, 40], this.cfg.settings.vibration);
@@ -736,6 +756,7 @@ export class Game {
     if (this.tut) this.tutorialUpdate();
     if (this.mode === 'frenzy') {
       this.timer = Math.max(0, this.timer - dt);
+      if (this.musicTier() !== this.musicTierNow) this.syncMusic();
       this.ui.hudTimer(this.timer);
       if (this.timer <= 0) {
         this.timeScale = 0.25;
@@ -982,6 +1003,7 @@ export class Game {
       if (!this.orbs.some((o) => o.type === 'gold') && Math.random() < this.goldChance) this.spawnOrb('gold');
     }
 
+    if (s === this.player) this.syncMusic();
     // mode rules
     if (this.mode === 'classic' && s === this.player) {
       const lvl = Math.floor(this.eaten / 10);
@@ -1043,7 +1065,9 @@ export class Game {
     track('death');
     this.deathReason = reason;
     this.deathCell = { x: nx, y: ny };
-    audio.stopLoop('boost_loop'); audio.stopLoop('magnet_loop'); audio.stopLoop('star_loop'); audio.setMusicRate(1);
+    audio.stopLoop('boost_loop'); audio.stopLoop('magnet_loop'); audio.stopLoop('star_loop');
+    this.musicRateNow = null;
+    audio.loseMood(true);
     const liquid = reason === 'hazard' && this.board.level && this.board.level.cells[ny * COLS + nx] === T.LETHAL;
     audio.play(liquid ? 'die_liquid' : 'die_hit');
     this.fx.shake(wet ? 6 : 14, wet ? 0.3 : 0.5);
@@ -1077,6 +1101,9 @@ export class Game {
   revive() {
     const s = this.player;
     audio.play('revive');
+    audio.loseMood(false);
+    this.musicRateNow = null;
+    setTimeout(() => this.syncMusic(), 0);
     this.revives++;
     const snap = s.history.length >= 2 ? s.history[s.history.length - 2] : s.history[s.history.length - 1];
     if (snap) {
@@ -1124,7 +1151,7 @@ export class Game {
     this.fx.sprite(x, y, pwImg('burst_gold'), this.board.cell * 9, 0.9, rand(TAU));
     this.fireworks(this.low ? 2 : 5);
     this.player.boostT = 0.0001;
-    audio.stopLoop('boost_loop'); audio.stopLoop('magnet_loop'); audio.stopLoop('star_loop'); audio.setMusicRate(1);
+    audio.stopLoop('boost_loop'); audio.stopLoop('magnet_loop'); audio.stopLoop('star_loop'); audio.loseMood(false); audio.setMusicRate(1);
     audio.play('level_win');
     vibrate([20, 40, 20], this.cfg.settings.vibration);
     this.setState('won');
@@ -1132,6 +1159,7 @@ export class Game {
 
   lose(why) {
     audio.play('level_fail');
+    audio.loseMood(true);
     this.player.alive = false;
     this.player.a.death = 1;
     this.crumble(this.player);

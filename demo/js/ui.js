@@ -16,6 +16,8 @@ import { CONTROL_INFO } from './input.js';
 import { t, tn, LANGS, getLang, setLang } from './i18n.js';
 import { BRAND_ICONS, PLAQUES } from './newmanifest.js';
 import { pwPath } from './powerups.js';
+import * as ads from './ads.js';
+import * as notify from './notify.js';
 
 // brand v2 icons (ivory symbols, gold rewards); the few the new set doesn't have (x2/x3 badges, map hazards) keep the old art
 const BRAND = new Set(BRAND_ICONS);
@@ -137,7 +139,7 @@ export class UI {
 
   bgWatch() {
     const v = this.bgv;
-    if (!v || !this.bgWant || document.hidden) return;
+    if (!v || !this.bgWant || document.hidden || this.appHidden) return;
     if (v.error) {
       // reload after an error (a few times at most); the still stays visible meanwhile
       if (this.bgErr < 4) { v.src = url(`brand/video/${v.dataset.name}.mp4`); v.load(); playSafe(v); }
@@ -146,8 +148,17 @@ export class UI {
     if (v.paused || v.ended) playSafe(v);
   }
 
+  // app hidden: stop the background video too (it would keep decoding in the background)
+  pauseMedia() {
+    this.appHidden = true;
+    if (this.bgv && !this.bgv.paused) this.bgv.pause();
+    document.querySelectorAll('.studio-intro video').forEach((v) => v.pause());
+  }
+
   // back from the background (Android pauses media when the app is hidden)
   resumeMedia() {
+    this.appHidden = false;
+    document.querySelectorAll('.studio-intro video').forEach((v) => playSafe(v));
     if (this.bgWant) this.bgWatch();
   }
 
@@ -163,7 +174,7 @@ export class UI {
       prev.destroy && prev.destroy();
       setTimeout(() => prev.el.remove(), 420);
     }
-    if (name !== 'game' && name !== 'splash') audio.playMusic(name === 'season' ? 'mus_season' : 'mus_menu');
+    if (name !== 'game' && name !== 'splash') { audio.loseMood(false); audio.duck(false); audio.setMusicRate(1); audio.playMusic(name === 'season' ? 'mus_season' : 'mus_menu'); }
     let scr;
     try { scr = fn.call(this, params) || {}; } catch (err) {
       console.error('screen failed', name, err);
@@ -223,6 +234,13 @@ export class UI {
 
   toast(msg, reward = false) {
     if (reward) audio.play('reward_chime', { vol: 0.8 });
+    if (this.game && this.hudEl && this.cur && this.cur.name === 'game') {
+      // during play it waits for the strip under the board to be free, so it never covers the map
+      const show = () => this.notice(el(`<div class="lane-toast">${msg}</div>`), 1.9);
+      const busy = this.hudEl.querySelector('.lane-notice');
+      if (busy && !busy.querySelector('.hint')) setTimeout(show, 1500); else show();
+      return;
+    }
     const t = el(`<div class="toast">${msg}</div>`);
     this.app.appendChild(t);
     setTimeout(() => t.remove(), 1900);
@@ -346,11 +364,26 @@ export class UI {
       season: () => this.go('season'),
       ach: () => this.go('ach'),
     });
-    if (!this.streakShown && !meta.streakState().claimedToday) {
+    if (notify.shouldOffer()) {
+      setTimeout(() => { if (this.cur && this.cur.name === 'home' && !this.overEl.children.length) this.offerReminders(); }, 1400);
+    } else if (!this.streakShown && !meta.streakState().claimedToday) {
       this.streakShown = true;
       setTimeout(() => { if (this.cur && this.cur.name === 'home') this.openStreak(); }, 900);
     }
     return { el: e };
+  }
+
+  // asked once, explained first; Android's permission dialog only appears if the player says yes
+  offerReminders() {
+    const S = this.S();
+    S.notifyAsked = true;
+    store.save();
+    this.popup({
+      title: '¿TE AVISAMOS?',
+      text: t('Como mucho un aviso al día, por la tarde, y solo si ese día no has jugado. Puedes quitarlo cuando quieras en Ajustes.'),
+      icon: 'calendar',
+      buttons: [['SÍ, AVÍSAME', () => notify.enable(), true], ['AHORA NO', null]],
+    });
   }
 
   playMode(id) {
@@ -967,6 +1000,8 @@ export class UI {
         <div class="set-row"><span class="l"><img src="${icon('hz_dark')}">${t('MODO DALTÓNICO')}</span><button class="toggle ${set.colorblind ? 'on' : ''}" data-act="tg" data-k="colorblind"></button></div>
         <div class="set-row"><span class="l"><img src="${icon('hz_wind')}">${t('GRÁFICOS BAJOS')}</span><button class="toggle ${set.lowfx ? 'on' : ''}" data-act="tg" data-k="lowfx"></button></div>
         <div class="demo-note" style="text-align:left">${t('Menos partículas y sin desenfoques: para móviles antiguos. Se activa solo si el juego va lento.')}</div>
+        ${notify.supported() ? `<div class="set-row"><span class="l"><img src="${icon('calendar')}">${t('AVISOS PARA JUGAR')}</span><button class="toggle ${set.notify ? 'on' : ''}" data-act="notif"></button></div>
+        <div class="demo-note" style="text-align:left">${t('Como mucho un aviso al día, por la tarde, y solo si ese día no has jugado.')}</div>` : ''}
         <div class="sec">${t('CONTROLES')}</div>
         <div class="ctl-grid">${[['swipe', 'DESLIZAR'], ['buttons', 'FLECHAS'], ['joystick', 'PALANCA'], ['tap', 'TOQUES']].map(([v, l]) => `<button class="ctl ${set.controls === v ? 'on' : ''}" data-act="ctl" data-v="${v}"><span class="ctl-ic ctl-${v}"></span>${t(l)}</button>`).join('')}</div>
         <div class="demo-note" id="ctlinfo" style="text-align:left;margin-top:.3rem">${t(CONTROL_INFO[set.controls] || '')}</div>
@@ -991,6 +1026,10 @@ export class UI {
       loadcode: () => { const c = window.prompt(t('Pega tu código de guardado:')); if (c) { if (cloud.importCode(c)) { this.toast(t('Partida restaurada')); this.go('home'); } else this.toast(t('Código no válido')); } },
       lang: (b) => { setLang(b.dataset.l); set.lang = b.dataset.l; store.save(); this.go('settings'); },
       tutorial: () => this.startGame({ mode: 'story', level: tutorialLevel() }),
+      notif: (b) => {
+        if (set.notify) { notify.disable(); b.classList.remove('on'); return; }
+        notify.enable((ok) => { b.classList.toggle('on', ok); if (!ok) this.toast(t('Actívalos en los ajustes de Android si cambias de idea')); });
+      },
       tg: (b) => { set[b.dataset.k] = !set[b.dataset.k]; b.classList.toggle('on', set[b.dataset.k]); const vr = e.querySelector(`[data-vk=${b.dataset.k}]`); if (vr) vr.classList.toggle('off', !set[b.dataset.k]); audio.applySettings(); if (b.dataset.k === 'lowfx') { document.body.classList.toggle('lowfx', set.lowfx); window.dispatchEvent(new Event('resize')); } store.save(); },
       ctl: (b) => { set.controls = b.dataset.v; e.querySelectorAll('[data-act=ctl]').forEach((x) => x.classList.toggle('on', x === b)); $(e, '#ctlinfo').textContent = t(CONTROL_INFO[set.controls]); store.save(); },
       coins: () => { store.addCoins(5000); this.toast(t('+{n} monedas', { n: fmt(5000) }), true); },
@@ -1069,12 +1108,21 @@ export class UI {
   }
 
   // Simulated rewarded ad (AdMob in the real build).
+  // rewarded ad chosen by the player (revive, x2 coins, +1 coin...): it also resets the every-10-games count
   fakeAd(onReward) {
+    const reward = () => { this.S().adCounter = 0; store.save(); onReward(); };
+    if (ads.showNative('rewarded', (ok) => { audio.resume(); if (ok) reward(); })) { audio.suspend(); return; }
+    this.simAd('rewarded', reward);
+  }
+
+  // simulated ad screen (browser / until the real ads are connected)
+  simAd(kind, onDone) {
+    const rewarded = kind === 'rewarded';
     const o = this.overlay(`<div class="ad">
       <span class="tagad">${t('ANUNCIO')} · DEMO</span>
       <div class="x" id="adx">5</div>
       <img class="logo" src="${LOGO}" alt="">
-      <div class="t">${t('Aquí se mostrará un anuncio con recompensa de AdMob.')}<br>${t('Espera unos segundos para recibir la recompensa.')}</div>
+      <div class="t">${rewarded ? `${t('Aquí se mostrará un anuncio con recompensa de AdMob.')}<br>${t('Espera unos segundos para recibir la recompensa.')}` : `${t('Cada 10 partidas hay un anuncio corto.')}<br>${t('Ver un anuncio con recompensa reinicia la cuenta.')}`}</div>
       <div class="loadbar" style="width:60%"><i id="adb"></i></div>
     </div>`);
     let left = 5;
@@ -1085,7 +1133,7 @@ export class UI {
       $(o, '#adx').textContent = left > 0 ? left : '✕';
       if (left <= 0) {
         clearInterval(iv);
-        $(o, '#adx').addEventListener('click', () => { this.closeOverlay(o); onReward(); }, { once: true });
+        $(o, '#adx').addEventListener('click', () => { this.closeOverlay(o); onDone(); }, { once: true });
       }
     }, 1000);
   }
@@ -1192,6 +1240,17 @@ export class UI {
 
   // ------------------------------------------------------------ game
   startGame(cfg) {
+    // every 10 games a short ad, always between games (never while playing)
+    const S = this.S();
+    if ((S.adCounter || 0) >= ads.ADS_EVERY && !(cfg.level && cfg.level.tutorial)) {
+      S.adCounter = 0;
+      store.save();
+      this.closeOverlays();
+      const go = () => this.startGame(cfg);
+      if (ads.showNative('interstitial', () => { audio.resume(); go(); })) { audio.suspend(); return; }
+      this.simAd('interstitial', go);
+      return;
+    }
     this.lastCfg = cfg;
     if (cfg.mode === 'duel') meta.track('duelplay');
     if (this.game) this.game = null;
@@ -1204,6 +1263,7 @@ export class UI {
     const art = cfg.mode === 'story' ? (cfg.level.mapInfo.key) : { classic: 'maps/key06.jpg', frenzy: 'maps/key12.jpg', duel: 'maps/key09.jpg' }[cfg.mode];
     this.setBg('game', art);
     audio.playMusic(cfg.mode === 'story' ? (cfg.level.season ? 'mus_season' : 'mus_story') : { classic: 'mus_classic', frenzy: 'mus_frenzy', duel: 'mus_duel' }[cfg.mode]);
+    audio.loseMood(false);
     audio.setMusicRate(1);
     const S = this.S();
     const e = el(`<section style="padding:0">
@@ -1274,16 +1334,37 @@ export class UI {
       const inset = parseFloat(window.getComputedStyle(document.documentElement).getPropertyValue('--sab')) || 0;
       const bot = Math.max(rem * 0.6 + inset, (free - ph) / 2 + inset * 0.5);
       pad.style.bottom = `calc(${Math.round(bot)}px + env(safe-area-inset-bottom, 0px))`;
+      this.laneH = Math.max(0, H - bot - ph - under - 8);
+    } else {
+      // the level tag at the bottom hides while a notice shows, so the strip can use its space too
+      this.laneH = Math.max(0, H - under - 10);
     }
+    this.laneTop = under + 4;
+  }
+
+  // In-game notices (item names, rewards, achievements, hints) never cover the board: they appear one at a
+  // time in the free strip under it, sized to fit that strip.
+  notice(node, sec = 2) {
+    const e = this.hudEl;
+    if (!e) return null;
+    e.querySelectorAll('.lane-notice').forEach((n) => n.remove());
+    const W = e.clientWidth || 360;
+    const H = Math.max(26, Math.min(this.laneH || 60, W * 0.88 / 3.2));
+    const box = el(`<div class="lane-notice" style="top:${Math.round(this.laneTop || 0)}px;height:${Math.round(H)}px;animation-duration:${sec}s"></div>`);
+    box.appendChild(node);
+    e.appendChild(box);
+    fitPlaques(box);
+    e.classList.add('notice-on');
+    clearTimeout(this.noticeTimer);
+    this.noticeTimer = setTimeout(() => { box.remove(); if (!e.querySelector('.lane-notice')) e.classList.remove('notice-on'); }, sec * 1000 + 80);
+    return box;
   }
 
   warnBanner(sec) {
     const layer = this.hudEl; // not #fxl: the countdown rewrites that layer
     if (!layer) return;
-    const w = el(`<div class="plaque strip p0" style="top:${Math.round(this.warnTop || 0)}px;animation-duration:${sec}s"><img src="${plaqueImg(0)}" alt=""><span><b${fit(t('EVITA LOS OBSTÁCULOS'), 16)}>${t('EVITA LOS OBSTÁCULOS')}</b></span></div>`);
-    layer.appendChild(w);
-    fitPlaques(w);
-    setTimeout(() => w.remove(), sec * 1000 + 100);
+    void layer;
+    this.notice(el(`<div class="plaque lane p0"><img src="${plaqueImg(0)}" alt=""><span><b${fit(t('EVITA LOS OBSTÁCULOS'), 16)}>${t('EVITA LOS OBSTÁCULOS')}</b></span></div>`), sec);
   }
 
   countdown(done) {
@@ -1346,10 +1427,12 @@ export class UI {
   }
 
   combo(n) {
-    const layer = this.fxLayer();
-    if (!layer) return;
+    const r = this.hudEl && $(this.hudEl, '.hud-right');
+    if (!r) return;
+    const old = r.querySelector('.combo');
+    if (old) old.remove();
     const c = el(`<div class="combo">${t('COMBO')} x${n}</div>`);
-    layer.appendChild(c);
+    r.appendChild(c);
     setTimeout(() => c.remove(), 1000);
   }
 
@@ -1368,24 +1451,20 @@ export class UI {
   hitFlash() { this.flash('hit'); }
 
   showHint(text) {
-    const layer = this.fxLayer();
-    if (!layer) return;
+    if (!this.hudEl) return;
     this.hideHint();
-    layer.appendChild(el(`<div class="hint" id="hint">${t(text)}</div>`));
+    this.notice(el(`<div class="hint" id="hint">${t(text)}</div>`), 600);
   }
 
   hideHint() {
     const h = this.hudEl && $(this.hudEl, '#hint');
-    if (h) h.remove();
+    if (h) { const box = h.closest('.lane-notice'); (box || h).remove(); if (this.hudEl && !this.hudEl.querySelector('.lane-notice')) this.hudEl.classList.remove('notice-on'); }
   }
 
   // wide banner plaque (banner kit) that announces an event on top of the board
   plaque(text, idx, sec = 2) {
     if (!this.hudEl) return;
-    const p = el(`<div class="plaque p${idx}" style="top:${Math.round((this.boardTop || 60) + 6)}px;animation-duration:${sec}s"><img src="${plaqueImg(idx)}" alt=""><span><b${fit(t(text), 12)}>${t(text)}</b></span></div>`);
-    this.hudEl.appendChild(p);
-    fitPlaques(p);
-    setTimeout(() => p.remove(), sec * 1000 + 80);
+    this.notice(el(`<div class="plaque lane p${idx}"><img src="${plaqueImg(idx)}" alt=""><span><b${fit(t(text), 12)}>${t(text)}</b></span></div>`), sec);
   }
 
   // time bars: an orb icon and how much of the effect is left (force field: two segments = two hits)
@@ -1670,6 +1749,8 @@ export class UI {
   // ------------------------------------------------------------ results
   finish(res) {
     const S = this.S();
+    if (!res.tutorial) { S.adCounter = (S.adCounter || 0) + 1; S.gamesTotal = (S.gamesTotal || 0) + 1; store.save(); }
+    audio.loseMood(!res.won);
     const cfg = this.lastCfg;
     let html = '', coins = 0;
     const statRow = (items) => `<div class="stat-row">${items.map(([k, v]) => `<div><span class="v">${v}</span><span class="k">${t(k)}</span></div>`).join('')}</div>`;

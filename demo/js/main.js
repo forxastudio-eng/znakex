@@ -7,6 +7,7 @@ import { TIPS } from './data.js';
 import { t, setLang, detectLang } from './i18n.js';
 import { setupInput } from './input.js';
 import * as audio from './audio.js';
+import * as notify from './notify.js';
 
 const app = document.getElementById('app');
 const gameCanvas = document.getElementById('game');
@@ -58,6 +59,7 @@ Promise.all([
   clearInterval(tipTimer);
   ui.cur.progress && ui.cur.progress(1);
   ui.cur.ready(() => ui.go('home'));
+  notify.sync(); // refresh tomorrow's reminder (in the current language) — a visit today means none today
   console.log('loaded in', Math.round(performance.now() - t0), 'ms');
 });
 
@@ -111,7 +113,7 @@ window.addEventListener('keydown', (e) => {
 setupInput(app, ui, view);
 
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) ui.pause();
+  if (document.hidden) { ui.pause(); ui.pauseMedia(); audio.suspend(); }
   else { ui.resumeMedia(); audio.resume(); }
 });
 window.addEventListener('pageshow', () => ui.resumeMedia());
@@ -119,4 +121,4 @@ window.addEventListener('pageshow', () => ui.resumeMedia());
 // Expose for quick debugging in the console.
 document.addEventListener('pointerdown', () => audio.unlock(), { capture: true });
 // called by the Android shell (MainActivity.onPause / onResume)
-window.ZNAKEX = { ui, store, back: () => ui.back(), onPause: () => ui.pause(), onResume: () => { ui.resumeMedia(); audio.resume(); } };
+window.ZNAKEX = { ui, store, back: () => ui.back(), onPause: () => { ui.pause(); ui.pauseMedia(); audio.suspend(); }, onResume: () => { ui.resumeMedia(); audio.resume(); } };

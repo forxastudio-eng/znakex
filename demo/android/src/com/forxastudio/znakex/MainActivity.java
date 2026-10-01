@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -49,6 +50,7 @@ public class MainActivity extends Activity {
         web.setVerticalScrollBarEnabled(false);
         web.setHorizontalScrollBarEnabled(false);
         web.setWebViewClient(new AssetClient(getAssets()));
+        web.addJavascriptInterface(new NotifyBridge(), "ZnakexNotify");
         setContentView(web);
         hideSystemUi();
         web.loadUrl(START);
@@ -85,14 +87,72 @@ public class MainActivity extends Activity {
         if (web != null) web.evaluateJavascript("window.ZNAKEX && window.ZNAKEX.onPause && window.ZNAKEX.onPause()", null);
         super.onPause();
         web.onPause();
+        // nothing keeps running in the background: JavaScript timers stop until the app returns
+        web.pauseTimers();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        web.resumeTimers();
         web.onResume();
         // media is paused by the system while the app is hidden: start the videos and music again
         web.evaluateJavascript("window.ZNAKEX && window.ZNAKEX.onResume && window.ZNAKEX.onResume()", null);
+    }
+
+    private static final String POST_NOTIFICATIONS = "android.permission.POST_NOTIFICATIONS"; // API 33
+
+    /** Reminders for the game: permission (asked only when the player says yes in the game) and scheduling. */
+    private class NotifyBridge {
+        @JavascriptInterface
+        public String permission() {
+            if (Build.VERSION.SDK_INT >= 33) {
+                if (checkSelfPermission(POST_NOTIFICATIONS) == android.content.pm.PackageManager.PERMISSION_GRANTED) return "granted";
+                return getSharedPreferences(Reminder.PREFS, MODE_PRIVATE).getBoolean("asked", false) ? "denied" : "default";
+            }
+            // before Android 13 no permission is needed (areNotificationsEnabled is API 24: read by reflection)
+            try {
+                Object nm = getSystemService(NOTIFICATION_SERVICE);
+                Object on = nm.getClass().getMethod("areNotificationsEnabled").invoke(nm);
+                return Boolean.FALSE.equals(on) ? "denied" : "granted";
+            } catch (Exception e) {
+                return "granted";
+            }
+        }
+
+        @JavascriptInterface
+        public void requestPermission() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        getSharedPreferences(Reminder.PREFS, MODE_PRIVATE).edit().putBoolean("asked", true).apply();
+                        requestPermissions(new String[]{POST_NOTIFICATIONS}, 77);
+                    } else {
+                        permissionResult(true);
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void schedule(String messagesJson) {
+            Reminder.schedule(MainActivity.this, messagesJson);
+        }
+
+        @JavascriptInterface
+        public void cancel() {
+            Reminder.cancel(MainActivity.this);
+        }
+    }
+
+    private void permissionResult(boolean granted) {
+        web.evaluateJavascript("window.__znakexNotifyPermission && window.__znakexNotifyPermission(" + granted + ")", null);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == 77) permissionResult(grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED);
     }
 
     @Override

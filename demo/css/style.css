@@ -669,3 +669,16 @@ svg.path { position: absolute; inset: 0; width: 100%; height: 100%; overflow: vi
 .plaque span b, .ptitle span b { font-weight: 400; display: inline-block; white-space: nowrap; }
 .plaque span, .ptitle span { overflow: hidden; }
 .plaque.p2 span, .ptitle.p2 span { inset: 0 21%; }
+
+/* in-game notice strip under the board (never over the map) */
+.lane-notice { position: absolute; left: 0; right: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 6; animation: laneIn 2s ease both; }
+.lane-notice .plaque.lane { position: relative; left: auto; top: auto; transform: none; width: auto; height: 100%; max-width: 92%; aspect-ratio: 697 / 217; animation: none; container-type: size; }
+.lane-notice .plaque.lane img { width: 100%; height: 100%; object-fit: contain; }
+.lane-notice .plaque.lane span { font-size: min(2rem, 40cqh); }
+.lane-notice .hint { position: static; animation: blinkish 1.2s infinite; font-size: 1.7rem; }
+.lane-toast { padding: 0.45rem 1rem; border-radius: 0.5rem; background: rgba(20, 24, 26, 0.92); border: 1.5px solid var(--amber); font-family: 'Barlow Condensed'; font-weight: 700; letter-spacing: 0.08em; font-size: 0.95rem; white-space: nowrap; max-width: 92%; overflow: hidden; text-overflow: ellipsis; }
+@keyframes laneIn { 0% { opacity: 0; transform: translateY(0.4rem) scale(.92); } 8% { opacity: 1; transform: none; } 88% { opacity: 1; } 100% { opacity: 0; } }
+.notice-on .hud-bottom { opacity: 0; transition: opacity .2s; }
+.hud-right { position: relative; }
+.hud-right .combo { position: absolute; top: 100%; right: 0; left: auto; margin-top: 0.15rem; font-size: 1.15rem; white-space: nowrap; color: var(--lime); text-shadow: 0 0 .6rem var(--lime-glow), 0 1px 0 var(--ink); animation: combo 1s var(--ease) both; }
+.btn-primary { white-space: nowrap; }

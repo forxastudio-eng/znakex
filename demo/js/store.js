@@ -15,7 +15,7 @@ const DEFAULTS = () => ({
   duelWins: { day: '', count: 0 },
   wheelDay: '',
   mode: 'story',
-  settings: { vibration: true, controls: 'swipe', music: true, sfx: true, musicVol: 0.8, sfxVol: 0.9, lowfx: false, colorblind: false, perfChecked: false },
+  settings: { vibration: true, controls: 'swipe', music: true, sfx: true, musicVol: 0.8, sfxVol: 0.9, lowfx: false, colorblind: false, perfChecked: false, notify: false },
   tutorialSeen: false,
   stars: { easy: {}, normal: {}, hard: {} }, // best stars per level: stars[diff][map] = [s1..s10]
   stats: { orbs: 0, gold: 0, items: 0, breaks: 0, rescues: 0, deaths: 0, levels: 0, clean: 0, stars: 0, stars3: 0, maxLen: 0, duelWins: 0, duels: 0, playSec: 0, bestClean: 0, curClean: 0 },

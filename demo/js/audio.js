@@ -35,12 +35,20 @@ export function unlock() {
     // start loading everything in the background
     [...SFX, ...MUSIC].forEach((n, i) => setTimeout(() => load(n), 60 * i));
   }
-  if (ctx.state === 'suspended') ctx.resume();
+  if (ctx.state === 'suspended' && !suspended && !document.hidden) ctx.resume();
   if (musicWant) playMusic(musicWant);
+}
+
+// app sent to the background: silence everything (music, loops, effects) until it comes back
+let suspended = false;
+export function suspend() {
+  suspended = true;
+  if (ctx && ctx.state === 'running') ctx.suspend().catch(() => {});
 }
 
 // back from the background: the system may have suspended the audio context
 export function resume() {
+  suspended = false;
   if (!ctx) return;
   if (ctx.state !== 'running') ctx.resume().then(() => { if (musicWant && !music) playMusic(musicWant); }).catch(() => {});
 }
@@ -50,7 +58,7 @@ export function applySettings() {
   const s = settings();
   const sv = s.sfxVol ?? 0.9, mv = s.musicVol ?? 0.8; // player volume sliders, 0..1
   sfxBus.gain.value = s.sfx === false ? 0 : sv;
-  musBus.gain.value = s.music === false ? 0 : mv * (ducked ? 0.35 : 0.7);
+  musBus.gain.value = s.music === false ? 0 : mv * (ducked ? 0.35 : 0.7) * (sad ? 0.5 : 1);
 }
 
 async function load(name) {
@@ -138,4 +146,13 @@ export function setMusicRate(r) {
 }
 
 export function duck(on) { ducked = on; applySettings(); }
+
+// after losing: the music slows down, drops in pitch and gets quieter until the next game
+let sad = false;
+export function loseMood(on) {
+  if (sad === !!on) return;
+  sad = !!on;
+  setMusicRate(on ? 0.84 : 1);
+  applySettings();
+}
 export function stopMusic() { musicWant = null; if (music) { const m = music; m.gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.4); setTimeout(() => { try { m.src.stop(); } catch { /* done */ } }, 500); music = null; } }
