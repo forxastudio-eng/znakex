@@ -40,11 +40,19 @@ jobs:
           ZNAKEX_KEY_PASSWORD: ${{ secrets.ZNAKEX_KEY_PASSWORD }}
           ADMOB_APP_ID: ${{ secrets.ADMOB_APP_ID }}
           GAMES_PROJECT_ID: ${{ secrets.GAMES_PROJECT_ID }}
+          ADMOB_INTERSTITIAL: ${{ secrets.ADMOB_INTERSTITIAL }}
+          ADMOB_REWARDED: ${{ secrets.ADMOB_REWARDED }}
+          LB_CLASSIC: ${{ secrets.LB_CLASSIC }}
+          LB_FRENZY: ${{ secrets.LB_FRENZY }}
         run: |
           ARGS=""
           [ -n "$ADMOB_APP_ID" ] && ARGS="$ARGS -PadmobAppId=$ADMOB_APP_ID"
           [ -n "$GAMES_PROJECT_ID" ] && ARGS="$ARGS -PgamesProjectId=$GAMES_PROJECT_ID"
-          gradle --no-daemon $ARGS bundlePlayRelease assemblePlayRelease assembleTesterRelease
+          [ -n "$ADMOB_INTERSTITIAL" ] && ARGS="$ARGS -PadmobInterstitial=$ADMOB_INTERSTITIAL"
+          [ -n "$ADMOB_REWARDED" ] && ARGS="$ARGS -PadmobRewarded=$ADMOB_REWARDED"
+          [ -n "$LB_CLASSIC" ] && ARGS="$ARGS -PlbClassic=$LB_CLASSIC"
+          [ -n "$LB_FRENZY" ] && ARGS="$ARGS -PlbFrenzy=$LB_FRENZY"
+          gradle --no-daemon $ARGS bundlePlayRelease assemblePlayRelease assembleBetaRelease
 
       - uses: actions/upload-artifact@v4
         with:
@@ -52,5 +60,5 @@ jobs:
           path: |
             demo/play/app/build/outputs/bundle/playRelease/*.aab
             demo/play/app/build/outputs/apk/play/release/*.apk
-            demo/play/app/build/outputs/apk/tester/release/*.apk
+            demo/play/app/build/outputs/apk/beta/release/*.apk
           if-no-files-found: error

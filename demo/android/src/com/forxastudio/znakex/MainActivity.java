@@ -28,6 +28,8 @@ public class MainActivity extends Activity {
     private static final String START = "https://" + HOST + "/www/index.html";
 
     private WebView web;
+    /** Google Play services (ads, purchases, Play Games): only present in the Gradle build, see demo/play */
+    private Object plugin;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +53,11 @@ public class MainActivity extends Activity {
         web.setHorizontalScrollBarEnabled(false);
         web.setWebViewClient(new AssetClient(getAssets()));
         web.addJavascriptInterface(new NotifyBridge(), "ZnakexNotify");
+        try {
+            plugin = Class.forName("com.forxastudio.znakex.Bridges").getConstructor(Activity.class, WebView.class).newInstance(this, web);
+        } catch (Throwable ignored) {
+            // old test build without the Play libraries: the game simulates ads and purchases
+        }
         setContentView(web);
         hideSystemUi();
         web.loadUrl(START);
@@ -96,6 +103,12 @@ public class MainActivity extends Activity {
         super.onResume();
         web.resumeTimers();
         web.onResume();
+        if (plugin != null) {
+            try {
+                plugin.getClass().getMethod("onResume").invoke(plugin);
+            } catch (Exception ignored) {
+            }
+        }
         // media is paused by the system while the app is hidden: start the videos and music again
         web.evaluateJavascript("window.ZNAKEX && window.ZNAKEX.onResume && window.ZNAKEX.onResume()", null);
     }

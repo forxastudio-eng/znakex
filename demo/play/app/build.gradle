@@ -21,12 +21,19 @@ android {
         // (gradle -PadmobAppId=... -PgamesProjectId=..., or the GitHub secrets of the same names)
         manifestPlaceholders = [admobAppId: (findProperty('admobAppId') ?: 'ca-app-pub-3940256099942544~3347511713')]
         resValue 'string', 'game_services_project_id', (findProperty('gamesProjectId') ?: '0')
+        // Google's sample ad units (safe to use while testing) until the real ones are given
+        resValue 'string', 'admob_interstitial', (findProperty('admobInterstitial') ?: 'ca-app-pub-3940256099942544/1033173712')
+        resValue 'string', 'admob_rewarded', (findProperty('admobRewarded') ?: 'ca-app-pub-3940256099942544/5224354917')
+        // Play Games leaderboard ids (created in Play Console)
+        resValue 'string', 'lb_classic', (findProperty('lbClassic') ?: '')
+        resValue 'string', 'lb_frenzy', (findProperty('lbFrenzy') ?: '')
     }
 
     flavorDimensions 'build'
     productFlavors {
         play { dimension 'build' }
-        tester {
+        // build for testers: own package (installs next to the store version) and the DEMO tools in Settings
+        beta {
             dimension 'build'
             applicationIdSuffix '.tester'
             versionNameSuffix '-tester'
@@ -60,7 +67,7 @@ android {
             assets.srcDirs = [layout.buildDirectory.dir('generated/game').get().asFile]
         }
         play { assets.srcDirs = [flavorOut('play').get().asFile] }
-        tester { assets.srcDirs = [flavorOut('tester').get().asFile] }
+        beta { assets.srcDirs = [flavorOut('beta').get().asFile] }
     }
 
     // videos stay uncompressed so the WebView can stream them with byte ranges
@@ -80,20 +87,24 @@ tasks.register('copyGame', Sync) {
     into gameOut
 }
 
-['play', 'tester'].each { f ->
+['play', 'beta'].each { f ->
     tasks.register("writeBuildJs${f.capitalize()}") {
         def out = flavorOut(f).get().file('www/build.js').asFile
         outputs.file out
         doLast {
             out.parentFile.mkdirs()
-            out.text = "window.ZNAKEX_BUILD = { tester: ${f == 'tester'}, version: '${android.defaultConfig.versionName}${f == 'tester' ? '-tester' : ''}' };\n"
+            out.text = "window.ZNAKEX_BUILD = { tester: ${f == 'beta'}, version: '${android.defaultConfig.versionName}${f == 'beta' ? '-tester' : ''}' };\n"
         }
     }
 }
 
 tasks.named('preBuild') {
-    dependsOn 'copyGame', 'writeBuildJsPlay', 'writeBuildJsTester'
+    dependsOn 'copyGame', 'writeBuildJsPlay', 'writeBuildJsBeta'
 }
 
 dependencies {
+    implementation 'com.google.android.gms:play-services-ads:24.4.0'
+    implementation 'com.google.android.ump:user-messaging-platform:3.2.0'
+    implementation 'com.android.billingclient:billing:8.0.0'
+    implementation 'com.google.android.gms:play-services-games-v2:21.0.0'
 }
