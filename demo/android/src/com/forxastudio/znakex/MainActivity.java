@@ -285,7 +285,15 @@ public class MainActivity extends Activity {
         @Override
         @SuppressWarnings("deprecation")
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
-            return !url.contains(HOST);
+            if (url.contains(HOST)) return false;
+            // privacy policy, support email...: open them outside the game (browser / mail app)
+            try {
+                android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url));
+                i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                view.getContext().startActivity(i);
+            } catch (Exception ignored) {
+            }
+            return true;
         }
 
         private static String mime(String p) {

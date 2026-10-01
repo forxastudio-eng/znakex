@@ -68,6 +68,12 @@ const ptitle = (text, idx = 2, cls = '') => `<div class="ptitle p${idx} ${cls}">
 const fmtT = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 const $ = (root, sel) => root.querySelector(sel);
 
+// links outside the game: in the Android app the shell opens them in the browser / mail app
+function openExternal(href) {
+  if (window.ZnakexNotify) location.href = href; // intercepted by the app, the game page stays
+  else window.open(href, '_blank', 'noopener');
+}
+
 // play() returns a promise that rejects when autoplay is blocked; the still stays in that case
 function playSafe(v) {
   try { const p = v.play(); if (p && p.catch) p.catch(() => {}); } catch { /* not playable */ }
@@ -1015,7 +1021,7 @@ export class UI {
         <div class="set-row"><span>${t('PROGRESO')}</span><button class="btn small" data-act="reset">${t('BORRAR')}</button></div>` : ''}
         <div class="sec">${t('CUENTA')}</div>
         <button class="btn" style="width:100%;margin-top:.4rem" data-act="soon">${t('CONECTAR GOOGLE PLAY GAMES')}</button>
-        <div class="btn-row" style="margin-top:.5rem"><button class="btn small" data-act="soon">${t('PRIVACIDAD')}</button><button class="btn small" data-act="soon">${t('SOPORTE')}</button></div>
+        <div class="btn-row" style="margin-top:.5rem"><button class="btn small" data-act="privacy">${t('PRIVACIDAD')}</button><button class="btn small" data-act="support">${t('SOPORTE')}</button></div>
         <button class="btn" style="width:100%;margin-top:.5rem" data-act="credits">${t('CRÉDITOS')}</button>
         <div style="display:flex;flex-direction:column;align-items:center;margin-top:1rem;gap:.3rem"><img src="${LOGO}" style="width:6rem"><span class="demo-note">${t('VERSIÓN')} ${CONFIG.version}${CONFIG.tester ? ' · TESTER' : ''}</span></div>
       </div></div></div>
@@ -1039,6 +1045,8 @@ export class UI {
         buttons: [['BORRAR', () => { store.reset(); this.go('home'); this.toast(t('Progreso borrado')); }, true], ['CANCELAR', null]],
       }),
       soon: () => this.toast(t('Disponible en la versión final')),
+      privacy: () => openExternal(CONFIG.privacyUrl),
+      support: () => openExternal(`mailto:${CONFIG.supportEmail}?subject=${encodeURIComponent('ZNAKEX ' + CONFIG.version)}`),
       credits: () => this.credits(),
     });
     this.wireVolume(e);
