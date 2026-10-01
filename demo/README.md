@@ -4,7 +4,7 @@ Primera demo del juego: HTML5 + Canvas, empaquetada como APK de Android (WebView
 
 ## Probar
 
-- **Android:** instala `releases/ZNAKEX-tester-1.2.0.apk` (todo desbloqueado: 16 mapas × 3 dificultades, 160 niveles por dificultad, 64 skins, 999.999 monedas) o `releases/ZNAKEX-1.2.0.apk` (progresión normal).
+- **Android:** instala `releases/ZNAKEX-tester-1.2.1.apk` (todo desbloqueado: 16 mapas × 3 dificultades, 160 niveles por dificultad, 64 skins, 999.999 monedas) o `releases/ZNAKEX-1.2.1.apk` (progresión normal).
   Hay que permitir "instalar apps de origen desconocido". Los dos APK pueden convivir en el móvil.
 - **Navegador:** sirve la carpeta `demo/` con cualquier servidor estático (`npx http-server demo`) y abre `index.html`.
   Añade `?tester=1` a la URL para el modo tester.
@@ -33,6 +33,7 @@ Controles (Ajustes): deslizar, flechas en pantalla, palanca flotante (aparece do
   - **Anuncios:** uno corto cada 10 partidas, siempre entre partidas; ver uno con recompensa reinicia la cuenta. Puente `window.ZnakexAds` listo para AdMob (`js/ads.js`).
   - **Avisos para volver a jugar** (opcionales, `js/notify.js` y `Reminder.java`): se ofrecen tras 3 partidas, como mucho uno al día por la tarde y solo si no has jugado; se paran tras 3 sin respuesta; interruptor en Ajustes.
   - **Permisos:** solo vibración y notificaciones.
+- **Nuevo en 1.2.1:** al superar un nivel (o ganar un duelo o terminar Frenético), la música del nivel acelera en rampa y se apaga, suena la fanfarria y la pantalla de «superado» pone la música del menú hasta que sigues al siguiente nivel o sales.
 - Muerte con revivir (anuncio simulado o 100 / 200 monedas), pausa, victoria, resultados y récords.
 - 64 skins dibujadas con las piezas reales de cada ficha (cabeza, lengua, módulos A/B/C, módulo especial y cola; se regeneran con `tools/build_v6.py` y los marcos con `tools/frames_v6.py`). Ruleta diaria, tienda de monedas (compras simuladas), ajustes.
 - Cada mapa tiene mecánicas propias: agua, lava, arenas movedizas, hielo, portales, según su ficha.

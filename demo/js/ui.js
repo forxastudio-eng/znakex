@@ -1240,6 +1240,7 @@ export class UI {
 
   // ------------------------------------------------------------ game
   startGame(cfg) {
+    this.resultsToken = (this.resultsToken || 0) + 1; // a pending results music must not start over the new game
     // every 10 games a short ad, always between games (never while playing)
     const S = this.S();
     if ((S.adCounter || 0) >= ads.ADS_EVERY && !(cfg.level && cfg.level.tutorial)) {
@@ -1751,6 +1752,11 @@ export class UI {
     const S = this.S();
     if (!res.tutorial) { S.adCounter = (S.adCounter || 0) + 1; S.gamesTotal = (S.gamesTotal || 0) + 1; store.save(); }
     audio.loseMood(!res.won);
+    // won: the cleared screen plays the menu theme (after the fanfare) until you continue or leave
+    if (res.won) {
+      const token = this.resultsToken = (this.resultsToken || 0) + 1;
+      setTimeout(() => { if (this.resultsToken === token && this.cur && this.cur.name === 'game') audio.playMusic('mus_menu'); }, 1400);
+    }
     const cfg = this.lastCfg;
     let html = '', coins = 0;
     const statRow = (items) => `<div class="stat-row">${items.map(([k, v]) => `<div><span class="v">${v}</span><span class="k">${t(k)}</span></div>`).join('')}</div>`;

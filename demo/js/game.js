@@ -761,6 +761,9 @@ export class Game {
       if (this.timer <= 0) {
         this.timeScale = 0.25;
         this.fx.flash(this.board.cx(5.5), this.board.cy(8.5), '#FFD36A', this.board.w, 0.6);
+        audio.stopLoop('boost_loop'); audio.stopLoop('magnet_loop'); audio.stopLoop('star_loop');
+        audio.winOut(1.1);
+        audio.play('level_win');
         this.setState('won');
         return;
       }
@@ -1151,7 +1154,8 @@ export class Game {
     this.fx.sprite(x, y, pwImg('burst_gold'), this.board.cell * 9, 0.9, rand(TAU));
     this.fireworks(this.low ? 2 : 5);
     this.player.boostT = 0.0001;
-    audio.stopLoop('boost_loop'); audio.stopLoop('magnet_loop'); audio.stopLoop('star_loop'); audio.loseMood(false); audio.setMusicRate(1);
+    audio.stopLoop('boost_loop'); audio.stopLoop('magnet_loop'); audio.stopLoop('star_loop'); audio.loseMood(false);
+    audio.winOut(1.1); // the level theme ramps up and fades out: you feel the level is done
     audio.play('level_win');
     vibrate([20, 40, 20], this.cfg.settings.vibration);
     this.setState('won');

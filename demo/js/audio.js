@@ -139,6 +139,23 @@ export async function playMusic(name) {
   music = { name, src, gain: g };
 }
 
+// level cleared: the level theme speeds up in a short ramp and fades out (the fanfare takes over)
+export function winOut(dur = 1.1) {
+  musicWant = null;
+  if (!music || !ctx) return;
+  const m = music;
+  music = null;
+  const now = ctx.currentTime;
+  m.src.playbackRate.cancelScheduledValues(now);
+  m.src.playbackRate.setValueAtTime(m.src.playbackRate.value, now);
+  m.src.playbackRate.linearRampToValueAtTime(Math.max(1.5, m.src.playbackRate.value * 1.25), now + dur);
+  m.gain.gain.cancelScheduledValues(now);
+  m.gain.gain.setValueAtTime(m.gain.gain.value, now);
+  m.gain.gain.linearRampToValueAtTime(0, now + dur);
+  setTimeout(() => { try { m.src.stop(); } catch { /* done */ } }, dur * 1000 + 100);
+  musicRate = 1;
+}
+
 // the theme speeds up (and rises in pitch) with the golden orb
 export function setMusicRate(r) {
   musicRate = r;

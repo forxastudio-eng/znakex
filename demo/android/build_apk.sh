@@ -11,8 +11,8 @@ OUT="$HERE/out"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-VERSION_NAME="1.2.0"
-VERSION_CODE="18"
+VERSION_NAME="1.2.1"
+VERSION_CODE="19"
 if [ "$MODE" = "tester" ]; then
   PACKAGE="com.forxastudio.znakex.tester"; LABEL="ZNAKEX Tester"; TESTER=true; APK="znakex-tester.apk"
 else
