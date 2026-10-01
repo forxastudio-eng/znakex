@@ -1009,10 +1009,10 @@ export class UI {
         <div class="set-row"><span class="l"><img src="${kit('gamepad')}">GOOGLE PLAY GAMES</span><span class="t-label dim" style="font-size:.8rem">${t(cloud.available() ? 'CONECTADO' : 'EN LA APP DE GOOGLE PLAY')}</span></div>
         <div class="set-row"><span class="l"><img src="${kit('cloud')}">${t('CÓDIGO DE GUARDADO')}</span><span style="display:flex;gap:.4rem"><button class="btn small" data-act="savecode">${t('COPIAR')}</button><button class="btn small" data-act="loadcode">${t('RESTAURAR')}</button></span></div>
         <div class="set-row"><span class="l"><img src="${kit('bulb')}">${t('TUTORIAL')}</span><button class="btn small" data-act="tutorial">${t('REPETIR')}</button></div>
-        <div class="sec">DEMO</div>
+        ${CONFIG.tester ? `        <div class="sec">DEMO</div>
         <div class="set-row"><span>+${fmt(5000)} ${t('MONEDAS')}</span><button class="btn small" data-act="coins">${t('AÑADIR')}</button></div>
         <div class="set-row"><span>${t('RULETA DE HOY')}</span><button class="btn small" data-act="wheel">${t('REINICIAR')}</button></div>
-        <div class="set-row"><span>${t('PROGRESO')}</span><button class="btn small" data-act="reset">${t('BORRAR')}</button></div>
+        <div class="set-row"><span>${t('PROGRESO')}</span><button class="btn small" data-act="reset">${t('BORRAR')}</button></div>` : ''}
         <div class="sec">${t('CUENTA')}</div>
         <button class="btn" style="width:100%;margin-top:.4rem" data-act="soon">${t('CONECTAR GOOGLE PLAY GAMES')}</button>
         <div class="btn-row" style="margin-top:.5rem"><button class="btn small" data-act="soon">${t('PRIVACIDAD')}</button><button class="btn small" data-act="soon">${t('SOPORTE')}</button></div>
