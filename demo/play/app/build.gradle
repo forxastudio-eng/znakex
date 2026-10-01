@@ -1,0 +1,99 @@
+plugins {
+    id 'com.android.application'
+}
+
+// The web game (demo/) is copied into the app assets at build time, so the game code lives in one place.
+def demoDir = rootProject.file('..')
+def gameOut = layout.buildDirectory.dir('generated/game/www')
+def flavorOut = { String f -> layout.buildDirectory.dir("generated/flavor/$f") }
+
+android {
+    namespace 'com.forxastudio.znakex'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId project.property('znakexAppId')
+        minSdk 24
+        targetSdk 36
+        versionCode Integer.parseInt(project.property('znakexVersionCode'))
+        versionName project.property('znakexVersionName')
+        // AdMob app id and Play Games project id: test values until the real ones are set
+        // (gradle -PadmobAppId=... -PgamesProjectId=..., or the GitHub secrets of the same names)
+        manifestPlaceholders = [admobAppId: (findProperty('admobAppId') ?: 'ca-app-pub-3940256099942544~3347511713')]
+        resValue 'string', 'game_services_project_id', (findProperty('gamesProjectId') ?: '0')
+    }
+
+    flavorDimensions 'build'
+    productFlavors {
+        play { dimension 'build' }
+        tester {
+            dimension 'build'
+            applicationIdSuffix '.tester'
+            versionNameSuffix '-tester'
+        }
+    }
+
+    signingConfigs {
+        upload {
+            def ks = System.getenv('ZNAKEX_KEYSTORE_FILE')
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('ZNAKEX_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ZNAKEX_KEY_ALIAS')
+                keyPassword System.getenv('ZNAKEX_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (System.getenv('ZNAKEX_KEYSTORE_FILE')) signingConfig signingConfigs.upload
+        }
+    }
+
+    sourceSets {
+        main {
+            manifest.srcFile 'src/main/AndroidManifest.xml'
+            java.srcDirs = ['../../android/src', 'src/main/java']
+            res.srcDirs = ['../../android/res']
+            assets.srcDirs = [layout.buildDirectory.dir('generated/game').get().asFile]
+        }
+        play { assets.srcDirs = [flavorOut('play').get().asFile] }
+        tester { assets.srcDirs = [flavorOut('tester').get().asFile] }
+    }
+
+    // videos stay uncompressed so the WebView can stream them with byte ranges
+    androidResources { noCompress += ['mp4'] }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint { abortOnError false; checkReleaseBuilds false }
+}
+
+tasks.register('copyGame', Sync) {
+    from(demoDir) {
+        include 'index.html', 'css/**', 'js/**', 'fonts/**', 'assets/**'
+    }
+    into gameOut
+}
+
+['play', 'tester'].each { f ->
+    tasks.register("writeBuildJs${f.capitalize()}") {
+        def out = flavorOut(f).get().file('www/build.js').asFile
+        outputs.file out
+        doLast {
+            out.parentFile.mkdirs()
+            out.text = "window.ZNAKEX_BUILD = { tester: ${f == 'tester'}, version: '${android.defaultConfig.versionName}${f == 'tester' ? '-tester' : ''}' };\n"
+        }
+    }
+}
+
+tasks.named('preBuild') {
+    dependsOn 'copyGame', 'writeBuildJsPlay', 'writeBuildJsTester'
+}
+
+dependencies {
+}
