@@ -498,4 +498,11 @@ export const RU = {
   "Desarrollo": "Разработка",
   "Música y efectos": "Музыка и звуки",
   "Fuentes": "Шрифты",
+  "Solo puedes llevar un objeto especial a la vez.": "Можно носить только один особый предмет за раз.",
+  "Solo un objeto a la vez: hasta que se acabe, no puedes coger otro": "Один предмет за раз: пока он действует, другой взять нельзя",
+  "Solo puedes llevar un objeto especial a la vez: hasta que se acabe, los demás no se pueden coger.": "Можно носить только один особый предмет: пока он не закончится, другие не подобрать.",
+  "Las monedas del mapa duran poco: si parpadean rápido, están a punto de desaparecer.": "Монеты на карте живут недолго: если быстро мигают — скоро исчезнут.",
+  "Monedas del mapa": "Монеты с карты",
+  "¡Cuenta 3 orbes y creces x3, pero vas al doble de velocidad unos segundos!": "Считается за 3 сферы, и ты растёшь x3, но несколько секунд движешься вдвое быстрее!",
+  "Cada orbe dorado cuenta 3 orbes y te hace crecer x3, pero vas el doble de rápido.": "Каждая золотая сфера считается за 3 и даёт рост x3, но ты движешься вдвое быстрее.",
 };

@@ -23,7 +23,7 @@ function mapFiles() {
 }
 
 export const MANIFEST = [
-  'brand/logo/logo_full.webp', 'brand/bg/carga.webp', 'brand/bg/inicio.webp', 'brand/bg/menu.webp', 'brand/bg/interior.webp',
+  'brand/logo/logo_full.webp', 'brand/icons/coin_z.webp', 'brand/bg/carga.webp', 'brand/bg/inicio.webp', 'brand/bg/menu.webp', 'brand/bg/interior.webp',
   ...['panel', 'btn_primary', 'btn_primary_down', 'btn_secondary', 'btn_reward', 'btn_round', 'btn_pill', 'title', 'divider', 'ring'].map((n) => `brand/kit/${n}.webp`),
   ...PLAQUES.map((n) => `brand/plaques/${n}.webp`),
   ...range(4, (i) => `tiles/court/floor${i}.jpg`),

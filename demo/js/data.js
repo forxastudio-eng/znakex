@@ -228,9 +228,11 @@ export const MODES = [
 ];
 
 export const TIPS = [
-  'Los orbes dorados te hacen crecer x3, pero vas el doble de rápido.',
+  'Cada orbe dorado cuenta 3 orbes y te hace crecer x3, pero vas el doble de rápido.',
   'Encadena orbes en menos de 3 segundos para multiplicar tu puntuación.',
   'En Orbes Frenéticos no hay muros: sal por un borde y entra por el otro.',
   'En el Duelo, si la cabeza del rival toca tu cuerpo, el rival pierde.',
   'El nivel 10 de cada mapa es el Guardián: prepárate.',
+  'Solo puedes llevar un objeto especial a la vez: hasta que se acabe, los demás no se pueden coger.',
+  'Las monedas del mapa duran poco: si parpadean rápido, están a punto de desaparecer.',
 ];

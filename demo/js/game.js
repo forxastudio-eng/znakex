@@ -8,6 +8,8 @@ import { PW, MAGNET_RANGE, ITEM_LIFE, SHIELD_CHARGES, drawItem, drawAuras, pwImg
 import { track } from './meta.js';
 import { CONFIG } from './config.js';
 import * as audio from './audio.js';
+import * as store from './store.js';
+import { IMG } from './assets.js';
 import { drawSnake } from './snakedraw.js';
 import { drawOrb, orbSpawnK } from './orbs.js';
 import { FX, Ambient, MapAmbient, glowSprite } from './fx.js';
@@ -17,6 +19,10 @@ import { DIRS, OPPOSITE, TAU, rand, clamp, lerp, ease, vibrate } from './util.js
 const COMBO_WINDOW = 3;
 const BOOST_TIME = 4;
 const GOLD_LIFE = 6;
+// map coins: a few, short-lived, blinking faster and faster before they vanish
+const COIN_LIFE = 5.5;
+const COIN_EVERY = [11, 17]; // seconds between coins
+const COIN_VALUE = 1;
 const STAR_CHANCE = CONFIG.tester ? 0.16 : 0.035;
 
 class Snake {
@@ -61,6 +67,9 @@ export class Game {
     this.stateT = 0;
     this.score = 0;
     this.coinsRun = 0;
+    this.mapCoins = [];
+    this.coinClock = 0;
+    this.nextCoin = rand(6, 10);
     this.combo = 1;
     this.lastEat = -10;
     this.orbs = [];
@@ -171,6 +180,8 @@ export class Game {
     const occ = new Set();
     for (const s of this.snakes) for (const c of s.cells) occ.add(c.y * COLS + c.x);
     for (const o of this.orbs) occ.add(o.y * COLS + o.x);
+    for (const it of this.items) occ.add(it.y * COLS + it.x);
+    for (const c of this.mapCoins) occ.add(c.y * COLS + c.x);
     return occ;
   }
 
@@ -189,40 +200,67 @@ export class Game {
   // For the first seconds every dangerous cell (obstacles, water, lava, spikes) pulses red.
   startWarning(silent = false) {
     if (!silent) this.resize(); // the HUD has its final size by now
-    const b = this.board, cells = [];
-    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
-      const k = y * COLS + x;
-      if (b.solid[k] || (b.lethal && b.lethal[k])) cells.push({ x, y });
-    }
-    this.warnCells = cells;
+    this.warnCells = this.dangerCells();
     this.warnDur = silent ? 3 : 5;
-    if (cells.length) {
+    if (this.warnCells.length) {
       this.warnT = this.warnDur;
       for (let i = 0; i < (silent ? 3 : 5); i++) audio.play('alert_pulse', { delay: i * 1.0, vol: 0.6 });
       if (!silent && !this.tut && this.ui.warnBanner) this.ui.warnBanner(this.warnDur);
     }
   }
 
+  // every cell that hurts: obstacles (red) and water / lava / acid (orange)
+  dangerCells() {
+    const b = this.board, cells = [];
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
+      const k = y * COLS + x;
+      if (b.lethal && b.lethal[k]) cells.push({ x, y, liquid: true });
+      else if (b.solid[k]) cells.push({ x, y, liquid: false });
+    }
+    return cells;
+  }
+
+  // a single red / orange blink over every danger cell, every 10 seconds of play
+  updateDangerPulse(dt) {
+    if (this.pulseT > 0) this.pulseT -= dt;
+    this.pulseClock = (this.pulseClock || 0) + dt;
+    if (this.pulseClock >= 10 && !(this.warnT > 0)) {
+      this.pulseClock = 0;
+      this.pulseCells = this.dangerCells();
+      this.pulseT = 0.9;
+    }
+  }
+
   drawWarning(g) {
-    if (!(this.warnT > 0) || !this.warnCells || !this.warnCells.length) return;
+    const start = this.warnT > 0 && this.warnCells && this.warnCells.length;
+    const blink = this.pulseT > 0 && this.pulseCells && this.pulseCells.length;
+    if (!start && !blink) return;
     const b = this.board, s = b.cell;
-    const el = this.warnDur - this.warnT;
-    const fade = Math.min(1, el / 0.3, this.warnT / 0.6);
-    const pulse = 0.5 + 0.5 * Math.sin(el * Math.PI * 2 * 1.7 - Math.PI / 2);
-    const a = fade * (0.28 + 0.5 * pulse);
+    let a, cells;
+    if (start) {
+      const el = this.warnDur - this.warnT;
+      const fade = Math.min(1, el / 0.3, this.warnT / 0.6);
+      const pulse = 0.5 + 0.5 * Math.sin(el * Math.PI * 2 * 1.7 - Math.PI / 2);
+      a = fade * (0.28 + 0.5 * pulse);
+      cells = this.warnCells;
+    } else {
+      a = 0.85 * Math.sin(Math.PI * (1 - this.pulseT / 0.9)); // one smooth blink
+      cells = this.pulseCells;
+    }
     const cb = !!(this.cfg.settings && this.cfg.settings.colorblind);
     g.save();
-    for (const c of this.warnCells) {
+    for (const c of cells) {
       const x = b.x + c.x * s, y = b.y + c.y * s;
+      const [fr, fg, fb, glow, sr, sg, sb] = c.liquid ? [255, 140, 20, '#FF9A1E', 255, 170, 60] : [255, 30, 30, '#FF3C28', 255, 80, 70];
       g.globalCompositeOperation = 'source-over';
-      g.fillStyle = `rgba(255,30,30,${a * 0.55})`;
+      g.fillStyle = `rgba(${fr},${fg},${fb},${a * 0.55})`;
       g.fillRect(x, y, s, s);
       g.globalCompositeOperation = 'lighter';
       g.globalAlpha = Math.min(1, a * 0.9);
-      g.drawImage(glowSprite('#FF3C28', 64), x - s * 0.5, y - s * 0.5, s * 2, s * 2);
+      g.drawImage(glowSprite(glow, 64), x - s * 0.5, y - s * 0.5, s * 2, s * 2);
       g.globalAlpha = 1;
       g.globalCompositeOperation = 'source-over';
-      g.strokeStyle = `rgba(255,80,70,${Math.min(1, a + 0.25)})`;
+      g.strokeStyle = `rgba(${sr},${sg},${sb},${Math.min(1, a + 0.25)})`;
       g.lineWidth = Math.max(1.5, s * 0.05);
       g.strokeRect(x + 1.5, y + 1.5, s - 3, s - 3);
       if (cb) { // colour-blind mode: white diagonal stripes and an X so the danger never depends on red
@@ -249,8 +287,14 @@ export class Game {
     return { x: this.board.cx(h.x), y: this.board.cy(h.y) };
   }
 
+  // one special item at a time: none appears while another is on the board or its effect is running
+  itemActive() {
+    return this.pw.shield > 0 || this.pw.magnet > 0 || this.pw.portal > 0 || this.pw.star > 0;
+  }
+
   spawnItem(type, at) {
     if (!this.board.breakCell && type === 'shield') return null; // only story boards have breakable obstacles
+    if (this.items.length || this.itemActive()) return null;
     const cell = at || randomFreeCell(this.board, this.occupiedSet(), this.player.cells[0]);
     if (!cell) return null;
     const it = { ...cell, type, born: this.t, life: ITEM_LIFE };
@@ -280,14 +324,9 @@ export class Game {
       if (this.t - this.items[i].born > this.items[i].life) this.items.splice(i, 1);
     }
     if (this.tut) return;
-    if (this.itemClock > this.nextShield && !this.items.some((i) => i.type === 'shield')) {
-      if (this.pw.shield === 0) this.spawnItem('shield');
-      this.nextShield = this.itemClock + 26;
-    }
-    if (this.itemClock > this.nextUtil && this.items.length < 2) {
-      this.spawnItem(Math.random() < 0.5 ? 'magnet' : 'portal');
-      this.nextUtil = this.itemClock + 34;
-    }
+    // timers wait (instead of skipping their turn) while another item is out or active
+    if (this.itemClock > this.nextShield && this.spawnItem('shield')) this.nextShield = this.itemClock + 26;
+    else if (this.itemClock > this.nextUtil && this.spawnItem(Math.random() < 0.5 ? 'magnet' : 'portal')) this.nextUtil = this.itemClock + 34;
   }
 
   // streaks behind the head while the golden star or a golden boost is running
@@ -304,6 +343,66 @@ export class Game {
     const ang = { up: -Math.PI / 2, down: Math.PI / 2, left: Math.PI, right: 0 }[s.dir] || 0;
     if (star) this.fx.sprite(hp.x - Math.cos(ang) * R, hp.y - Math.sin(ang) * R, pwImg('star_streak'), R * 3.2, 0.35, ang + Math.PI / 4, 0.8);
     this.fx.burst(hp.x, hp.y, star ? 3 : 2, { type: 'star', color: star ? ['#FFE08A', '#FFFFFF'] : ['#FFD36A', '#B8FF1A'], speed: 60, size: 3.5, life: 0.6, drag: 3 });
+  }
+
+  updateCoins(dt) {
+    if (this.tut) return;
+    for (let i = this.mapCoins.length - 1; i >= 0; i--) {
+      const c = this.mapCoins[i];
+      if (this.t - c.born > c.life) {
+        this.mapCoins.splice(i, 1);
+        this.fx.burst(this.board.cx(c.x), this.board.cy(c.y), 6, { type: 'dust', color: '#FFE08A', speed: 50, size: 8, life: 0.4, add: false });
+      }
+    }
+    this.coinClock += dt;
+    if (this.coinClock < this.nextCoin || this.mapCoins.length) return;
+    const cell = randomFreeCell(this.board, this.occupiedSet(), this.player.cells[0]);
+    if (!cell) return;
+    this.mapCoins.push({ ...cell, born: this.t, life: COIN_LIFE });
+    this.coinClock = 0;
+    this.nextCoin = rand(COIN_EVERY[0], COIN_EVERY[1]);
+  }
+
+  pickCoin(c) {
+    this.mapCoins.splice(this.mapCoins.indexOf(c), 1);
+    const x = this.board.cx(c.x), y = this.board.cy(c.y);
+    this.coinsRun += COIN_VALUE;
+    store.addCoins(COIN_VALUE);
+    audio.play('coin', { vol: 0.9 });
+    this.fx.text(x, y - this.R, `+${COIN_VALUE}`, '#FFE08A', 40);
+    this.fx.sprite(x, y, pwImg('burst_gold'), this.R * 5, 0.45, rand(TAU));
+    this.fx.burst(x, y, 14, { type: 'star', color: ['#FFE08A', '#FFFFFF'], speed: 220, size: 4, life: 0.6, drag: 2.5 });
+    vibrate(10, this.cfg.settings.vibration);
+  }
+
+  // a coin lying on the board: spins, glows and blinks faster and faster as it runs out
+  drawCoin(g, c) {
+    const im = IMG['brand/icons/coin_z.webp'];
+    if (!im) return;
+    const b = this.board, cell = b.cell;
+    const age = this.t - c.born, L = c.life, k = age / L;
+    // blink frequency grows from 1.5 Hz to ~9 Hz: phase = 2π ∫ f dt with f = 1.5 + 7.5 k²
+    const phase = TAU * (1.5 * age + 7.5 * age * age * age / (3 * L * L));
+    const blink = 0.5 + 0.5 * Math.sin(phase);
+    const pop = Math.min(1, age / 0.3), out = Math.min(1, (L - age) / 0.25);
+    const sz = cell * 1.05 * (0.4 + 0.6 * (1 - Math.pow(1 - pop, 3))) * Math.max(0, out);
+    const x = b.cx(c.x), y = b.cy(c.y) + Math.sin(this.t * 3 + c.x) * cell * 0.05;
+    g.save();
+    g.globalCompositeOperation = 'lighter';
+    g.globalAlpha = (0.35 + 0.65 * blink) * Math.max(0, out);
+    const gs = glowSprite('#FFD36A', 64);
+    g.drawImage(gs, x - cell * 1.3, y - cell * 1.3, cell * 2.6, cell * 2.6);
+    g.restore();
+    g.save();
+    g.translate(x, y);
+    g.scale(0.72 + 0.28 * Math.cos(this.t * 4 + c.y), 1); // spin
+    g.globalAlpha = k > 0.6 ? 0.55 + 0.45 * blink : 1;
+    g.drawImage(im, -sz / 2, -sz / 2, sz, sz);
+    // bright flash on top of the blink
+    g.globalCompositeOperation = 'lighter';
+    g.globalAlpha = 0.6 * blink;
+    g.drawImage(im, -sz / 2, -sz / 2, sz, sz);
+    g.restore();
   }
 
   // a burst of fireworks over the board (level cleared)
@@ -504,6 +603,7 @@ export class Game {
     for (const sn of this.snakes) for (const c of sn.cells) near(c);
     for (const o of this.orbs) avoid.add(o.y * COLS + o.x);
     for (const it of this.items) avoid.add(it.y * COLS + it.x);
+    for (const c of this.mapCoins) avoid.add(c.y * COLS + c.x);
     // old obstacles crumble
     for (const c of this.board.level.obs) {
       const x = this.board.cx(c.x), y = this.board.cy(c.y);
@@ -630,6 +730,8 @@ export class Game {
     this.elapsed += dt;
     this.updateEffects(dt);
     this.updateItems(dt);
+    this.updateCoins(dt);
+    this.updateDangerPulse(dt);
     if (this.eventLevel && !this.shifted && this.player.alive && this.player.orbs >= Math.ceil(this.target / 2)) this.mapShift();
     if (this.tut) this.tutorialUpdate();
     if (this.mode === 'frenzy') {
@@ -795,7 +897,10 @@ export class Game {
     if (oi >= 0) this.eat(s, this.orbs[oi], oi);
     if (s === this.player) {
       const ii = this.items.findIndex((i) => i.x === nx && i.y === ny);
-      if (ii >= 0) this.pickItem(s, this.items[ii]);
+      const ci = this.mapCoins.findIndex((c) => c.x === nx && c.y === ny);
+      if (ci >= 0) this.pickCoin(this.mapCoins[ci]);
+      // an item can't be taken while another effect is running (the snake passes over it)
+      if (ii >= 0 && !this.itemActive()) this.pickItem(s, this.items[ii]);
     }
 
     // mouth anticipation: an orb within 2 cells straight ahead
@@ -816,7 +921,8 @@ export class Game {
     s.a.mouth = 1;
     s.a.mouthTarget = 0;
     s.a.squash = 1;
-    s.orbs++;
+    // golden orbs count 3 towards the level / duel objective (you grow x3 and risk double speed)
+    s.orbs += gold ? 3 : 1;
 
     if (s === this.player) {
       this.eaten++;
@@ -830,8 +936,7 @@ export class Game {
       if (this.combo > 1) this.ui.combo(this.combo);
       track(gold ? 'gold' : 'orb');
       if (!gold && !this.starDone && this.mode === 'story' && !this.tut && s.orbs >= 3 && Math.random() < STAR_CHANCE) {
-        this.starDone = true;
-        this.spawnItem('star');
+        if (this.spawnItem('star')) this.starDone = true;
       }
     }
 
@@ -1043,8 +1148,8 @@ export class Game {
     }
     track('len', this.player.cells.length + this.player.grow);
     this.ui.finish({
-      stars, par: this.par, deaths: this.deaths, tutorial: !!this.tut, items: this.itemsPicked,
-      mode: this.mode, won, score: this.score, orbs: this.eaten, gold: this.goldEaten,
+      stars, par: this.par, deaths: this.deaths, tutorial: !!this.tut, items: this.itemsPicked, mapCoins: this.coinsRun,
+      mode: this.mode, won, score: this.score, orbs: this.eaten, objective: this.player.orbs, gold: this.goldEaten,
       length: this.player.cells.length + this.player.grow, time: this.elapsed,
       level: this.cfg.level, difficulty: this.cfg.difficulty, loseReason: this.loseReason,
       duel: this.bot ? { p: this.player.orbs, b: this.bot.orbs } : null,
@@ -1231,6 +1336,7 @@ export class Game {
       drawOrb(g, b.cx(o.x), b.cy(o.y), b.cell, o.type, this.t, { spawnK: orbSpawnK(o, this.t), warn });
     }
     for (const it of this.items) drawItem(g, it, b.cx(it.x), b.cy(it.y), b.cell, this.t);
+    for (const c of this.mapCoins) this.drawCoin(g, c);
     this.fx.drawUnder(g);
     this.drawWarning(g);
 

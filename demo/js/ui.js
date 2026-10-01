@@ -33,11 +33,35 @@ const frameImg = (rarity) => `<img class="fr" src="${url('ui/rfr/' + rarity + '.
 const fit = (text, chars = 13) => { const n = String(text).replace(/<[^>]*>/g, '').length; return n > chars ? ` style="font-size:${(chars / n).toFixed(3)}em"` : ''; };
 // measured fit (the estimate above can't know how wide Cyrillic glyphs are)
 function fitPlaques(root) {
-  requestAnimationFrame(() => root.querySelectorAll('.ptitle span b, .plaque span b').forEach((b) => {
-    const box = b.parentElement.clientWidth;
-    if (box && b.scrollWidth > box) b.style.fontSize = `${(parseFloat(getComputedStyle(b).fontSize) * box / b.scrollWidth * 0.96).toFixed(1)}px`;
-  }));
+  requestAnimationFrame(() => {
+    root.querySelectorAll('.ptitle span b, .plaque span b').forEach((b) => {
+      const box = b.parentElement.clientWidth;
+      if (box && b.scrollWidth > box) b.style.fontSize = `${(parseFloat(getComputedStyle(b).fontSize) * box / b.scrollWidth * 0.96).toFixed(1)}px`;
+    });
+    // primary buttons: long words (Russian, Indonesian) shrink instead of spilling out of the button
+    root.querySelectorAll('.btn-primary').forEach((btn) => {
+      if (!btn.offsetParent) return;
+      btn.style.fontSize = '';
+      const r = document.createRange(); r.selectNodeContents(btn);
+      // measure in the button's own space (panels open with a zoom animation that scales the rects)
+      const scale = btn.getBoundingClientRect().width / (btn.offsetWidth || 1) || 1;
+      const tw = r.getBoundingClientRect().width / scale, box = btn.clientWidth - 4;
+      if (tw > box && box > 0) btn.style.fontSize = `${(parseFloat(getComputedStyle(btn).fontSize) * box / tw * 0.95).toFixed(1)}px`;
+    });
+  });
 }
+// screens and panels that change their content later (level panel, revive) are fitted again
+// (only when buttons or plaques are added, so the HUD's per-frame text updates never trigger it)
+const FIT_SEL = '.btn-primary, .ptitle, .plaque';
+const fitObserver = typeof MutationObserver !== 'undefined' ? new MutationObserver((ms) => {
+  const roots = new Set();
+  for (const m of ms) {
+    for (const n of m.addedNodes) {
+      if (n.nodeType === 1 && (n.matches(FIT_SEL) || n.querySelector(FIT_SEL))) { const r = n.closest('.screen, .overlay') || n; roots.add(r); }
+    }
+  }
+  roots.forEach((r) => fitPlaques(r));
+}) : null;
 const ptitle = (text, idx = 2, cls = '') => `<div class="ptitle p${idx} ${cls}"><img src="${plaqueImg(idx)}" alt=""><span><b${fit(text)}>${text}</b></span></div>`;
 const fmtT = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 const $ = (root, sel) => root.querySelector(sel);
@@ -62,6 +86,7 @@ export class UI {
     this.view = view; // shared game canvas info
     this.screensEl = $(app, '#screens');
     this.overEl = $(app, '#overlays');
+    if (fitObserver) { fitObserver.observe(this.screensEl, { childList: true, subtree: true }); fitObserver.observe(this.overEl, { childList: true, subtree: true }); }
     this.cur = null;
     this.game = null;
     this.timers = [];
@@ -79,23 +104,51 @@ export class UI {
     this.bgVideo({ menu: 'menu', title: 'inicio' }[kind]);
   }
 
-  // The title and menu screens play the original looping videos over their still (first frame),
-  // so nothing jumps while a video starts; if a video can't play, the still simply stays.
+  // The title and menu screens play the original looping videos over their still (first frame).
+  // One single <video> is reused for every screen: Android has very few hardware decoders, and
+  // creating a new player each time (without freeing the old one) is what stopped the videos after
+  // the first plays. A watchdog restarts it if the system pauses it (app in background, stall).
   bgVideo(name) {
-    const bg = $(this.app, '#bg');
-    const old = $(bg, 'video');
-    if (old && old.dataset.name === name) { if (old.paused) playSafe(old); return; }
-    if (old) { old.classList.remove('on'); setTimeout(() => { old.pause(); old.remove(); }, 700); }
-    if (!name) return;
-    const v = document.createElement('video');
-    v.dataset.name = name;
-    v.muted = true; v.defaultMuted = true; v.loop = true; v.playsInline = true; v.autoplay = true;
-    v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
-    v.preload = 'auto';
-    v.addEventListener('playing', () => v.classList.add('on'));
-    v.src = url(`brand/video/${name}.mp4`);
-    $(bg, '.bg-dim').before(v);
+    this.bgWant = name || null;
+    let v = this.bgv;
+    if (!v) {
+      v = this.bgv = document.createElement('video');
+      v.muted = true; v.defaultMuted = true; v.loop = true; v.playsInline = true; v.preload = 'auto';
+      v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+      v.addEventListener('playing', () => { if (this.bgWant) v.classList.add('on'); });
+      v.addEventListener('error', () => { this.bgErr = (this.bgErr || 0) + 1; v.classList.remove('on'); });
+      $(this.app, '#bg .bg-dim').before(v);
+      setInterval(() => this.bgWatch(), 1000);
+    }
+    if (!name) {
+      v.classList.remove('on');
+      if (!v.paused) v.pause();
+      return;
+    }
+    if (v.dataset.name !== name) {
+      v.classList.remove('on');
+      v.dataset.name = name;
+      this.bgErr = 0;
+      v.src = url(`brand/video/${name}.mp4`);
+      v.load();
+    }
     playSafe(v);
+  }
+
+  bgWatch() {
+    const v = this.bgv;
+    if (!v || !this.bgWant || document.hidden) return;
+    if (v.error) {
+      // reload after an error (a few times at most); the still stays visible meanwhile
+      if (this.bgErr < 4) { v.src = url(`brand/video/${v.dataset.name}.mp4`); v.load(); playSafe(v); }
+      return;
+    }
+    if (v.paused || v.ended) playSafe(v);
+  }
+
+  // back from the background (Android pauses media when the app is hidden)
+  resumeMedia() {
+    if (this.bgWant) this.bgWatch();
   }
 
   // ------------------------------------------------------------ navigation
@@ -160,7 +213,8 @@ export class UI {
       const b = e.target.closest('[data-act]');
       if (!b || !root.contains(b)) return;
       const act = b.dataset.act;
-      audio.play(b.disabled ? 'ui_locked' : act === 'back' ? 'ui_back' : 'ui_tap');
+      const GO = ['play', 'retry', 'next', 'nextmap', 'fight', 'first'];
+      audio.play(b.disabled ? 'ui_locked' : act === 'back' ? 'ui_back' : GO.includes(act) ? 'countdown_go' : 'ui_tap', GO.includes(act) ? { vol: 0.9 } : undefined);
       if (handlers[act]) return handlers[act](b, e);
       if (act === 'nav' || act === 'back') this.go(b.dataset.to || 'home');
       else if (act === 'shop') this.go('shop', { back: this.cur ? this.cur.name : 'home' });
@@ -200,7 +254,8 @@ export class UI {
     o.appendChild(v);
     this.app.appendChild(o);
     let gone = false;
-    const end = () => { if (gone) return; gone = true; clearTimeout(timer); o.classList.add('out'); setTimeout(() => { v.pause(); o.remove(); }, 500); };
+    // free the decoder right away so the background video can use it
+    const end = () => { if (gone) return; gone = true; clearTimeout(timer); audio.playMusic('mus_menu'); o.classList.add('out'); setTimeout(() => { v.pause(); v.removeAttribute('src'); v.load(); o.remove(); }, 500); };
     o.addEventListener('pointerup', end);
     // if the video never starts (no codec), don't hold the game; once it plays, it ends by itself
     let timer = setTimeout(end, 2500);
@@ -231,7 +286,7 @@ export class UI {
         this.setBg('title');
         $(e, '#ldt').outerHTML = `<div class="tap">${t('TOCA PARA JUGAR')}</div>`;
         $(e, '#ldb').parentElement.style.display = 'none';
-        e.addEventListener('pointerup', onTap, { once: true });
+        e.addEventListener('pointerup', () => { audio.unlock(); audio.play('countdown_go', { vol: 0.9 }); onTap(); }, { once: true });
       },
     };
   }
@@ -1358,13 +1413,15 @@ export class UI {
     const T = [
       ['DESLIZA PARA GIRAR', 'Mueve el dedo hacia donde quieras ir. Prueba con dos giros.', 'swipe'],
       ['COME EL ORBE ROJO', 'Cada orbe rojo te hace crecer un poquito y suma al objetivo.', 'orb'],
-      ['ORBE DORADO', '¡Crece x3 y vas al doble de velocidad unos segundos!', 'star_gold'],
+      ['ORBE DORADO', '¡Cuenta 3 orbes y creces x3, pero vas al doble de velocidad unos segundos!', 'star_gold'],
       ['EVITA LOS OBSTÁCULOS', 'Agua, lava y pinchos te eliminan. Recoge el campo de fuerza: rompe 2 obstáculos.', 'eye'],
     ][i];
+    // the item step also explains the one-item rule
+    const extra = i === 3 ? `<div class="tx" style="margin-top:.2rem;color:var(--lime)">${t('Solo puedes llevar un objeto especial a la vez.')}</div>` : '';
     const old = $(this.hudEl, '.tut-panel');
     if (old) old.remove();
     const p = el(`<div class="tut-panel" style="top:${Math.round(this.warnTop || 0)}px"><img class="ic" src="${T[2] === 'orb' ? icon('orb_red') : kit(T[2])}" alt="">
-      <div><div class="tt">${t(T[0])} <span>${i + 1}/4</span></div><div class="tx">${t(T[1])}</div></div></div>`);
+      <div><div class="tt">${t(T[0])} <span>${i + 1}/4</span></div><div class="tx">${t(T[1])}</div>${extra}</div></div>`);
     this.hudEl.appendChild(p);
     if (i === 0) {
       const h = el(`<img class="tut-hand" src="${kit('swipe')}" alt="">`);
@@ -1479,6 +1536,7 @@ export class UI {
       portal: ['PORTAL DE REGRESO', pwi('portal'), [[kit('check_box'), 'Si chocas, no pierdes: vuelves al inicio'], [kit('refresh'), 'Dura 8 segundos'], [kit('bulb'), 'Conservas todo tu largo']]],
       star: ['ESTRELLA DORADA', pwi('star'), [[icon('x2'), 'Velocidad x2'], [kit('star_gold'), 'Invencible: nada te afecta'], [kit('refresh'), 'Dura 6 segundos · el mapa da la vuelta']]],
     }[type];
+    D[2].push([kit('lock'), 'Solo un objeto a la vez: hasta que se acabe, no puedes coger otro']);
     const R = 3.2 * 16;
     const o = this.overlay(`<div class="overlay item-intro" style="background:radial-gradient(circle at ${px}px ${py}px, transparent 0, transparent ${R}px, rgba(4,6,4,.84) ${R + 60}px)">
       <div class="spot" style="left:${px}px;top:${py}px"></div>
@@ -1623,7 +1681,7 @@ export class UI {
       html = `<div class="t-label glow-amber">${t('TUTORIAL')}</div>
         ${ptitle(t('¡LISTO PARA JUGAR!'), 1)}
         <div class="ov-sub">${t('Ya conoces los orbes, los obstáculos y el campo de fuerza')}</div>
-        <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>
+        <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>${res.mapCoins ? `<div class="demo-note">${t('Monedas del mapa')}: +${res.mapCoins}</div>` : ''}
         <button class="btn-primary" data-act="first" style="width:100%"><span class="worn">${t('JUGAR')} ${t('NIVEL')} 1-1</span><i class="tri"></i></button>
         <div class="btn-row"><button class="btn" data-act="retry"><img class="ic" src="${icon('retry')}">${t('REPETIR')}</button><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">${t('INICIO')}</button></div>`;
     } else if (res.mode === 'story') {
@@ -1648,8 +1706,8 @@ export class UI {
             [t('Objetivo'), true], [t('Sin morir'), res.deaths === 0], [`${t('Rápido')} · ${fmtT(res.par)}`, res.stars === 3],
           ].map(([cap, on], i) => `<div class="star ${on ? 'on' : ''}" style="--d:${0.35 + i * 0.3}s"><img src="${kit(on ? 'star_gold' : 'star_empty')}" alt=""><span>${cap}</span></div>`).join('')}</div>
           ${res.stars === 3 ? ptitle(t('¡PERFECTO!'), 2, 'small') : ''}
-          ${statRow([['ORBES', `${Math.min(res.orbs, L.target)}/${L.target}`], ['PUNTOS', fmt(res.score)], ['TIEMPO', time]])}
-          <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>
+          ${statRow([['ORBES', `${Math.min(res.objective ?? res.orbs, L.target)}/${L.target}`], ['PUNTOS', fmt(res.score)], ['TIEMPO', time]])}
+          <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>${res.mapCoins ? `<div class="demo-note">${t('Monedas del mapa')}: +${res.mapCoins}</div>` : ''}
           ${first ? '' : `<div class="demo-note">${t('Nivel repetido: recompensa reducida')}</div>`}
           ${skinNow ? `<div class="t-label glow-amber">${t('¡SKIN DE TEMPORADA DESBLOQUEADA!')}</div>` : ''}
           <button class="ad-x2" data-act="x2"><img src="${kit('x2')}" alt=""><span>x2 ${t('MONEDAS')} · ${t('VER ANUNCIO')}</span><img class="vid" src="${kit('video')}" alt=""></button>
@@ -1660,7 +1718,7 @@ export class UI {
       } else {
         html = `${ptitle(t('NIVEL FALLIDO'), 0)}
           <div class="ov-sub">${L.season ? t('TEMPORADA') + ' · ' + t('NIVEL') + ' ' + L.n : L.map + '-' + L.n} · ${L.mapInfo.name}</div>
-          ${statRow([['ORBES', `${res.orbs}/${L.target}`], ['PUNTOS', fmt(res.score)], ['TIEMPO', time]])}
+          ${statRow([['ORBES', `${Math.min(res.objective ?? res.orbs, L.target)}/${L.target}`], ['PUNTOS', fmt(res.score)], ['TIEMPO', time]])}
           <button class="btn-primary" data-act="retry" style="width:100%"><span class="worn">${t('REINTENTAR')}</span></button>
           <div class="btn-row"><button class="btn" data-act="levels"><img class="ic" src="${icon('levels')}">${t('NIVELES')}</button><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">${t('INICIO')}</button></div>`;
       }
@@ -1676,7 +1734,7 @@ export class UI {
         <div class="big-num">${fmt(res.score)}</div>
         <div class="ov-sub">${t('RÉCORD')} ${fmt(Math.max(prevBest, res.score))}</div>
         ${statRow(key === 'classic' ? [['ORBES', res.orbs], ['LARGO', res.length], ['TIEMPO', time]] : [['DORADOS', res.gold], ['LARGO', res.length], ['TIEMPO', time]])}
-        <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>
+        <div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>${res.mapCoins ? `<div class="demo-note">${t('Monedas del mapa')}: +${res.mapCoins}</div>` : ''}
         ${coins > 0 ? `<button class="ad-x2" data-act="x2"><img src="${kit('x2')}" alt=""><span>x2 ${t('MONEDAS')} · ${t('VER ANUNCIO')}</span><img class="vid" src="${kit('video')}" alt=""></button>` : ''}
         <button class="btn-primary" data-act="retry" style="width:100%"><span class="worn">${t('JUGAR DE NUEVO')}</span></button>
         <div class="btn-row"><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">${t('INICIO')}</button><button class="btn" data-act="lb"><img class="ic" src="${icon('mode_leaderboard')}">${t('RANKING')}</button></div>`;
@@ -1692,7 +1750,7 @@ export class UI {
       html = `${ptitle(t(res.won ? 'VICTORIA' : 'DERROTA'), res.won ? 2 : 0)}
         <div class="ov-sub">${t(res.won ? '{b} DERROTADO' : res.loseReason === 'bot' ? '{b} LLEGÓ PRIMERO' : '{b} TE HA VENCIDO', { b: b.name })}</div>
         ${statRow([['TÚ', res.duel.p], ['RIVAL', res.duel.b], ['TIEMPO', time]])}
-        ${res.won ? `<div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>${coins ? '' : `<div class="demo-note">${t('Límite diario de victorias pagadas alcanzado')}</div>`}` : ''}
+        ${res.won ? `<div class="coin-reward"><img src="${icon('coin')}"><span id="cr">+0</span></div>${res.mapCoins ? `<div class="demo-note">${t('Monedas del mapa')}: +${res.mapCoins}</div>` : ''}${coins ? '' : `<div class="demo-note">${t('Límite diario de victorias pagadas alcanzado')}</div>`}` : ''}
         <button class="btn-primary" data-act="retry" style="width:100%"><span class="worn">${t('REVANCHA')}</span></button>
         <div class="btn-row"><button class="btn" data-act="duel"><img class="ic" src="${icon('mode_duel')}">${t('RIVALES')}</button><button class="btn" data-act="home"><img class="ic" src="${icon('home')}">${t('INICIO')}</button></div>`;
     }

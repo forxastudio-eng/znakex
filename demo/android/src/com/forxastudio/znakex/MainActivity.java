@@ -81,6 +81,8 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
+        // pause the game first (the WebView stops running JavaScript after onPause)
+        if (web != null) web.evaluateJavascript("window.ZNAKEX && window.ZNAKEX.onPause && window.ZNAKEX.onPause()", null);
         super.onPause();
         web.onPause();
     }
@@ -89,6 +91,8 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         web.onResume();
+        // media is paused by the system while the app is hidden: start the videos and music again
+        web.evaluateJavascript("window.ZNAKEX && window.ZNAKEX.onResume && window.ZNAKEX.onResume()", null);
     }
 
     @Override

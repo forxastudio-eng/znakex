@@ -39,6 +39,12 @@ export function unlock() {
   if (musicWant) playMusic(musicWant);
 }
 
+// back from the background: the system may have suspended the audio context
+export function resume() {
+  if (!ctx) return;
+  if (ctx.state !== 'running') ctx.resume().then(() => { if (musicWant && !music) playMusic(musicWant); }).catch(() => {});
+}
+
 export function applySettings() {
   if (!ctx) return;
   const s = settings();

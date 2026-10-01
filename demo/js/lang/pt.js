@@ -498,4 +498,11 @@ export const PT = {
   "Desarrollo": "Desenvolvimento",
   "Música y efectos": "Música e efeitos",
   "Fuentes": "Fontes",
+  "Solo puedes llevar un objeto especial a la vez.": "Você só pode ter um objeto especial por vez.",
+  "Solo un objeto a la vez: hasta que se acabe, no puedes coger otro": "Um objeto por vez: até ele acabar, você não pode pegar outro",
+  "Solo puedes llevar un objeto especial a la vez: hasta que se acabe, los demás no se pueden coger.": "Você só pode ter um objeto especial por vez: até ele acabar, os outros não podem ser pegos.",
+  "Las monedas del mapa duran poco: si parpadean rápido, están a punto de desaparecer.": "As moedas do mapa duram pouco: se piscam rápido, estão prestes a sumir.",
+  "Monedas del mapa": "Moedas do mapa",
+  "¡Cuenta 3 orbes y creces x3, pero vas al doble de velocidad unos segundos!": "Vale 3 orbes e você cresce x3, mas fica com o dobro da velocidade por alguns segundos!",
+  "Cada orbe dorado cuenta 3 orbes y te hace crecer x3, pero vas el doble de rápido.": "Cada orbe dourado vale 3 orbes e faz você crescer x3, mas você fica duas vezes mais rápido.",
 };

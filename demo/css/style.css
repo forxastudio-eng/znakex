@@ -228,8 +228,9 @@ button { font: inherit; color: inherit; border: 0; background: none; padding: 0;
 .topbar .title { flex: 1; text-align: center; font-size: 2.3rem; }
 .pill {
   display: inline-flex; align-items: center; gap: 0.35rem; height: 2.6rem; padding: 0 0.4rem 0 0.25rem;
-  border: 0.55rem solid transparent; border-width: 0.55rem 0.9rem;
+  border: 0.55rem solid transparent; border-width: 0.55rem 0.75rem;
   border-image: url(../assets/brand/kit/btn_pill.webp) 60 110 fill / 0.55rem 0.9rem stretch;
+  white-space: nowrap; gap: 0.25rem;
   padding: 0 0.1rem 0 0;
   font-family: 'Bebas Neue'; font-size: 1.45rem; letter-spacing: 0.05em;
 }

@@ -39,6 +39,8 @@ window.addEventListener('resize', resize);
 resize();
 
 // ------------------------------------------------------------------ boot
+// sound from the very start (the WebView allows it without a tap; in a browser the first tap starts it)
+audio.unlock();
 ui.go('splash');
 ui.studioIntro();
 let tip = 0;
@@ -110,10 +112,11 @@ setupInput(app, ui, view);
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) ui.pause();
-  // Android pauses the background videos when the app goes to the background: resume them on return
-  else document.querySelectorAll('#bg video, .studio-intro video').forEach((v) => { if (v.paused) { const p = v.play(); if (p && p.catch) p.catch(() => {}); } });
+  else { ui.resumeMedia(); audio.resume(); }
 });
+window.addEventListener('pageshow', () => ui.resumeMedia());
 
 // Expose for quick debugging in the console.
 document.addEventListener('pointerdown', () => audio.unlock(), { capture: true });
-window.ZNAKEX = { ui, store, back: () => ui.back() };
+// called by the Android shell (MainActivity.onPause / onResume)
+window.ZNAKEX = { ui, store, back: () => ui.back(), onPause: () => ui.pause(), onResume: () => { ui.resumeMedia(); audio.resume(); } };

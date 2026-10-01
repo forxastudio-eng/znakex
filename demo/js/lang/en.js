@@ -498,4 +498,11 @@ export const EN = {
   "Desarrollo": "Development",
   "Música y efectos": "Music and sound effects",
   "Fuentes": "Fonts",
+  "Solo puedes llevar un objeto especial a la vez.": "You can only carry one special item at a time.",
+  "Solo un objeto a la vez: hasta que se acabe, no puedes coger otro": "One item at a time: until it ends, you can't take another",
+  "Solo puedes llevar un objeto especial a la vez: hasta que se acabe, los demás no se pueden coger.": "You can only carry one special item at a time: until it runs out, the others can't be picked up.",
+  "Las monedas del mapa duran poco: si parpadean rápido, están a punto de desaparecer.": "Coins on the map don't last long: when they blink fast, they're about to vanish.",
+  "Monedas del mapa": "Map coins",
+  "¡Cuenta 3 orbes y creces x3, pero vas al doble de velocidad unos segundos!": "It counts as 3 orbs and you grow x3, but you go twice as fast for a few seconds!",
+  "Cada orbe dorado cuenta 3 orbes y te hace crecer x3, pero vas el doble de rápido.": "Each golden orb counts as 3 orbs and makes you grow x3, but you go twice as fast.",
 };

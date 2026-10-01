@@ -498,4 +498,11 @@ export const ID = {
   "Desarrollo": "Pengembangan",
   "Música y efectos": "Musik dan efek suara",
   "Fuentes": "Font",
+  "Solo puedes llevar un objeto especial a la vez.": "Kamu hanya bisa membawa satu item spesial dalam satu waktu.",
+  "Solo un objeto a la vez: hasta que se acabe, no puedes coger otro": "Satu item sekali waktu: sampai habis, kamu tak bisa ambil yang lain",
+  "Solo puedes llevar un objeto especial a la vez: hasta que se acabe, los demás no se pueden coger.": "Kamu hanya bisa membawa satu item spesial: sampai habis, item lain tak bisa diambil.",
+  "Las monedas del mapa duran poco: si parpadean rápido, están a punto de desaparecer.": "Koin di peta cepat hilang: kalau berkedip cepat, sebentar lagi lenyap.",
+  "Monedas del mapa": "Koin peta",
+  "¡Cuenta 3 orbes y creces x3, pero vas al doble de velocidad unos segundos!": "Dihitung 3 orb dan kamu tumbuh x3, tapi bergerak 2x lebih cepat beberapa detik!",
+  "Cada orbe dorado cuenta 3 orbes y te hace crecer x3, pero vas el doble de rápido.": "Setiap orb emas dihitung 3 orb dan membuatmu tumbuh x3, tapi kamu jadi 2x lebih cepat.",
 };
