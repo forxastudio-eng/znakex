@@ -157,9 +157,13 @@ export function winOut(dur = 1.1) {
 }
 
 // the theme speeds up (and rises in pitch) with the golden orb
-export function setMusicRate(r) {
+export function setMusicRate(r, glide = 0.35) {
   musicRate = r;
-  if (music && ctx) music.src.playbackRate.linearRampToValueAtTime(r, ctx.currentTime + 0.35);
+  if (!music || !ctx) return;
+  const p = music.src.playbackRate, now = ctx.currentTime;
+  p.cancelScheduledValues(now);
+  p.setValueAtTime(p.value, now);
+  p.linearRampToValueAtTime(r, now + glide);
 }
 
 export function duck(on) { ducked = on; applySettings(); }

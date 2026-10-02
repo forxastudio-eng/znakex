@@ -46,11 +46,15 @@ public class MainActivity extends Activity {
         s.setDatabaseEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setAllowFileAccess(false);
+        // everything is served from inside the app: nothing needs the WebView's disk cache, and a stale
+        // cached copy of a video (partial byte ranges) is what could stop the intro until the cache was cleared
+        s.setCacheMode(WebSettings.LOAD_NO_CACHE);
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         web.setVerticalScrollBarEnabled(false);
         web.setHorizontalScrollBarEnabled(false);
+        web.clearCache(true);
         web.setWebViewClient(new AssetClient(getAssets()));
         web.addJavascriptInterface(new NotifyBridge(), "ZnakexNotify");
         try {
@@ -202,7 +206,7 @@ public class MainActivity extends Activity {
                 WebResourceResponse r = new WebResourceResponse(mime(path), mime(path).startsWith("text/") || path.endsWith(".js") ? "utf-8" : null, in);
                 java.util.Map<String, String> h = new java.util.HashMap<>();
                 h.put("Access-Control-Allow-Origin", "*");
-                h.put("Cache-Control", "no-cache");
+                h.put("Cache-Control", "no-store");
                 r.setResponseHeaders(h);
                 return r;
             } catch (IOException e) {
@@ -287,7 +291,7 @@ public class MainActivity extends Activity {
             h.put("Access-Control-Allow-Origin", "*");
             h.put("Accept-Ranges", "bytes");
             h.put("Content-Length", String.valueOf(len));
-            h.put("Cache-Control", "no-cache");
+            h.put("Cache-Control", "no-store");
             if (partial) {
                 h.put("Content-Range", "bytes " + start + "-" + end + "/" + total);
                 return new WebResourceResponse("video/mp4", null, 206, "Partial Content", h, body);

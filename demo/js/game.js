@@ -430,12 +430,24 @@ export class Game {
     return Math.min(2, Math.floor(this.eaten / 10));
   }
 
+  // The golden star and the golden orb speed the music up; in the effect's last seconds it glides
+  // back down little by little (the ear hears the effect running out), never with a sudden stop.
   syncMusic() {
     const tier = this.musicTier();
-    let r = [1, 1.06, 1.12][tier] * (this.shifted ? 1.03 : 1);
-    if (this.pw.star > 0) r *= 1.18;
-    else if (this.player.boostT > 0 && this.player.alive) r *= 1.15;
-    if (this.musicRateNow !== r) { this.musicRateNow = r; audio.setMusicRate(r); }
+    const base = [1, 1.06, 1.12][tier] * (this.shifted ? 1.03 : 1);
+    const FADE = 1.8; // seconds of glide at the end of an effect
+    const boost = this.player.alive && this.player.boostT > 0 ? this.player.boostT : 0;
+    const bonus = Math.max(
+      this.pw.star > 0 ? 0.18 * clamp(this.pw.star / FADE, 0, 1) : 0,
+      boost > 0 ? 0.15 * clamp(boost / FADE, 0, 1) : 0,
+    );
+    const r = base * (1 + bonus);
+    // small steps while gliding (every frame), a quick rise when an effect starts
+    if (this.musicRateNow === undefined || Math.abs(this.musicRateNow - r) > 0.003) {
+      const rising = this.musicRateNow !== undefined && r > this.musicRateNow + 0.02;
+      this.musicRateNow = r;
+      audio.setMusicRate(r, rising ? 0.35 : 0.12);
+    }
     this.musicTierNow = tier;
   }
 
@@ -472,6 +484,8 @@ export class Game {
     return {
       gold: this.player.boostT > 0 ? this.player.boostT / BOOST_TIME : 0, shield: this.pw.shield, magnet: this.pw.magnet / PW.magnet.dur, portal: this.pw.portal / PW.portal.dur,
       star: this.pw.star / PW.star.dur,
+      // seconds left of each timed effect (shown next to its bar)
+      secs: { gold: Math.max(0, this.player.boostT), magnet: this.pw.magnet, portal: this.pw.portal, star: this.pw.star },
     };
   }
 
@@ -487,6 +501,7 @@ export class Game {
       this.syncMusic();
     }
     if (boosting || this.wasBoosting) this.hudFxT = Math.min(this.hudFxT || 0, 0.1);
+    if (boosting || this.pw.star > 0 || this.musicGliding) { this.musicGliding = boosting || this.pw.star > 0; this.syncMusic(); }
     this.ui.pwHud(this.pwState());
     this.trailFx(dt);
     for (const k of ['magnet', 'portal', 'star']) {

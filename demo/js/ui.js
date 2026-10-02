@@ -19,12 +19,14 @@ import { pwPath } from './powerups.js';
 import * as ads from './ads.js';
 import * as notify from './notify.js';
 import * as billing from './billing.js';
+import * as guide from './guide.js';
 
 // brand v2 icons (ivory symbols, gold rewards); the few the new set doesn't have (x2/x3 badges, map hazards) keep the old art
 const BRAND = new Set(BRAND_ICONS);
 const ICON_ALIAS = { ad: 'video' };
 const icon = (n) => { n = ICON_ALIAS[n] || n; return BRAND.has(n) ? url(`brand/icons/${n}.webp`) : url(`ui/icons/${n}.png`); };
 const kit = icon;
+const SESSION = Date.now().toString(36); // video addresses change every launch (no stale cached copies)
 const pwi = (n) => url(pwPath(n));
 const LOGO = url('brand/logo/logo_full.webp');
 // plaque colours by meaning: 0 danger, 1 brand, 2 reward, 3 info, 4 special
@@ -123,6 +125,9 @@ export class UI {
   // the first plays. A watchdog restarts it if the system pauses it (app in background, stall).
   bgVideo(name) {
     this.bgWant = name || null;
+    // while the GPUnlock intro plays, the background video waits: two videos loading at once at
+    // startup is what could leave the intro black
+    if (this.introOn) return;
     let v = this.bgv;
     if (!v) {
       v = this.bgv = document.createElement('video');
@@ -142,7 +147,7 @@ export class UI {
       v.classList.remove('on');
       v.dataset.name = name;
       this.bgErr = 0;
-      v.src = url(`brand/video/${name}.mp4`);
+      v.src = `${url(`brand/video/${name}.mp4`)}?s=${SESSION}`;
       v.load();
     }
     playSafe(v);
@@ -150,10 +155,10 @@ export class UI {
 
   bgWatch() {
     const v = this.bgv;
-    if (!v || !this.bgWant || document.hidden || this.appHidden) return;
+    if (!v || !this.bgWant || this.introOn || document.hidden || this.appHidden) return;
     if (v.error) {
       // reload after an error (a few times at most); the still stays visible meanwhile
-      if (this.bgErr < 4) { v.src = url(`brand/video/${v.dataset.name}.mp4`); v.load(); playSafe(v); }
+      if (this.bgErr < 4) { v.src = `${url(`brand/video/${v.dataset.name}.mp4`)}?s=${SESSION}-${this.bgErr}`; v.load(); playSafe(v); }
       return;
     }
     if (v.paused || v.ended) playSafe(v);
@@ -177,6 +182,7 @@ export class UI {
   go(name, params = {}) {
     const fn = this['scr_' + name];
     if (!fn) return;
+    if (this.coachEl) { this.coachEl.remove(); this.coachEl = null; }
     this.closeOverlays();
     const prev = this.cur;
     if (prev) {
@@ -200,6 +206,56 @@ export class UI {
     requestAnimationFrame(() => requestAnimationFrame(() => scr.el.classList.add('active')));
     this.cur = scr;
     this.refreshCoins(false);
+    this.visitN = (this.visitN || 0) + 1;
+    this.maybeGuide();
+  }
+
+  // ------------------------------------------------------------ first-time guide
+  // One hint per screen visit, only when nothing else is open (a popup, the streak, a game).
+  maybeGuide(delay = 900) {
+    clearTimeout(this.guideTimer);
+    this.guideTimer = setTimeout(() => {
+      const c = this.cur;
+      if (!c || this.coachEl || this.guideVisit === this.visitN || this.overEl.children.length) return;
+      const step = guide.next(c.name);
+      if (step && this.coach(step, c.el)) this.guideVisit = this.visitN;
+    }, delay);
+  }
+
+  // highlights one element and explains it; tapping the element does what it does
+  coach(step, root) {
+    const target = [...root.querySelectorAll(step.sel)].find((n) => n.offsetParent && !n.closest('.locked'));
+    if (!target) return false;
+    guide.mark(step.id);
+    target.scrollIntoView({ block: 'nearest' });
+    const ar = this.app.getBoundingClientRect(), r = target.getBoundingClientRect();
+    if (r.width < 2 || r.bottom < ar.top || r.top > ar.bottom) return false;
+    const pad = 6;
+    const hx = r.left - ar.left - pad, hy = r.top - ar.top - pad, hw = r.width + pad * 2, hh = r.height + pad * 2;
+    const below = hy + hh / 2 < ar.height * 0.5;
+    const ax = clamp(hx + hw / 2, 24, ar.width - 24);
+    const c = el(`<div class="coach">
+      <div class="coach-hole" style="left:${hx}px;top:${hy}px;width:${hw}px;height:${hh}px"></div>
+      <div class="coach-tip ${below ? 'below' : 'above'}" style="${below ? `top:${hy + hh + 14}px` : `bottom:${ar.height - hy + 14}px`};--ax:${ax}px">
+        <div class="ct-head"><img src="${icon(step.icon)}" alt=""><b>${t(step.title)}</b></div>
+        <div class="ct-text">${t(step.text)}</div>
+        <div class="ct-btns"><button class="link" data-c="skip">${t('Saltar guía')}</button><button class="btn small" data-c="ok">${t('ENTENDIDO')}</button></div>
+      </div>
+    </div>`);
+    this.app.appendChild(c);
+    this.coachEl = c;
+    audio.play('ui_open');
+    requestAnimationFrame(() => c.classList.add('show'));
+    const close = () => { if (this.coachEl !== c) return; this.coachEl = null; c.classList.remove('show'); setTimeout(() => c.remove(), 250); };
+    c.addEventListener('click', (ev) => {
+      const b = ev.target.closest('[data-c]');
+      if (b) { audio.play('ui_tap'); if (b.dataset.c === 'skip') guide.skipAll(); close(); return; }
+      if (ev.target.closest('.coach-tip')) return;
+      close();
+      // a tap on the highlighted button does it right away
+      if (ev.target.closest('.coach-hole') && target.isConnected) target.click();
+    });
+    return true;
   }
 
   refreshCoins(bump) {
@@ -276,23 +332,39 @@ export class UI {
   // ------------------------------------------------------------ studio intro (GPUnlock)
   // Plays over the loading screen (the game keeps loading underneath); a tap skips it.
   studioIntro() {
-    // GPUnlock's own reveal video, played once exactly as delivered (4 s); a tap skips it.
+    // GPUnlock's own reveal video, played exactly as delivered, every time the game opens; a tap skips it.
+    // It gets the video decoder to itself (the background video waits for it) and, if it doesn't start,
+    // it is loaded again once before giving up, so it never depends on what the phone kept in its cache.
+    this.introOn = true;
     const o = el(`<div class="studio-intro"></div>`);
     const v = document.createElement('video');
     v.muted = true; v.defaultMuted = true; v.playsInline = true; v.autoplay = true; v.preload = 'auto';
     v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
     o.appendChild(v);
     this.app.appendChild(o);
-    let gone = false;
-    // free the decoder right away so the background video can use it
-    const end = () => { if (gone) return; gone = true; clearTimeout(timer); audio.playMusic('mus_menu'); o.classList.add('out'); setTimeout(() => { v.pause(); v.removeAttribute('src'); v.load(); o.remove(); }, 500); };
+    let gone = false, tries = 0, started = false;
+    // a fresh address each launch: never a stale copy kept by the WebView
+    const src = () => `${url('brand/video/gpunlock.mp4')}?t=${Date.now()}`;
+    const end = () => {
+      if (gone) return;
+      gone = true;
+      clearTimeout(timer);
+      audio.playMusic('mus_menu');
+      o.classList.add('out');
+      // free the decoder, then let the background video start
+      setTimeout(() => { v.pause(); v.removeAttribute('src'); v.load(); o.remove(); this.introOn = false; if (this.bgWant) this.bgVideo(this.bgWant); }, 500);
+    };
+    const retry = () => {
+      if (gone || started) return;
+      if (tries++ < 1) { v.src = src(); v.load(); playSafe(v); timer = setTimeout(retry, 3500); } else end();
+    };
     o.addEventListener('pointerup', end);
-    // if the video never starts (no codec), don't hold the game; once it plays, it ends by itself
-    let timer = setTimeout(end, 2500);
-    v.addEventListener('playing', () => { v.classList.add('on'); clearTimeout(timer); timer = setTimeout(end, (v.duration || 4) * 1000 + 1500); }, { once: true });
+    // if it never starts (no codec, decoder busy), try once more, then go on without it
+    let timer = setTimeout(retry, 3500);
+    v.addEventListener('playing', () => { started = true; v.classList.add('on'); clearTimeout(timer); timer = setTimeout(end, (v.duration || 4) * 1000 + 1500); }, { once: true });
     v.addEventListener('ended', () => setTimeout(end, 150));
-    v.addEventListener('error', end);
-    v.src = url('brand/video/gpunlock.mp4');
+    v.addEventListener('error', () => { clearTimeout(timer); retry(); });
+    v.src = src();
     playSafe(v);
   }
 
@@ -378,7 +450,7 @@ export class UI {
     });
     if (notify.shouldOffer()) {
       setTimeout(() => { if (this.cur && this.cur.name === 'home' && !this.overEl.children.length) this.offerReminders(); }, 1400);
-    } else if (!this.streakShown && !meta.streakState().claimedToday) {
+    } else if (!this.streakShown && !meta.streakState().claimedToday && (guide.seen('streak') || guide.off())) {
       this.streakShown = true;
       setTimeout(() => { if (this.cur && this.cur.name === 'home') this.openStreak(); }, 900);
     }
@@ -1029,6 +1101,7 @@ export class UI {
         ${cloud.available() ? `<div class="demo-note" style="text-align:left">${t(cloud.signedIn() ? 'Tu progreso se guarda en tu cuenta de Google.' : 'Conéctate para guardar tu progreso en tu cuenta de Google.')}</div>` : ''}
         <div class="set-row"><span class="l"><img src="${kit('cloud')}">${t('CÓDIGO DE GUARDADO')}</span><span style="display:flex;gap:.4rem"><button class="btn small" data-act="savecode">${t('COPIAR')}</button><button class="btn small" data-act="loadcode">${t('RESTAURAR')}</button></span></div>
         <div class="set-row"><span class="l"><img src="${kit('bulb')}">${t('TUTORIAL')}</span><button class="btn small" data-act="tutorial">${t('REPETIR')}</button></div>
+        <div class="set-row"><span class="l"><img src="${kit('eye')}">${t('GUÍA DEL JUEGO')}</span><button class="btn small" data-act="guide">${t('VER DE NUEVO')}</button></div>
         ${CONFIG.tester ? `        <div class="sec">DEMO</div>
         <div class="set-row"><span>+${fmt(5000)} ${t('MONEDAS')}</span><button class="btn small" data-act="coins">${t('AÑADIR')}</button></div>
         <div class="set-row"><span>${t('RULETA DE HOY')}</span><button class="btn small" data-act="wheel">${t('REINICIAR')}</button></div>
@@ -1047,6 +1120,7 @@ export class UI {
       loadcode: () => { const c = window.prompt(t('Pega tu código de guardado:')); if (c) { if (cloud.importCode(c)) { this.toast(t('Partida restaurada')); this.go('home'); } else this.toast(t('Código no válido')); } },
       lang: (b) => { setLang(b.dataset.l); set.lang = b.dataset.l; store.save(); this.go('settings'); },
       tutorial: () => this.startGame({ mode: 'story', level: tutorialLevel() }),
+      guide: () => { guide.reset(); this.toast(t('La guía volverá a aparecer poco a poco')); },
       notif: (b) => {
         if (set.notify) { notify.disable(); b.classList.remove('on'); return; }
         notify.enable((ok) => { b.classList.toggle('on', ok); if (!ok) this.toast(t('Actívalos en los ajustes de Android si cambias de idea')); });
@@ -1104,7 +1178,7 @@ export class UI {
   closeOverlay(o) {
     if (!o || !o.parentNode) return;
     o.classList.remove('show');
-    setTimeout(() => o.remove(), 300);
+    setTimeout(() => { o.remove(); if (!this.overEl.children.length) this.maybeGuide(500); }, 300);
   }
 
   closeOverlays() {
@@ -1522,11 +1596,17 @@ export class UI {
       if (v <= 0) { if (c) c.remove(); continue; }
       if (!c) {
         const src = k === 'gold' ? icon('orb_gold') : pwi(img);
-        c = el(`<div class="pw-bar ${k}" data-k="${k}"><img src="${src}" alt=""><div class="bar"><i></i>${k === 'shield' ? '<u></u>' : ''}</div></div>`);
+        c = el(`<div class="pw-bar pw-${k}" data-k="${k}"><img src="${src}" alt=""><div class="bar"><i></i>${k === 'shield' ? '<u></u>' : ''}</div><b class="pwsec"></b></div>`);
         row.appendChild(c);
       }
       $(c, 'i').style.width = `${Math.round(clamp(v, 0, 1) * 100)}%`;
+      // a stopwatch: seconds left (tenths in the last 3 s), blinking in the last 1.5 s; the force field shows its hits
+      const sec = k === 'shield' ? null : (st.secs && st.secs[k]) || 0;
+      const txt = k === 'shield' ? `x${n}` : sec < 3 ? `${sec.toFixed(1)}s` : `${Math.ceil(sec)}s`;
+      const sb = $(c, '.pwsec');
+      if (sb.textContent !== txt) sb.textContent = txt;
       c.classList.toggle('low', k !== 'shield' && v < 0.25);
+      c.classList.toggle('ending', k !== 'shield' && sec > 0 && sec <= 1.5);
     }
   }
 
@@ -1751,8 +1831,8 @@ export class UI {
         paused = true;
         this.fakeAd(() => { store.addCoins(1); this.toast(t('+1 moneda'), true); b.remove(); paused = false; });
       },
-      retry: () => this.startGame(this.lastCfg),
-      home: () => this.exitGame(),
+      retry: () => { this.countGame(!!game.tut); this.startGame(this.lastCfg); },
+      home: () => { this.countGame(!!game.tut); this.exitGame(); },
       no: () => decline(),
     });
   }
@@ -1794,9 +1874,18 @@ export class UI {
   }
 
   // ------------------------------------------------------------ results
+  // every finished game counts (ad every 10 games, the guide's pace), also when it is left from the revive screen
+  countGame(tutorial) {
+    if (tutorial) return;
+    const S = this.S();
+    S.adCounter = (S.adCounter || 0) + 1;
+    S.gamesTotal = (S.gamesTotal || 0) + 1;
+    store.save();
+  }
+
   finish(res) {
     const S = this.S();
-    if (!res.tutorial) { S.adCounter = (S.adCounter || 0) + 1; S.gamesTotal = (S.gamesTotal || 0) + 1; store.save(); }
+    this.countGame(res.tutorial);
     audio.loseMood(!res.won);
     // won: the cleared screen plays the menu theme (after the fanfare) until you continue or leave
     if (res.won) {
@@ -1890,6 +1979,8 @@ export class UI {
     }
 
     const o = this.overlay(`<div class="overlay"><div class="panel"><div class="inner stagger">${html}</div></div></div>`);
+    // first time an optional x2 video is offered: explain it (the results stay open underneath)
+    setTimeout(() => { if (o.isConnected && !this.coachEl) { const st = guide.next('results'); if (st) this.coach(st, o); } }, 1600);
     [...o.querySelectorAll('.inner > *')].forEach((n, i) => n.style.setProperty('--i', i));
     if (coins > 0) {
       store.addCoins(coins);
