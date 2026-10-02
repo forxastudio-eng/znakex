@@ -1,0 +1,4 @@
+Audios del juego (30 efectos + 6 músicas) en OGG Vorbis.
+Origen: generados con el generador de efectos de sonido de Magnific (motor ElevenLabs Sound Effects V2)
+con suscripción de pago activa. Se regeneran desde "sound effectts/" y "musica/" con tools/build_audio.py.
+Constancia legal: legal/LEEME.md
